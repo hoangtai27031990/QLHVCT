@@ -516,7 +516,7 @@ tbody tr:hover td{background:var(--gray-50)}
 // =============================================
 // CẤU HÌNH
 // =============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbx1H9R2ZZgBXhuWWyYd7RdlTd08rXoHIWSS3LSpcEs4vKo_xK26dt2NSQum4ASbo1vo/exec'; // Thay bằng URL Apps Script đã deploy
+const API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL'; // Thay bằng URL Apps Script đã deploy
 
 // =============================================
 // STATE
@@ -772,48 +772,95 @@ function renderTable() {
 // =============================================
 // DASHBOARD
 // =============================================
+function isDone(h) {
+  const tt = (h.trangThai || '').trim();
+  return tt === 'Đã nộp bài' || tt === 'Đã chuyển QTĐT';
+}
+
 function updateDashboard() {
   const today = new Date();
+  today.setHours(0,0,0,0);
+
   const total = hvData.length;
-  const done = hvData.filter(h => h.trangThai && h.trangThai !== 'Chưa hoàn thành').length;
+  const done  = hvData.filter(h => isDone(h)).length;
   const scores = hvData.map(h => computeScores(h).bq).filter(v => v != null);
   const avg = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : null;
-  const dueSoon = hvData.filter(h => {
-    if (!h.ngayBatDau) return false;
-    const han = new Date(addDays(addMonths(h.ngayBatDau,6),-10));
-    const diff = Math.ceil((han - today)/86400000);
-    return diff >= 0 && diff <= 30 && h.trangThai === 'Chưa hoàn thành';
+
+  // Phân nhóm: chỉ HV chưa hoàn thành mới cần cảnh báo
+  const pending = hvData.filter(h => !isDone(h) && h.ngayBatDau);
+  const withDiff = pending.map(h => {
+    const han = addDays(addMonths(h.ngayBatDau, 6), -10);
+    const diff = Math.ceil((new Date(han) - today) / 86400000);
+    return { ...h, han, diff };
   });
 
+  const overdue  = withDiff.filter(h => h.diff < 0).sort((a,b) => a.diff - b.diff);
+  const dueSoon  = withDiff.filter(h => h.diff >= 0 && h.diff <= 30).sort((a,b) => a.diff - b.diff);
+
   document.getElementById('s-total').textContent = total;
-  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-done').textContent  = done;
   document.getElementById('s-done-pct').textContent = total ? Math.round(done/total*100)+'% hoàn thành' : '';
-  document.getElementById('s-avg').textContent = avg ? avg.toFixed(2) : '–';
-  document.getElementById('s-due').textContent = dueSoon.length;
+  document.getElementById('s-avg').textContent   = avg ? avg.toFixed(2) : '–';
+  document.getElementById('s-due').textContent   = dueSoon.length + overdue.length;
 
   const el = document.getElementById('dueSoonList');
-  if (dueSoon.length === 0) {
-    el.innerHTML = '<div class="empty">Không có học viên nào sắp đến hạn</div>';
+
+  if (!overdue.length && !dueSoon.length) {
+    el.innerHTML = '<div class="empty" style="padding:24px">✓ Không có học viên nào sắp đến hạn hoặc quá hạn</div>';
     return;
   }
-  el.innerHTML = `<div class="tbl-wrap"><table>
-    <thead><tr><th>Mã HV</th><th>Họ tên</th><th>Chức danh</th><th>Đơn vị</th><th>Hạn nộp bài</th><th>Còn lại</th></tr></thead>
-    <tbody>
-    ${dueSoon.map(h=>{
-      const han = addDays(addMonths(h.ngayBatDau,6),-10);
-      const diff = Math.ceil((new Date(han)-today)/86400000);
-      const cd = h.chucDanh==='KTT'?'badge-ktt':h.chucDanh==='GĐ'?'badge-gd':'badge-pgd';
-      return `<tr>
-        <td class="td-code">${h.maHV}</td>
-        <td>${h.ho} ${h.ten}</td>
-        <td><span class="badge ${cd}">${h.chucDanh}</span></td>
-        <td class="td-muted">${h.donVi||'–'}</td>
-        <td style="color:#BA7517;font-weight:500">${fmtDate(han)}</td>
-        <td><span class="badge badge-pending">${diff} ngày</span></td>
-      </tr>`;
-    }).join('')}
-    </tbody>
-  </table></div>`;
+
+  const tableHead = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Mã HV</th><th>Họ tên</th><th>Chức danh</th>
+      <th>Đơn vị</th><th>Người HD</th><th>Hạn nộp bài</th><th>Còn lại</th>
+    </tr></thead><tbody>`;
+
+  const badgeCD = cd => cd==='KTT'?'badge-ktt':cd==='GĐ'?'badge-gd':'badge-pgd';
+
+  const rowHTML = (h) => {
+    let urgencyBadge, urgencyColor;
+    if (h.diff < 0) {
+      urgencyBadge = `<span class="badge" style="background:var(--red-light);color:var(--red)">Quá hạn ${Math.abs(h.diff)} ngày</span>`;
+      urgencyColor = 'color:var(--red);font-weight:600';
+    } else if (h.diff <= 7) {
+      urgencyBadge = `<span class="badge" style="background:var(--red-light);color:var(--red)">Còn ${h.diff} ngày</span>`;
+      urgencyColor = 'color:var(--red);font-weight:600';
+    } else if (h.diff <= 14) {
+      urgencyBadge = `<span class="badge" style="background:#FAEEDA;color:#993C1D">Còn ${h.diff} ngày</span>`;
+      urgencyColor = 'color:#993C1D;font-weight:600';
+    } else {
+      urgencyBadge = `<span class="badge badge-pending">Còn ${h.diff} ngày</span>`;
+      urgencyColor = 'color:#BA7517';
+    }
+    return `<tr>
+      <td class="td-code">${h.maHV}</td>
+      <td>${h.ho} ${h.ten}</td>
+      <td><span class="badge ${badgeCD(h.chucDanh)}">${h.chucDanh}</span></td>
+      <td class="td-muted">${h.donVi||'–'}</td>
+      <td class="td-muted" style="font-size:11px">${h.nguoiHD||'–'}</td>
+      <td style="${urgencyColor}">${fmtDate(h.han)}</td>
+      <td>${urgencyBadge}</td>
+    </tr>`;
+  };
+
+  let html = '';
+
+  if (overdue.length) {
+    html += `<tr><td colspan="7" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--red);letter-spacing:.04em;background:var(--red-light)">
+      ⚠ QUÁ HẠN NỘP BÀI — ${overdue.length} học viên
+    </td></tr>`;
+    html += overdue.map(rowHTML).join('');
+  }
+
+  if (dueSoon.length) {
+    html += `<tr><td colspan="7" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:#633806;letter-spacing:.04em;background:#FAEEDA">
+      🔔 SẮP ĐẾN HẠN (trong 30 ngày) — ${dueSoon.length} học viên
+    </td></tr>`;
+    html += dueSoon.map(rowHTML).join('');
+  }
+
+  el.innerHTML = tableHead + html + '</tbody></table></div>';
 }
 
 // =============================================
