@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý học viên cấp trung – Saigon Co-op</title>
+<title>Quản lý học viên cấp trung – Saigon Co.op</title>
 <style>
 :root {
   --green: #0F6E56;
@@ -113,7 +113,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 thead th{font-size:11px;font-weight:600;color:var(--text-faint);text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;background:#fff;position:sticky;top:0}
-tbody td{padding:9px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text)}
+/* Column width hints */
+#hvTable th:nth-child(1){min-width:60px}   /* Mã HV */
+#hvTable th:nth-child(2){min-width:130px}  /* Họ tên */
+#hvTable th:nth-child(3){min-width:110px;white-space:normal;word-break:keep-all}  /* Chức danh */
+#hvTable th:nth-child(4){min-width:90px}   /* Đơn vị TT */
+#hvTable th:nth-child(5){min-width:90px}   /* Người HD */
+#hvTable th:nth-child(6){min-width:90px}   /* SĐT */
+#hvTable th:nth-child(7),
+#hvTable th:nth-child(8),
+#hvTable th:nth-child(9),
+#hvTable th:nth-child(10){min-width:80px;white-space:normal;word-break:keep-all;line-height:1.3}  /* Các cột ngày */
+#hvTable th:nth-child(11){min-width:120px} /* Đề tài */
+#hvTable th:nth-child(12),
+#hvTable th:nth-child(13),
+#hvTable th:nth-child(14){min-width:60px;text-align:center} /* Điểm */
+#hvTable th:nth-child(15){min-width:110px} /* Trạng thái */
+tbody td{padding:9px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text);word-break:break-word}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--gray-50)}
 .td-muted{color:var(--text-muted)!important}
@@ -124,7 +140,7 @@ tbody tr:hover td{background:var(--gray-50)}
 .td-actions{display:flex;gap:4px}
 
 /* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
 .badge-ktt{background:var(--green-light);color:var(--green-dark)}
 .badge-gd{background:var(--blue-light);color:var(--blue)}
 .badge-pgd{background:var(--purple-light);color:var(--purple)}
@@ -202,7 +218,7 @@ tbody tr:hover td{background:var(--gray-50)}
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">SC</div>
-      <span>Saigon Co-op Training</span>
+      <span>Saigon Co.op Training</span>
     </div>
     <h2>Đăng nhập</h2>
     <p>Hệ thống quản lý học viên cấp trung</p>
@@ -838,8 +854,8 @@ function renderTable() {
 
     return `<tr>
       <td class="td-code">${hv.maHV}</td>
-      <td>${hv.ho} ${hv.ten}</td>
-      <td><span class="badge ${badgeCD}">${hv.chucDanh}</span></td>
+      <td style="min-width:120px">${hv.ho} ${hv.ten}</td>
+      <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${hv.chucDanh}</span></td>
       <td class="td-muted">${hv.donVi || '–'}</td>
       <td class="td-muted" style="font-size:11px">${hv.nguoiHD || '–'}</td>
       <td class="td-muted" style="font-size:11px">${hv.sdt || '–'}</td>
@@ -847,11 +863,11 @@ function renderTable() {
       <td class="td-muted">${fmtDate(addMonths(start,2))}</td>
       <td class="td-muted">${fmtDate(addMonths(start,6))}</td>
       <td style="${hanNopStyle}${overdue}">${fmtDate(hanNop)}</td>
-      <td class="td-muted" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hv.tenDeTai||''}">${hv.tenDeTai || '–'}</td>
-      <td>${scoreCell(!isNaN(gd1v) ? gd1v : null)}</td>
-      <td>${scoreCell(gd2)}</td>
-      <td>${scoreCell(bq)}</td>
-      <td><span class="badge ${badgeTT}">${tt || 'Chưa hoàn thành'}</span></td>
+      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(hv.tenDeTai||'').replace(/"/g,'&quot;')}">${hv.tenDeTai || '–'}</td>
+      <td style="text-align:center">${scoreCell(!isNaN(gd1v) ? gd1v : null)}</td>
+      <td style="text-align:center">${scoreCell(gd2)}</td>
+      <td style="text-align:center">${scoreCell(bq)}</td>
+      <td><span class="badge ${badgeTT}" style="white-space:normal;line-height:1.4">${tt || 'Chưa hoàn thành'}</span></td>
       <td>
         <div class="td-actions">
           <button class="btn btn-sm btn-icon" title="Sửa" onclick="openEditHV('${hv.id}')">
@@ -932,8 +948,8 @@ function updateDashboard() {
     }
     return `<tr>
       <td class="td-code">${h.maHV}</td>
-      <td>${h.ho} ${h.ten}</td>
-      <td><span class="badge ${badgeCD(h.chucDanh)}">${h.chucDanh}</span></td>
+      <td style="min-width:120px">${h.ho} ${h.ten}</td>
+      <td style="min-width:100px"><span class="badge ${badgeCD(h.chucDanh)}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${h.chucDanh}</span></td>
       <td class="td-muted">${h.donVi||'–'}</td>
       <td class="td-muted" style="font-size:11px">${h.nguoiHD||'–'}</td>
       <td style="${urgencyColor}">${fmtDate(h.han)}</td>
