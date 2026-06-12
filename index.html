@@ -390,6 +390,11 @@ tbody tr:hover td{background:var(--gray-50)}
               <option value="Thực tập Kế toán trưởng">Thực tập Kế toán trưởng</option>
               <option value="Nhân viên Kế toán giữ quyền">Nhân viên Kế toán giữ quyền</option>
             </optgroup>
+            <optgroup label="── Chức danh cũ (legacy) ──" style="color:var(--text-faint)">
+              <option value="KTT">KTT</option>
+              <option value="GĐ">GĐ</option>
+              <option value="PGĐ">PGĐ</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-field">
@@ -999,7 +1004,7 @@ async function saveHV() {
   const ho   = document.getElementById('f-ho').value.trim();
   const ten  = document.getElementById('f-ten').value.trim();
   const chucDanh = document.getElementById('f-chucDanh').value;
-  if (!maHV || !ho || !ten || !chucDanh) {
+  if (!maHV || !ho || !ten) {
     toast('Vui lòng điền đầy đủ thông tin bắt buộc (*)', 'error'); return;
   }
 
