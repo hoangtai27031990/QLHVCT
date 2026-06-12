@@ -128,6 +128,13 @@ tbody tr:hover td{background:var(--gray-50)}
 .badge-ktt{background:var(--green-light);color:var(--green-dark)}
 .badge-gd{background:var(--blue-light);color:var(--blue)}
 .badge-pgd{background:var(--purple-light);color:var(--purple)}
+.badge-ttgd{background:var(--blue-light);color:var(--blue)}
+.badge-qgd{background:#E8F5E9;color:#1B5E20}
+.badge-qktt{background:var(--amber-light);color:var(--amber)}
+.badge-ttktt{background:#FFF3E0;color:#E65100}
+.badge-nvkt{background:#F3E5F5;color:#6A1B9A}
+.badge-ttpgd{background:var(--purple-light);color:var(--purple)}
+.badge-pgdgq{background:#EDE7F6;color:#4527A0}
 .badge-done{background:#EAF3DE;color:#27500A}
 .badge-sent{background:var(--green-light);color:var(--green-dark)}
 .badge-pending{background:var(--amber-light);color:var(--amber)}
@@ -284,9 +291,13 @@ tbody tr:hover td{background:var(--gray-50)}
           </div>
           <div class="filter-row" id="filterRow">
             <div class="chip on" onclick="setFilter('')">Tất cả</div>
-            <div class="chip" onclick="setFilter('KTT')">KTT</div>
-            <div class="chip" onclick="setFilter('GĐ')">GĐ</div>
-            <div class="chip" onclick="setFilter('PGĐ')">PGĐ</div>
+            <div class="chip" onclick="setFilter('Thực tập Giám đốc')">TT Giám đốc</div>
+            <div class="chip" onclick="setFilter('Quyền Giám đốc')">Q. Giám đốc</div>
+            <div class="chip" onclick="setFilter('Thực tập Phó Giám đốc')">TT Phó GĐ</div>
+            <div class="chip" onclick="setFilter('Phó Giám đốc giữ quyền')">PGĐ giữ quyền</div>
+            <div class="chip" onclick="setFilter('Quyền Kế toán trưởng')">Q. KTT</div>
+            <div class="chip" onclick="setFilter('Thực tập Kế toán trưởng')">TT KTT</div>
+            <div class="chip" onclick="setFilter('Nhân viên Kế toán giữ quyền')">NV KT giữ quyền</div>
           </div>
           <div class="tbl-wrap">
             <table id="hvTable">
@@ -297,6 +308,7 @@ tbody tr:hover td{background:var(--gray-50)}
                   <th>Chức danh</th>
                   <th>Đơn vị TT</th>
                   <th>Người HD</th>
+                  <th>SĐT</th>
                   <th>Bắt đầu TT</th>
                   <th>Giao đề tài</th>
                   <th>Hoàn thành</th>
@@ -310,7 +322,7 @@ tbody tr:hover td{background:var(--gray-50)}
                 </tr>
               </thead>
               <tbody id="hvBody">
-                <tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="16" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
@@ -367,9 +379,17 @@ tbody tr:hover td{background:var(--gray-50)}
           <label>Chức danh học tập *</label>
           <select id="f-chucDanh">
             <option value="">-- Chọn --</option>
-            <option value="KTT">KTT</option>
-            <option value="GĐ">GĐ</option>
-            <option value="PGĐ">PGĐ</option>
+            <optgroup label="Nhóm Giám đốc">
+              <option value="Thực tập Giám đốc">Thực tập Giám đốc</option>
+              <option value="Quyền Giám đốc">Quyền Giám đốc</option>
+              <option value="Thực tập Phó Giám đốc">Thực tập Phó Giám đốc</option>
+              <option value="Phó Giám đốc giữ quyền">Phó Giám đốc giữ quyền</option>
+            </optgroup>
+            <optgroup label="Nhóm Kế toán trưởng">
+              <option value="Quyền Kế toán trưởng">Quyền Kế toán trưởng</option>
+              <option value="Thực tập Kế toán trưởng">Thực tập Kế toán trưởng</option>
+              <option value="Nhân viên Kế toán giữ quyền">Nhân viên Kế toán giữ quyền</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-field">
@@ -379,6 +399,14 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="form-field">
           <label>Tên *</label>
           <input type="text" id="f-ten" placeholder="Tên">
+        </div>
+        <div class="form-field">
+          <label>Số điện thoại</label>
+          <input type="tel" id="f-sdt" placeholder="VD: 0901234567">
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" id="f-email" placeholder="VD: nguyenvana@saigoncoop.com.vn">
         </div>
         <div class="form-field">
           <label>Đơn vị thực tập</label>
@@ -505,6 +533,46 @@ tbody tr:hover td{background:var(--gray-50)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalGV')">Hủy</button>
       <button class="btn btn-primary" onclick="saveGV()">Lưu tài khoản</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: XÁC NHẬN XÓA HỌC VIÊN -->
+<div class="overlay" id="modalDeleteHV">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header" style="border-bottom-color:var(--red);background:var(--red-light)">
+      <h3 style="color:var(--red);display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Xác nhận xóa học viên
+      </h3>
+      <button class="modal-close" onclick="closeModal('modalDeleteHV')">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px 20px">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Bạn sắp xóa vĩnh viễn học viên:</p>
+      <div id="deleteHVInfo" style="background:var(--red-light);border:0.5px solid rgba(163,45,45,.2);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px">
+        <div style="font-size:15px;font-weight:600;color:var(--text)" id="deleteHVName"></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px" id="deleteHVMeta"></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+        Nhập <b id="deleteHVCodeHint" style="font-family:monospace;color:var(--text)"></b> để xác nhận xóa:
+      </p>
+      <div class="form-field">
+        <input type="text" id="deleteHVConfirmInput" placeholder="Nhập mã học viên..." autocomplete="off"
+          oninput="checkDeleteConfirm()"
+          style="border-color:var(--border-md);font-family:monospace;letter-spacing:.05em">
+      </div>
+      <p style="font-size:11px;color:var(--red);margin-top:10px;display:flex;align-items:center;gap:5px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalDeleteHV')">Hủy</button>
+      <button class="btn btn-danger" id="btnConfirmDelete" disabled onclick="confirmDeleteHV()"
+        style="opacity:.45;cursor:not-allowed;transition:opacity .15s">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        Xóa học viên
+      </button>
     </div>
   </div>
 </div>
@@ -695,6 +763,19 @@ async function loadHV() {
   updateDashboard();
 }
 
+function getBadgeCD(cd) {
+  const map = {
+    'Thực tập Giám đốc':          'badge-ttgd',
+    'Quyền Giám đốc':             'badge-qgd',
+    'Quyền Kế toán trưởng':       'badge-qktt',
+    'Thực tập Kế toán trưởng':    'badge-ttktt',
+    'Nhân viên Kế toán giữ quyền':'badge-nvkt',
+    'Thực tập Phó Giám đốc':      'badge-ttpgd',
+    'Phó Giám đốc giữ quyền':     'badge-pgdgq',
+  };
+  return map[cd] || 'badge-new';
+}
+
 function setFilter(val) {
   filterChucDanh = val;
   document.querySelectorAll('#filterRow .chip').forEach(c => {
@@ -714,7 +795,7 @@ function renderTable() {
 
   const tbody = document.getElementById('hvBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="15" class="empty">Không có học viên nào</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="empty">Không có học viên nào</td></tr>';
     return;
   }
 
@@ -730,7 +811,7 @@ function renderTable() {
     const overdue = daysLeft !== null && daysLeft < 0 && hv.trangThai === 'Chưa hoàn thành'
       ? 'color:var(--red);font-weight:600' : '';
 
-    const badgeCD = hv.chucDanh === 'KTT' ? 'badge-ktt' : hv.chucDanh === 'GĐ' ? 'badge-gd' : 'badge-pgd';
+    const badgeCD = getBadgeCD(hv.chucDanh);
     const tt = hv.trangThai || '';
     const badgeTT = tt.includes('chuyển') ? 'badge-sent' : tt.includes('nộp') ? 'badge-done' : 'badge-new';
 
@@ -746,6 +827,7 @@ function renderTable() {
       <td><span class="badge ${badgeCD}">${hv.chucDanh}</span></td>
       <td class="td-muted">${hv.donVi || '–'}</td>
       <td class="td-muted" style="font-size:11px">${hv.nguoiHD || '–'}</td>
+      <td class="td-muted" style="font-size:11px">${hv.sdt || '–'}</td>
       <td class="td-muted">${fmtDate(start)}</td>
       <td class="td-muted">${fmtDate(addMonths(start,2))}</td>
       <td class="td-muted">${fmtDate(addMonths(start,6))}</td>
@@ -816,7 +898,7 @@ function updateDashboard() {
       <th>Đơn vị</th><th>Người HD</th><th>Hạn nộp bài</th><th>Còn lại</th>
     </tr></thead><tbody>`;
 
-  const badgeCD = cd => cd==='KTT'?'badge-ktt':cd==='GĐ'?'badge-gd':'badge-pgd';
+  const badgeCD = cd => getBadgeCD(cd);
 
   const rowHTML = (h) => {
     let urgencyBadge, urgencyColor;
@@ -882,6 +964,8 @@ function openEditHV(id) {
   document.getElementById('f-maHV').value       = hv.maHV || '';
   document.getElementById('f-ho').value          = hv.ho || '';
   document.getElementById('f-ten').value         = hv.ten || '';
+  document.getElementById('f-sdt').value         = hv.sdt || '';
+  document.getElementById('f-email').value       = hv.email || '';
   document.getElementById('f-chucDanh').value    = hv.chucDanh || '';
   document.getElementById('f-donVi').value       = hv.donVi || '';
   document.getElementById('f-nguoiHD').value     = hv.nguoiHD || '';
@@ -901,7 +985,7 @@ function openEditHV(id) {
 }
 
 function clearHVForm() {
-  ['f-maHV','f-ho','f-ten','f-donVi','f-nguoiHD','f-ngayBatDau',
+  ['f-maHV','f-ho','f-ten','f-sdt','f-email','f-donVi','f-nguoiHD','f-ngayBatDau',
    'f-ngayGiaoDT','f-ngayHoanThanh','f-hanNop','f-tenDeTai',
    'f-diemGD1','f-gk1','f-gk2','f-gk3','f-diemQuyTrinh',
    'f-diemBTH','f-diemGD2','f-diemBQ','f-ghiChu'
@@ -922,6 +1006,8 @@ async function saveHV() {
   const data = {
     id: editingHVId,
     maHV, ho, ten, chucDanh,
+    sdt:           document.getElementById('f-sdt').value.trim(),
+    email:         document.getElementById('f-email').value.trim(),
     donVi:         document.getElementById('f-donVi').value.trim(),
     nguoiHD:       document.getElementById('f-nguoiHD').value.trim(),
     ngayBatDau:    document.getElementById('f-ngayBatDau').value,
@@ -943,11 +1029,48 @@ async function saveHV() {
   loadHV();
 }
 
-async function deleteHV(id) {
-  if (!confirm('Xác nhận xóa học viên này?')) return;
-  const res = await api('deleteHV', { id });
+let pendingDeleteHVId = null;
+
+function deleteHV(id) {
+  const hv = hvData.find(h => h.id == id);
+  if (!hv) return;
+  pendingDeleteHVId = id;
+
+  // Điền thông tin vào modal
+  document.getElementById('deleteHVName').textContent = (hv.ho + ' ' + hv.ten).trim();
+  document.getElementById('deleteHVMeta').textContent =
+    [hv.maHV, hv.chucDanh, hv.donVi].filter(Boolean).join(' · ');
+  document.getElementById('deleteHVCodeHint').textContent = hv.maHV || id;
+  document.getElementById('deleteHVConfirmInput').value = '';
+
+  // Reset nút xóa về trạng thái disabled
+  const btn = document.getElementById('btnConfirmDelete');
+  btn.disabled = true;
+  btn.style.opacity = '.45';
+  btn.style.cursor = 'not-allowed';
+
+  document.getElementById('modalDeleteHV').classList.add('open');
+  setTimeout(() => document.getElementById('deleteHVConfirmInput').focus(), 150);
+}
+
+function checkDeleteConfirm() {
+  const hv = hvData.find(h => h.id == pendingDeleteHVId);
+  const expected = (hv?.maHV || pendingDeleteHVId || '').toString().trim();
+  const typed = document.getElementById('deleteHVConfirmInput').value.trim();
+  const btn = document.getElementById('btnConfirmDelete');
+  const match = typed === expected;
+  btn.disabled = !match;
+  btn.style.opacity = match ? '1' : '.45';
+  btn.style.cursor = match ? 'pointer' : 'not-allowed';
+}
+
+async function confirmDeleteHV() {
+  if (!pendingDeleteHVId) return;
+  const res = await api('deleteHV', { id: pendingDeleteHVId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
   toast('Đã xóa học viên', 'success');
+  closeModal('modalDeleteHV');
+  pendingDeleteHVId = null;
   loadHV();
 }
 
@@ -1032,6 +1155,7 @@ async function deleteGV(id) {
 // =============================================
 function exportCSV() {
   const headers = ['Mã HV','Họ','Tên','Chức danh','Đơn vị TT','Người HD',
+    'SĐT','Email',
     'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài',
     'Tên đề tài','Điểm GĐ1','GK1','GK2','GK3','Điểm quá trình',
     'Điểm bài thu hoạch','Điểm GĐ2','Điểm BQ chung','Trạng thái','Ghi chú'];
@@ -1040,6 +1164,7 @@ function exportCSV() {
     const s = h.ngayBatDau;
     return [
       h.maHV, h.ho, h.ten, h.chucDanh, h.donVi, h.nguoiHD,
+      h.sdt, h.email,
       fmtDate(s), fmtDate(addMonths(s,2)), fmtDate(addMonths(s,6)), fmtDate(addDays(addMonths(s,6),-10)),
       h.tenDeTai, h.diemGD1, h.gk1, h.gk2, h.gk3, h.diemQuyTrinh,
       bth?.toFixed(2)||'', gd2?.toFixed(2)||'', bq?.toFixed(2)||'',
