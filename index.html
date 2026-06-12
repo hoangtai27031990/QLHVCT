@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý học viên cấp trung – Saigon Co.op</title>
+<title>Quản lý học viên cấp trung – Saigon Co-op</title>
 <style>
 :root {
   --green: #0F6E56;
@@ -65,12 +65,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .btn-logout:hover{background:var(--red-light)}
 
 .layout{display:flex;flex:1}
-.sidebar{width:196px;background:#fff;border-right:0.5px solid var(--border);padding:12px 0;flex-shrink:0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.sidebar{width:168px;background:#fff;border-right:0.5px solid var(--border);padding:12px 0;flex-shrink:0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
 .nav-section{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--text-faint);padding:12px 14px 4px;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;border-left:2px solid transparent;transition:all .12s}
+.nav-item{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;color:var(--text-muted);cursor:pointer;border-left:2px solid transparent;transition:all .12s}
 .nav-item:hover{background:var(--gray-50);color:var(--text)}
 .nav-item.active{color:var(--green);background:var(--green-light);border-left-color:var(--green);font-weight:500}
-.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item svg{width:14px;height:14px;flex-shrink:0}
 
 .main{flex:1;padding:20px;overflow-y:auto}
 .page{display:none}
@@ -218,7 +218,7 @@ tbody tr:hover td{background:var(--gray-50)}
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">SC</div>
-      <span>Saigon Co.op Training</span>
+      <span>Saigon Co-op Training</span>
     </div>
     <h2>Đăng nhập</h2>
     <p>Hệ thống quản lý học viên cấp trung</p>
@@ -259,7 +259,7 @@ tbody tr:hover td{background:var(--gray-50)}
       <div class="nav-section">Quản lý</div>
       <div class="nav-item" onclick="navigate('hocvien')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Danh sách học viên
+        Học viên
       </div>
       <div class="nav-item admin-only" onclick="navigate('giaovien')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
