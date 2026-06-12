@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý học viên cấp trung – Saigon Co.op</title>
+<title>Quản lý học viên cấp trung – Saigon Co-op</title>
 <style>
 :root {
   --green: #0F6E56;
@@ -193,6 +193,7 @@ tbody tr:hover td{background:var(--gray-50)}
   .form-grid{grid-template-columns:1fr}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -201,7 +202,7 @@ tbody tr:hover td{background:var(--gray-50)}
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">SC</div>
-      <span>Saigon Co.op Training</span>
+      <span>Saigon Co-op Training</span>
     </div>
     <h2>Đăng nhập</h2>
     <p>Hệ thống quản lý học viên cấp trung</p>
@@ -279,6 +280,15 @@ tbody tr:hover td{background:var(--gray-50)}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="renderTable()">
               </div>
+              <button class="btn" onclick="downloadTemplate()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Tải mẫu Excel
+              </button>
+              <button class="btn" onclick="document.getElementById('importFile').click()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Nhập Excel
+              </button>
+              <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
               <button class="btn" onclick="exportCSV()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Xuất CSV
@@ -1155,6 +1165,97 @@ async function deleteGV(id) {
   if (!res.ok) { toast(res.msg,'error'); return; }
   toast('Đã xóa tài khoản','success');
   loadGV();
+}
+
+// =============================================
+// TEMPLATE EXCEL (base64 nhúng sẵn)
+// =============================================
+const TEMPLATE_XLSX_B64 = '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';
+
+function downloadTemplate() {
+  const byteChars = atob(TEMPLATE_XLSX_B64);
+  const bytes = new Uint8Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mau_import_hoc_vien.xlsx';
+  a.click();
+}
+
+// =============================================
+// IMPORT EXCEL
+// =============================================
+const IMPORT_FIELDS = ['maHV','ho','ten','chucDanh','donVi','nguoiHD','ngayBatDau','tenDeTai',
+  'diemGD1','gk1','gk2','gk3','diemQuyTrinh','trangThai','ghiChu','email','sdt'];
+
+function excelDateToStr(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (v instanceof Date) {
+    return Utilities_formatDate(v);
+  }
+  if (typeof v === 'number') {
+    // Excel serial date
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return Utilities_formatDate(d);
+  }
+  return String(v).trim();
+}
+function Utilities_formatDate(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+async function importExcel(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  ev.target.value = '';
+
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, { type: 'array', cellDates: true });
+  const sheetName = wb.SheetNames.includes('HocVien') ? 'HocVien' : wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
+
+  if (!rows.length) { toast('File không có dữ liệu', 'error'); return; }
+
+  if (!confirm(`Tìm thấy ${rows.length} dòng. Xác nhận nhập danh sách học viên?\n(Học viên có Mã HV đã tồn tại sẽ được CẬP NHẬT, mã mới sẽ được THÊM)`)) return;
+
+  let added = 0, updated = 0, failed = 0;
+  const existingByMaHV = {};
+  hvData.forEach(h => { if (h.maHV) existingByMaHV[String(h.maHV).trim()] = h; });
+
+  for (const row of rows) {
+    const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
+    const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
+    const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
+    if (!maHV || !ho || !ten) { failed++; continue; }
+
+    const payload = {};
+    IMPORT_FIELDS.forEach(f => {
+      let v = row[f];
+      if (v === undefined) v = '';
+      if (f === 'ngayBatDau') v = excelDateToStr(v);
+      else if (f === 'sdt') v = String(v).replace(/^'/, '').trim();
+      else v = (v === null || v === undefined) ? '' : String(v).trim();
+      payload[f] = v;
+    });
+
+    const existing = existingByMaHV[maHV];
+    let res;
+    if (existing) {
+      res = await api('updateHV', { ...payload, id: existing.id });
+      if (res.ok) updated++; else failed++;
+    } else {
+      res = await api('addHV', payload);
+      if (res.ok) added++; else failed++;
+    }
+  }
+
+  toast(`Hoàn tất: thêm ${added}, cập nhật ${updated}${failed ? `, lỗi ${failed}` : ''}`, failed ? 'error' : 'success');
+  loadHV();
 }
 
 // =============================================
