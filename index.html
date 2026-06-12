@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý học viên cấp trung – Saigon Co-op</title>
+<style>
+:root {
+  --green: #0F6E56;
+  --green-light: #E1F5EE;
+  --green-mid: #1D9E75;
+  --green-dark: #085041;
+  --blue-light: #E6F1FB;
+  --blue: #185FA5;
+  --purple-light: #EEEDFE;
+  --purple: #3C3489;
+  --amber-light: #FAEEDA;
+  --amber: #633806;
+  --red-light: #FCEBEB;
+  --red: #A32D2D;
+  --gray-50: #F8F8F6;
+  --gray-100: #F1EFE8;
+  --gray-200: #D3D1C7;
+  --gray-400: #888780;
+  --gray-700: #444441;
+  --gray-900: #1a1a18;
+  --text: #1a1a18;
+  --text-muted: #5F5E5A;
+  --text-faint: #888780;
+  --border: rgba(0,0,0,0.1);
+  --border-md: rgba(0,0,0,0.18);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--gray-100);min-height:100vh}
+
+/* ── LOGIN ── */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--gray-100)}
+.login-card{background:#fff;border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:40px 36px;width:360px;box-shadow:var(--shadow)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:38px;height:38px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
+.login-logo span{font-size:15px;font-weight:600;color:var(--text)}
+.login-card h2{font-size:18px;font-weight:600;margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:5px}
+.field input{width:100%;padding:9px 12px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:14px;outline:none;transition:border .15s}
+.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1)}
+.btn-login{width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;transition:background .15s}
+.btn-login:hover{background:var(--green-dark)}
+.login-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+
+/* ── APP SHELL ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:0.5px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-logo{width:30px;height:30px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+.topbar-title{font-size:14px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.user-info{font-size:12px;color:var(--text-muted)}
+.user-info b{color:var(--text)}
+.btn-logout{font-size:12px;color:var(--red);cursor:pointer;padding:4px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:#fff}
+.btn-logout:hover{background:var(--red-light)}
+
+.layout{display:flex;flex:1}
+.sidebar{width:196px;background:#fff;border-right:0.5px solid var(--border);padding:12px 0;flex-shrink:0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--text-faint);padding:12px 14px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;border-left:2px solid transparent;transition:all .12s}
+.nav-item:hover{background:var(--gray-50);color:var(--text)}
+.nav-item.active{color:var(--green);background:var(--green-light);border-left-color:var(--green);font-weight:500}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+
+.main{flex:1;padding:20px;overflow-y:auto}
+.page{display:none}
+.page.active{display:block}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:var(--radius);border:0.5px solid var(--border);padding:14px 16px}
+.stat-label{font-size:11px;color:var(--text-faint);margin-bottom:6px;font-weight:500}
+.stat-val{font-size:24px;font-weight:600;line-height:1}
+.stat-sub{font-size:11px;color:var(--text-faint);margin-top:4px}
+
+/* ── PANEL ── */
+.panel{background:#fff;border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:16px}
+.panel+.panel{margin-top:16px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.panel-title{font-size:14px;font-weight:600}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius);border:0.5px solid var(--border-md);font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--text);transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--gray-50)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-danger{background:#fff;border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red-light)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-icon{width:28px;height:28px;padding:0;justify-content:center}
+
+/* ── SEARCH & FILTER ── */
+.search-box{display:flex;align-items:center;gap:6px;padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:12px;color:var(--text-muted);background:var(--gray-50);width:200px}
+.search-box input{border:none;background:none;outline:none;font-size:12px;color:var(--text);width:100%}
+.search-box input::placeholder{color:var(--text-faint)}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:0.5px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
+.chip:hover{border-color:var(--green);color:var(--green)}
+.chip.on{background:var(--green-light);border-color:var(--green-mid);color:var(--green-dark)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-size:11px;font-weight:600;color:var(--text-faint);text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;background:#fff;position:sticky;top:0}
+tbody td{padding:9px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--gray-50)}
+.td-muted{color:var(--text-muted)!important}
+.td-code{font-weight:600;font-family:monospace;font-size:12px}
+.td-score{font-weight:600;color:var(--green)}
+.td-score.warn{color:#BA7517}
+.td-score.danger{color:var(--red)}
+.td-actions{display:flex;gap:4px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-ktt{background:var(--green-light);color:var(--green-dark)}
+.badge-gd{background:var(--blue-light);color:var(--blue)}
+.badge-pgd{background:var(--purple-light);color:var(--purple)}
+.badge-done{background:#EAF3DE;color:#27500A}
+.badge-sent{background:var(--green-light);color:var(--green-dark)}
+.badge-pending{background:var(--amber-light);color:var(--amber)}
+.badge-new{background:var(--gray-100);color:var(--text-muted)}
+.badge-admin{background:var(--amber-light);color:var(--amber)}
+.badge-gv{background:var(--blue-light);color:var(--blue)}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);width:680px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-header{padding:18px 20px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.modal-header h3{font-size:15px;font-weight:600}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:2px 6px}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:0.5px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-full{grid-column:1/-1}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:11px;font-weight:600;color:var(--text-muted)}
+.form-field input,.form-field select,.form-field textarea{padding:8px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius);font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border .12s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.08)}
+.form-field input[readonly]{background:var(--gray-50);color:var(--text-muted)}
+.form-field textarea{resize:vertical;min-height:60px}
+.form-divider{grid-column:1/-1;border:none;border-top:0.5px solid var(--border);margin:4px 0}
+.form-section-title{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:2px;border-bottom:0.5px solid var(--border)}
+.calc-note{font-size:11px;color:var(--text-faint);margin-top:2px}
+
+/* ── DATE ALERT ── */
+.date-alert{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius);font-size:12px;margin-top:10px}
+.date-alert.warn{background:var(--amber-light);color:var(--amber)}
+.date-alert.ok{background:var(--green-light);color:var(--green-dark)}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px 20px;color:var(--text-faint)}
+.empty svg{width:40px;height:40px;margin-bottom:10px;opacity:.4}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-item{padding:10px 16px;border-radius:var(--radius);font-size:13px;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:slideIn .2s ease}
+.toast-item.success{background:var(--green)}
+.toast-item.error{background:var(--red)}
+@keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── LOADING ── */
+.loading{text-align:center;padding:30px;color:var(--text-faint);font-size:13px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border-md);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .sidebar{display:none}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">SC</div>
+      <span>Saigon Co-op Training</span>
+    </div>
+    <h2>Đăng nhập</h2>
+    <p>Hệ thống quản lý học viên cấp trung</p>
+    <div class="field">
+      <label>Tên đăng nhập</label>
+      <input type="text" id="loginUser" placeholder="username" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Mật khẩu</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Đăng nhập</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">SC</div>
+      <span class="topbar-title">Quản lý học viên cấp trung</span>
+    </div>
+    <div class="topbar-right">
+      <span class="user-info">Xin chào, <b id="userDisplayName"></b></span>
+      <button class="btn-logout" onclick="doLogout()">Đăng xuất</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="nav-section">Tổng quan</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-section">Quản lý</div>
+      <div class="nav-item" onclick="navigate('hocvien')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Danh sách học viên
+      </div>
+      <div class="nav-item admin-only" onclick="navigate('giaovien')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Tài khoản GV
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="stat-label">Tổng học viên</div><div class="stat-val" id="s-total">–</div><div class="stat-sub">đang theo dõi</div></div>
+          <div class="stat-card"><div class="stat-label">Đã nộp bài</div><div class="stat-val" id="s-done" style="color:var(--green)">–</div><div class="stat-sub" id="s-done-pct"></div></div>
+          <div class="stat-card"><div class="stat-label">Điểm BQ chung</div><div class="stat-val" id="s-avg" style="color:var(--blue)">–</div><div class="stat-sub">điểm trung bình</div></div>
+          <div class="stat-card"><div class="stat-label">Sắp hết hạn</div><div class="stat-val" id="s-due" style="color:#BA7517">–</div><div class="stat-sub">trong 30 ngày tới</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Học viên sắp đến hạn nộp bài</span>
+          </div>
+          <div id="dueSoonList" class="loading"><span class="spinner"></span>Đang tải...</div>
+        </div>
+      </div>
+
+      <!-- HỌC VIÊN -->
+      <div class="page" id="page-hocvien">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Danh sách học viên</span>
+            <div class="toolbar">
+              <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="renderTable()">
+              </div>
+              <button class="btn" onclick="exportCSV()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Xuất CSV
+              </button>
+              <button class="btn btn-primary" onclick="openAddHV()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Thêm học viên
+              </button>
+            </div>
+          </div>
+          <div class="filter-row" id="filterRow">
+            <div class="chip on" onclick="setFilter('')">Tất cả</div>
+            <div class="chip" onclick="setFilter('KTT')">KTT</div>
+            <div class="chip" onclick="setFilter('GĐ')">GĐ</div>
+            <div class="chip" onclick="setFilter('PGĐ')">PGĐ</div>
+          </div>
+          <div class="tbl-wrap">
+            <table id="hvTable">
+              <thead>
+                <tr>
+                  <th>Mã HV</th>
+                  <th>Họ tên</th>
+                  <th>Chức danh</th>
+                  <th>Đơn vị TT</th>
+                  <th>Người HD</th>
+                  <th>Bắt đầu TT</th>
+                  <th>Giao đề tài</th>
+                  <th>Hoàn thành</th>
+                  <th>Hạn nộp bài</th>
+                  <th>Đề tài</th>
+                  <th>Điểm GĐ1</th>
+                  <th>Điểm GĐ2</th>
+                  <th>BQ chung</th>
+                  <th>Trạng thái</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hvBody">
+                <tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GIÁO VIÊN -->
+      <div class="page" id="page-giaovien">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Tài khoản giáo viên</span>
+            <button class="btn btn-primary" onclick="openAddGV()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Thêm tài khoản
+            </button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên đăng nhập</th>
+                  <th>Họ tên</th>
+                  <th>Vai trò</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="gvBody">
+                <tr><td colspan="4" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: HỌC VIÊN -->
+<div class="overlay" id="modalHV">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalHVTitle">Thêm học viên</h3>
+      <button class="modal-close" onclick="closeModal('modalHV')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Thông tin cá nhân</div>
+        <div class="form-field">
+          <label>Mã học viên *</label>
+          <input type="text" id="f-maHV" placeholder="VD: 12446">
+        </div>
+        <div class="form-field">
+          <label>Chức danh học tập *</label>
+          <select id="f-chucDanh">
+            <option value="">-- Chọn --</option>
+            <option value="KTT">KTT</option>
+            <option value="GĐ">GĐ</option>
+            <option value="PGĐ">PGĐ</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Họ *</label>
+          <input type="text" id="f-ho" placeholder="Họ và tên đệm">
+        </div>
+        <div class="form-field">
+          <label>Tên *</label>
+          <input type="text" id="f-ten" placeholder="Tên">
+        </div>
+        <div class="form-field">
+          <label>Đơn vị thực tập</label>
+          <input type="text" id="f-donVi" placeholder="VD: CM-DVCONG">
+        </div>
+        <div class="form-field">
+          <label>Người hướng dẫn</label>
+          <input type="text" id="f-nguoiHD" placeholder="Tên người HD">
+        </div>
+
+        <div class="form-section-title">Thời gian thực tập</div>
+        <div class="form-field">
+          <label>Ngày bắt đầu thực tập *</label>
+          <input type="date" id="f-ngayBatDau" oninput="calcDates()">
+        </div>
+        <div class="form-field">
+          <label>Ngày giao đề tài (+ 2 tháng)</label>
+          <input type="text" id="f-ngayGiaoDT" readonly placeholder="Tự tính">
+        </div>
+        <div class="form-field">
+          <label>Ngày hoàn thành (+ 6 tháng)</label>
+          <input type="text" id="f-ngayHoanThanh" readonly placeholder="Tự tính">
+        </div>
+        <div class="form-field">
+          <label>Hạn nộp bài (hoàn thành − 10 ngày)</label>
+          <input type="text" id="f-hanNop" readonly placeholder="Tự tính">
+        </div>
+
+        <div class="form-section-title">Đề tài</div>
+        <div class="form-field form-full">
+          <label>Tên đề tài</label>
+          <textarea id="f-tenDeTai" placeholder="Nhập tên đề tài..."></textarea>
+        </div>
+
+        <div class="form-section-title">Điểm số</div>
+        <div class="form-field">
+          <label>Điểm GĐ1 (nhập tay)</label>
+          <input type="number" id="f-diemGD1" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
+        </div>
+        <div class="form-field">
+          <label>GK1 – Bài thu hoạch</label>
+          <input type="number" id="f-gk1" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
+        </div>
+        <div class="form-field">
+          <label>GK2 – Bài thu hoạch</label>
+          <input type="number" id="f-gk2" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="Để trống nếu không có">
+        </div>
+        <div class="form-field">
+          <label>GK3 – Bài thu hoạch</label>
+          <input type="number" id="f-gk3" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="Để trống nếu không có">
+        </div>
+        <div class="form-field">
+          <label>Điểm đánh giá quá trình (1 GK)</label>
+          <input type="number" id="f-diemQuyTrinh" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
+        </div>
+        <div class="form-field">
+          <label>Điểm bài thu hoạch (TB tự tính)</label>
+          <input type="text" id="f-diemBTH" readonly placeholder="Tự tính">
+          <span class="calc-note">TB cộng GK1, GK2, GK3 (bỏ ô trống)</span>
+        </div>
+        <div class="form-field">
+          <label>Điểm GĐ2 (tự tính)</label>
+          <input type="text" id="f-diemGD2" readonly placeholder="Tự tính">
+          <span class="calc-note">Quá trình × 80% + Bài thu hoạch × 20%</span>
+        </div>
+        <div class="form-field">
+          <label>Điểm bình quân chung (tự tính)</label>
+          <input type="text" id="f-diemBQ" readonly placeholder="Tự tính">
+          <span class="calc-note">GĐ1 × 30% + GĐ2 × 70%</span>
+        </div>
+
+        <div class="form-section-title">Trạng thái & Ghi chú</div>
+        <div class="form-field">
+          <label>Trạng thái</label>
+          <select id="f-trangThai">
+            <option value="Chưa hoàn thành">Chưa hoàn thành</option>
+            <option value="Đã nộp bài">Đã nộp bài</option>
+            <option value="Đã chuyển QTĐT">Đã chuyển QTĐT</option>
+          </select>
+        </div>
+        <div class="form-field form-full">
+          <label>Ghi chú</label>
+          <textarea id="f-ghiChu" placeholder="Ghi chú thêm..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalHV')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveHV()">Lưu học viên</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GIÁO VIÊN -->
+<div class="overlay" id="modalGV">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 id="modalGVTitle">Thêm tài khoản GV</h3>
+      <button class="modal-close" onclick="closeModal('modalGV')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-field">
+          <label>Họ tên *</label>
+          <input type="text" id="gv-ten" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="form-field">
+          <label>Tên đăng nhập *</label>
+          <input type="text" id="gv-username" placeholder="nguyenvana">
+        </div>
+        <div class="form-field">
+          <label>Mật khẩu *</label>
+          <input type="password" id="gv-password" placeholder="Nhập mật khẩu">
+        </div>
+        <div class="form-field">
+          <label>Vai trò</label>
+          <select id="gv-role">
+            <option value="gv">Giáo viên</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalGV')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveGV()">Lưu tài khoản</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// =============================================
+// CẤU HÌNH
+// =============================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbx1H9R2ZZgBXhuWWyYd7RdlTd08rXoHIWSS3LSpcEs4vKo_xK26dt2NSQum4ASbo1vo/exec'; // Thay bằng URL Apps Script đã deploy
+
+// =============================================
+// STATE
+// =============================================
+let token = localStorage.getItem('sc_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('sc_user') || 'null');
+let hvData = [];
+let gvData = [];
+let filterChucDanh = '';
+let editingHVId = null;
+let editingGVId = null;
+
+// =============================================
+// API
+// =============================================
+async function api(action, data = {}) {
+  const body = { action, token, ...data };
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
+  }
+}
+
+// =============================================
+// AUTH
+// =============================================
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  if (!username || !password) { errEl.textContent = 'Vui lòng nhập đầy đủ'; return; }
+  errEl.textContent = '';
+  const btn = document.querySelector('.btn-login');
+  btn.textContent = 'Đang đăng nhập...';
+  btn.disabled = true;
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'login', username, password })
+  }).then(r => r.json()).catch(() => ({ ok: false, msg: 'Không thể kết nối đến server' }));
+
+  btn.textContent = 'Đăng nhập';
+  btn.disabled = false;
+
+  if (!res.ok) { errEl.textContent = res.msg; return; }
+  token = res.token;
+  currentUser = res.user;
+  localStorage.setItem('sc_token', token);
+  localStorage.setItem('sc_user', JSON.stringify(currentUser));
+  startApp();
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogout() {
+  token = ''; currentUser = null;
+  localStorage.removeItem('sc_token');
+  localStorage.removeItem('sc_user');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// =============================================
+// APP INIT
+// =============================================
+function startApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('userDisplayName').textContent = currentUser.ten;
+
+  // Admin-only nav
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = currentUser.role === 'admin' ? '' : 'none';
+  });
+
+  loadHV();
+  navigate('dashboard');
+}
+
+window.onload = () => {
+  if (token && currentUser) startApp();
+};
+
+// =============================================
+// NAVIGATION
+// =============================================
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+
+  if (page === 'giaovien' && currentUser.role === 'admin') loadGV();
+  if (page === 'dashboard') updateDashboard();
+}
+
+// =============================================
+// DATE CALCULATIONS
+// =============================================
+function addMonths(dateStr, months) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().split('T')[0];
+}
+function addDays(dateStr, days) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+function fmtDate(str) {
+  if (!str) return '–';
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('vi-VN');
+}
+function calcDates() {
+  const start = document.getElementById('f-ngayBatDau').value;
+  document.getElementById('f-ngayGiaoDT').value    = start ? fmtDate(addMonths(start, 2)) : '';
+  document.getElementById('f-ngayHoanThanh').value = start ? fmtDate(addMonths(start, 6)) : '';
+  document.getElementById('f-hanNop').value        = start ? fmtDate(addDays(addMonths(start, 6), -10)) : '';
+}
+
+// =============================================
+// SCORE CALCULATIONS
+// =============================================
+function calcScores() {
+  const vals = ['f-gk1','f-gk2','f-gk3'].map(id => {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? null : v;
+  }).filter(v => v !== null);
+
+  const bth = vals.length > 0 ? (vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+  document.getElementById('f-diemBTH').value = bth !== null ? bth.toFixed(2) : '';
+
+  const qTrinh = parseFloat(document.getElementById('f-diemQuyTrinh').value);
+  const gd2 = (bth !== null && !isNaN(qTrinh))
+    ? (qTrinh * 0.8 + bth * 0.2) : null;
+  document.getElementById('f-diemGD2').value = gd2 !== null ? gd2.toFixed(2) : '';
+
+  const gd1 = parseFloat(document.getElementById('f-diemGD1').value);
+  const bq = (gd2 !== null && !isNaN(gd1))
+    ? (gd1 * 0.3 + gd2 * 0.7) : null;
+  document.getElementById('f-diemBQ').value = bq !== null ? bq.toFixed(2) : '';
+}
+
+// Tính từ object dữ liệu (dùng khi hiển thị bảng)
+function computeScores(hv) {
+  const vals = ['gk1','gk2','gk3'].map(k => parseFloat(hv[k])).filter(v => !isNaN(v) && v !== '');
+  const bth = vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  const qTrinh = parseFloat(hv.diemQuyTrinh);
+  const gd2 = (bth !== null && !isNaN(qTrinh)) ? (qTrinh * 0.8 + bth * 0.2) : null;
+  const gd1 = parseFloat(hv.diemGD1);
+  const bq = (gd2 !== null && !isNaN(gd1)) ? (gd1 * 0.3 + gd2 * 0.7) : null;
+  return { bth, gd2, bq };
+}
+
+// =============================================
+// LOAD & RENDER HỌC VIÊN
+// =============================================
+async function loadHV() {
+  const res = await api('getHV');
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  hvData = res.data;
+  renderTable();
+  updateDashboard();
+}
+
+function setFilter(val) {
+  filterChucDanh = val;
+  document.querySelectorAll('#filterRow .chip').forEach(c => {
+    c.classList.toggle('on', c.textContent.trim() === (val || 'Tất cả'));
+  });
+  renderTable();
+}
+
+function renderTable() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const filtered = hvData.filter(hv => {
+    const matchFilter = !filterChucDanh || hv.chucDanh === filterChucDanh;
+    const fullName = (hv.ho + ' ' + hv.ten).toLowerCase();
+    const matchSearch = !q || fullName.includes(q) || String(hv.maHV).includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  const tbody = document.getElementById('hvBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="15" class="empty">Không có học viên nào</td></tr>';
+    return;
+  }
+
+  const today = new Date();
+  tbody.innerHTML = filtered.map(hv => {
+    const { gd2, bq } = computeScores(hv);
+    const start = hv.ngayBatDau;
+    const hanNop = start ? addDays(addMonths(start, 6), -10) : '';
+    const daysLeft = hanNop ? Math.ceil((new Date(hanNop) - today) / 86400000) : null;
+
+    const hanNopStyle = daysLeft !== null && daysLeft <= 14 && daysLeft >= 0
+      ? 'color:#BA7517;font-weight:600' : '';
+    const overdue = daysLeft !== null && daysLeft < 0 && hv.trangThai === 'Chưa hoàn thành'
+      ? 'color:var(--red);font-weight:600' : '';
+
+    const badgeCD = hv.chucDanh === 'KTT' ? 'badge-ktt' : hv.chucDanh === 'GĐ' ? 'badge-gd' : 'badge-pgd';
+    const tt = hv.trangThai || '';
+    const badgeTT = tt.includes('chuyển') ? 'badge-sent' : tt.includes('nộp') ? 'badge-done' : 'badge-new';
+
+    const scoreCell = (v) => v != null
+      ? `<span class="td-score${v < 5 ? ' danger' : v < 7 ? ' warn' : ''}">${v.toFixed(2)}</span>`
+      : '<span style="color:var(--text-faint)">–</span>';
+
+    const gd1v = parseFloat(hv.diemGD1);
+
+    return `<tr>
+      <td class="td-code">${hv.maHV}</td>
+      <td>${hv.ho} ${hv.ten}</td>
+      <td><span class="badge ${badgeCD}">${hv.chucDanh}</span></td>
+      <td class="td-muted">${hv.donVi || '–'}</td>
+      <td class="td-muted" style="font-size:11px">${hv.nguoiHD || '–'}</td>
+      <td class="td-muted">${fmtDate(start)}</td>
+      <td class="td-muted">${fmtDate(addMonths(start,2))}</td>
+      <td class="td-muted">${fmtDate(addMonths(start,6))}</td>
+      <td style="${hanNopStyle}${overdue}">${fmtDate(hanNop)}</td>
+      <td class="td-muted" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${hv.tenDeTai||''}">${hv.tenDeTai || '–'}</td>
+      <td>${scoreCell(!isNaN(gd1v) ? gd1v : null)}</td>
+      <td>${scoreCell(gd2)}</td>
+      <td>${scoreCell(bq)}</td>
+      <td><span class="badge ${badgeTT}">${tt || 'Chưa hoàn thành'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-sm btn-icon" title="Sửa" onclick="openEditHV('${hv.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          ${currentUser.role==='admin'?`<button class="btn btn-sm btn-icon btn-danger" title="Xóa" onclick="deleteHV('${hv.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// =============================================
+// DASHBOARD
+// =============================================
+function updateDashboard() {
+  const today = new Date();
+  const total = hvData.length;
+  const done = hvData.filter(h => h.trangThai && h.trangThai !== 'Chưa hoàn thành').length;
+  const scores = hvData.map(h => computeScores(h).bq).filter(v => v != null);
+  const avg = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : null;
+  const dueSoon = hvData.filter(h => {
+    if (!h.ngayBatDau) return false;
+    const han = new Date(addDays(addMonths(h.ngayBatDau,6),-10));
+    const diff = Math.ceil((han - today)/86400000);
+    return diff >= 0 && diff <= 30 && h.trangThai === 'Chưa hoàn thành';
+  });
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-done-pct').textContent = total ? Math.round(done/total*100)+'% hoàn thành' : '';
+  document.getElementById('s-avg').textContent = avg ? avg.toFixed(2) : '–';
+  document.getElementById('s-due').textContent = dueSoon.length;
+
+  const el = document.getElementById('dueSoonList');
+  if (dueSoon.length === 0) {
+    el.innerHTML = '<div class="empty">Không có học viên nào sắp đến hạn</div>';
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Mã HV</th><th>Họ tên</th><th>Chức danh</th><th>Đơn vị</th><th>Hạn nộp bài</th><th>Còn lại</th></tr></thead>
+    <tbody>
+    ${dueSoon.map(h=>{
+      const han = addDays(addMonths(h.ngayBatDau,6),-10);
+      const diff = Math.ceil((new Date(han)-today)/86400000);
+      const cd = h.chucDanh==='KTT'?'badge-ktt':h.chucDanh==='GĐ'?'badge-gd':'badge-pgd';
+      return `<tr>
+        <td class="td-code">${h.maHV}</td>
+        <td>${h.ho} ${h.ten}</td>
+        <td><span class="badge ${cd}">${h.chucDanh}</span></td>
+        <td class="td-muted">${h.donVi||'–'}</td>
+        <td style="color:#BA7517;font-weight:500">${fmtDate(han)}</td>
+        <td><span class="badge badge-pending">${diff} ngày</span></td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+// =============================================
+// ADD / EDIT HỌC VIÊN
+// =============================================
+function openAddHV() {
+  editingHVId = null;
+  document.getElementById('modalHVTitle').textContent = 'Thêm học viên';
+  clearHVForm();
+  document.getElementById('modalHV').classList.add('open');
+}
+
+function openEditHV(id) {
+  const hv = hvData.find(h => h.id == id);
+  if (!hv) return;
+  editingHVId = id;
+  document.getElementById('modalHVTitle').textContent = 'Sửa học viên';
+
+  document.getElementById('f-maHV').value       = hv.maHV || '';
+  document.getElementById('f-ho').value          = hv.ho || '';
+  document.getElementById('f-ten').value         = hv.ten || '';
+  document.getElementById('f-chucDanh').value    = hv.chucDanh || '';
+  document.getElementById('f-donVi').value       = hv.donVi || '';
+  document.getElementById('f-nguoiHD').value     = hv.nguoiHD || '';
+  document.getElementById('f-ngayBatDau').value  = hv.ngayBatDau || '';
+  document.getElementById('f-tenDeTai').value    = hv.tenDeTai || '';
+  document.getElementById('f-diemGD1').value     = hv.diemGD1 || '';
+  document.getElementById('f-gk1').value         = hv.gk1 || '';
+  document.getElementById('f-gk2').value         = hv.gk2 || '';
+  document.getElementById('f-gk3').value         = hv.gk3 || '';
+  document.getElementById('f-diemQuyTrinh').value= hv.diemQuyTrinh || '';
+  document.getElementById('f-trangThai').value   = hv.trangThai || 'Chưa hoàn thành';
+  document.getElementById('f-ghiChu').value      = hv.ghiChu || '';
+
+  calcDates();
+  calcScores();
+  document.getElementById('modalHV').classList.add('open');
+}
+
+function clearHVForm() {
+  ['f-maHV','f-ho','f-ten','f-donVi','f-nguoiHD','f-ngayBatDau',
+   'f-ngayGiaoDT','f-ngayHoanThanh','f-hanNop','f-tenDeTai',
+   'f-diemGD1','f-gk1','f-gk2','f-gk3','f-diemQuyTrinh',
+   'f-diemBTH','f-diemGD2','f-diemBQ','f-ghiChu'
+  ].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-chucDanh').value = '';
+  document.getElementById('f-trangThai').value = 'Chưa hoàn thành';
+}
+
+async function saveHV() {
+  const maHV = document.getElementById('f-maHV').value.trim();
+  const ho   = document.getElementById('f-ho').value.trim();
+  const ten  = document.getElementById('f-ten').value.trim();
+  const chucDanh = document.getElementById('f-chucDanh').value;
+  if (!maHV || !ho || !ten || !chucDanh) {
+    toast('Vui lòng điền đầy đủ thông tin bắt buộc (*)', 'error'); return;
+  }
+
+  const data = {
+    id: editingHVId,
+    maHV, ho, ten, chucDanh,
+    donVi:         document.getElementById('f-donVi').value.trim(),
+    nguoiHD:       document.getElementById('f-nguoiHD').value.trim(),
+    ngayBatDau:    document.getElementById('f-ngayBatDau').value,
+    tenDeTai:      document.getElementById('f-tenDeTai').value.trim(),
+    diemGD1:       document.getElementById('f-diemGD1').value,
+    gk1:           document.getElementById('f-gk1').value,
+    gk2:           document.getElementById('f-gk2').value,
+    gk3:           document.getElementById('f-gk3').value,
+    diemQuyTrinh:  document.getElementById('f-diemQuyTrinh').value,
+    trangThai:     document.getElementById('f-trangThai').value,
+    ghiChu:        document.getElementById('f-ghiChu').value.trim(),
+  };
+
+  const action = editingHVId ? 'updateHV' : 'addHV';
+  const res = await api(action, data);
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
+  closeModal('modalHV');
+  loadHV();
+}
+
+async function deleteHV(id) {
+  if (!confirm('Xác nhận xóa học viên này?')) return;
+  const res = await api('deleteHV', { id });
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  toast('Đã xóa học viên', 'success');
+  loadHV();
+}
+
+// =============================================
+// GIÁO VIÊN
+// =============================================
+async function loadGV() {
+  const res = await api('getGV');
+  if (!res.ok) { toast(res.msg,'error'); return; }
+  gvData = res.data;
+  renderGV();
+}
+
+function renderGV() {
+  const tbody = document.getElementById('gvBody');
+  if (!gvData.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Chưa có tài khoản nào</td></tr>';
+    return;
+  }
+  tbody.innerHTML = gvData.map(gv => `<tr>
+    <td class="td-code">${gv.username}</td>
+    <td>${gv.ten}</td>
+    <td><span class="badge ${gv.role==='admin'?'badge-admin':'badge-gv'}">${gv.role==='admin'?'Admin':'Giáo viên'}</span></td>
+    <td>
+      <div class="td-actions">
+        <button class="btn btn-sm" onclick="openEditGV('${gv.id}')">Đổi mật khẩu</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteGV('${gv.id}')">Xóa</button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+function openAddGV() {
+  editingGVId = null;
+  document.getElementById('modalGVTitle').textContent = 'Thêm tài khoản GV';
+  ['gv-ten','gv-username','gv-password'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('gv-role').value = 'gv';
+  document.getElementById('modalGV').classList.add('open');
+}
+
+function openEditGV(id) {
+  const gv = gvData.find(g => g.id==id);
+  if (!gv) return;
+  editingGVId = id;
+  document.getElementById('modalGVTitle').textContent = 'Đổi mật khẩu – ' + gv.ten;
+  document.getElementById('gv-ten').value = gv.ten;
+  document.getElementById('gv-username').value = gv.username;
+  document.getElementById('gv-password').value = '';
+  document.getElementById('gv-role').value = gv.role;
+  document.getElementById('modalGV').classList.add('open');
+}
+
+async function saveGV() {
+  const ten      = document.getElementById('gv-ten').value.trim();
+  const username = document.getElementById('gv-username').value.trim();
+  const password = document.getElementById('gv-password').value;
+  const role     = document.getElementById('gv-role').value;
+  if (!ten || !username) { toast('Vui lòng điền đầy đủ','error'); return; }
+  if (!editingGVId && !password) { toast('Cần nhập mật khẩu','error'); return; }
+
+  const data = { id: editingGVId, ten, username, role };
+  if (password) data.password = password;
+
+  const action = editingGVId ? 'updateGV' : 'addGV';
+  const res = await api(action, data);
+  if (!res.ok) { toast(res.msg,'error'); return; }
+  toast(editingGVId ? 'Đã cập nhật tài khoản' : 'Đã thêm tài khoản','success');
+  closeModal('modalGV');
+  loadGV();
+}
+
+async function deleteGV(id) {
+  if (!confirm('Xác nhận xóa tài khoản này?')) return;
+  const res = await api('deleteGV',{id});
+  if (!res.ok) { toast(res.msg,'error'); return; }
+  toast('Đã xóa tài khoản','success');
+  loadGV();
+}
+
+// =============================================
+// EXPORT CSV
+// =============================================
+function exportCSV() {
+  const headers = ['Mã HV','Họ','Tên','Chức danh','Đơn vị TT','Người HD',
+    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài',
+    'Tên đề tài','Điểm GĐ1','GK1','GK2','GK3','Điểm quá trình',
+    'Điểm bài thu hoạch','Điểm GĐ2','Điểm BQ chung','Trạng thái','Ghi chú'];
+  const rows = hvData.map(h => {
+    const {bth,gd2,bq} = computeScores(h);
+    const s = h.ngayBatDau;
+    return [
+      h.maHV, h.ho, h.ten, h.chucDanh, h.donVi, h.nguoiHD,
+      fmtDate(s), fmtDate(addMonths(s,2)), fmtDate(addMonths(s,6)), fmtDate(addDays(addMonths(s,6),-10)),
+      h.tenDeTai, h.diemGD1, h.gk1, h.gk2, h.gk3, h.diemQuyTrinh,
+      bth?.toFixed(2)||'', gd2?.toFixed(2)||'', bq?.toFixed(2)||'',
+      h.trangThai, h.ghiChu
+    ].map(v => '"'+(v||'').toString().replace(/"/g,'""')+'"');
+  });
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'hoc_vien_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// =============================================
+// UTILS
+// =============================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+});
+
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = 'toast-item ' + type;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>
