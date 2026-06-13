@@ -960,8 +960,8 @@ function renderTable() {
     const gd1v = parseFloat(hv.diemGD1);
 
     return `<tr>
-      <td class="td-code">${hv.maHV}</td>
-      <td style="min-width:120px">${hv.ho} ${hv.ten}</td>
+      <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${hv.maHV}</td>
+      <td style="min-width:120px;cursor:pointer" onclick="openDetail('${hv.id}')">${hv.ho} ${hv.ten}</td>
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${hv.chucDanh}</span></td>
       <td class="td-muted">${hv.donVi || '–'}</td>
       <td class="td-muted" style="font-size:11px">${hv.nguoiHD || '–'}</td>
