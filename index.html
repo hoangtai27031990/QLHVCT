@@ -208,6 +208,40 @@ tbody tr:hover td{background:var(--gray-50)}
   .sidebar{display:none}
   .form-grid{grid-template-columns:1fr}
 }
+
+/* ── AUDIT LOG ── */
+.audit-action-add{background:var(--green-light);color:var(--green-dark)}
+.audit-action-edit{background:var(--blue-light);color:var(--blue)}
+.audit-action-delete{background:var(--red-light);color:var(--red)}
+.audit-diff{font-size:11px;line-height:1.6}
+.audit-diff-field{color:var(--text-faint);font-weight:600;margin-right:4px}
+.audit-diff-old{color:var(--red);text-decoration:line-through;margin-right:4px}
+.audit-diff-new{color:var(--green)}
+
+/* ── DETAIL VIEW ── */
+.detail-hero{background:#fff;border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:16px;display:flex;align-items:flex-start;gap:20px}
+.detail-avatar{width:52px;height:52px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green);flex-shrink:0}
+.detail-meta{flex:1}
+.detail-name{font-size:20px;font-weight:600;margin-bottom:4px}
+.detail-sub{font-size:13px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.detail-card{background:#fff;border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.detail-card-title{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:12px}
+.detail-row:last-child{border-bottom:none}
+.detail-row-label{color:var(--text-muted)}
+.detail-row-val{font-weight:500;text-align:right;max-width:60%}
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:1px;background:var(--border-md)}
+.tl-item{position:relative;margin-bottom:16px}
+.tl-dot{position:absolute;left:-24px;top:4px;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--border-md)}
+.tl-dot.done{background:var(--green)}
+.tl-dot.warn{background:#BA7517}
+.tl-dot.upcoming{background:var(--gray-200)}
+.tl-dot.overdue{background:var(--red)}
+.tl-label{font-size:12px;font-weight:600;color:var(--text)}
+.tl-date{font-size:11px;color:var(--text-muted);margin-top:1px}
+.tl-badge{display:inline-flex;margin-top:4px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -252,18 +286,22 @@ tbody tr:hover td{background:var(--gray-50)}
     <!-- SIDEBAR -->
     <nav class="sidebar">
       <div class="nav-section">Tổng quan</div>
-      <div class="nav-item active" onclick="navigate('dashboard')">
+      <div class="nav-item active" onclick="navigate('dashboard',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Dashboard
       </div>
       <div class="nav-section">Quản lý</div>
-      <div class="nav-item" onclick="navigate('hocvien')">
+      <div class="nav-item" onclick="navigate('hocvien',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Học viên
       </div>
-      <div class="nav-item admin-only" onclick="navigate('giaovien')">
+      <div class="nav-item admin-only" onclick="navigate('giaovien',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Tài khoản GV
+      </div>
+      <div class="nav-item admin-only" onclick="navigate('auditlog',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Lịch sử sửa
       </div>
     </nav>
 
@@ -384,10 +422,57 @@ tbody tr:hover td{background:var(--gray-50)}
       </div>
 
     </main>
+
+    <!-- AUDIT LOG (admin only, ẩn/hiện qua navigate) -->
+    <div id="page-auditlog-wrap" style="display:none;flex:1;padding:20px;overflow-y:auto">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Lịch sử chỉnh sửa</span>
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="auditPage=0;renderAuditLog()">
+            </div>
+            <button class="btn" onclick="clearAuditLog()" style="color:var(--red)">Xóa log cũ</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:130px">Thời gian</th>
+                <th style="min-width:100px">Người sửa</th>
+                <th style="min-width:80px">Hành động</th>
+                <th style="min-width:80px">Mã HV</th>
+                <th style="min-width:130px">Học viên</th>
+                <th>Nội dung thay đổi</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody">
+              <tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="auditPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- MODAL: HỌC VIÊN -->
+<!-- DETAIL OVERLAY: Xem chi tiết học viên -->
+<div id="detailOverlay" style="display:none;position:fixed;inset:0;background:#fff;z-index:150;overflow-y:auto">
+  <div style="max-width:860px;margin:0 auto;padding:24px 20px 48px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;position:sticky;top:0;background:#fff;padding:12px 0;border-bottom:0.5px solid var(--border);z-index:1">
+      <button class="btn" onclick="closeDetail()" style="gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Quay lại
+      </button>
+      <span id="detail-breadcrumb" style="font-size:12px;color:var(--text-muted)"></span>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+</div>
 <div class="overlay" id="modalHV">
   <div class="modal">
     <div class="modal-header">
@@ -627,6 +712,7 @@ let gvData = [];
 let filterChucDanh = '';
 let editingHVId = null;
 let editingGVId = null;
+let auditPage = 0;
 
 // =============================================
 // API
@@ -706,7 +792,8 @@ function startApp() {
   });
 
   loadHV();
-  navigate('dashboard');
+  const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
+  navigate('dashboard', dashNav);
 }
 
 window.onload = () => {
@@ -716,11 +803,26 @@ window.onload = () => {
 // =============================================
 // NAVIGATION
 // =============================================
-function navigate(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+function navigate(page, el) {
+  const auditWrap = document.getElementById('page-auditlog-wrap');
+  const mainEl    = document.querySelector('.main');
+
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  if (page === 'auditlog') {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    mainEl.style.display = 'none';
+    auditWrap.style.display = 'block';
+    auditPage = 0;
+    renderAuditLog();
+    return;
+  }
+
+  auditWrap.style.display = 'none';
+  mainEl.style.display = '';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  event && event.currentTarget && event.currentTarget.classList.add('active');
 
   if (page === 'giaovien' && currentUser.role === 'admin') loadGV();
   if (page === 'dashboard') updateDashboard();
@@ -875,6 +977,9 @@ function renderTable() {
       <td><span class="badge ${badgeTT}" style="white-space:normal;line-height:1.4">${tt || 'Chưa hoàn thành'}</span></td>
       <td>
         <div class="td-actions">
+          <button class="btn btn-sm btn-icon" title="Chi tiết" onclick="openDetail('${hv.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </button>
           <button class="btn btn-sm btn-icon" title="Sửa" onclick="openEditHV('${hv.id}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1031,6 +1136,9 @@ function clearHVForm() {
 }
 
 async function saveHV() {
+  // Snapshot trước khi lưu để so sánh thay đổi
+  const oldHv = editingHVId ? hvData.find(h => h.id == editingHVId) : null;
+
   const maHV = document.getElementById('f-maHV').value.trim();
   const ho   = document.getElementById('f-ho').value.trim();
   const ten  = document.getElementById('f-ten').value.trim();
@@ -1062,6 +1170,15 @@ async function saveHV() {
   const res = await api(action, data);
   console.log('[saveHV] ket qua tra ve:', JSON.stringify(res));
   if (!res.ok) { toast(res.msg, 'error'); return; }
+
+  // Ghi audit log
+  if (editingHVId && oldHv) {
+    const changes = buildChanges(oldHv, data);
+    if (changes.length) auditLog('edit', data, changes);
+  } else {
+    auditLog('add', data);
+  }
+
   toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
   closeModal('modalHV');
   loadHV();
@@ -1104,8 +1221,10 @@ function checkDeleteConfirm() {
 
 async function confirmDeleteHV() {
   if (!pendingDeleteHVId) return;
+  const hv = hvData.find(h => h.id == pendingDeleteHVId);
   const res = await api('deleteHV', { id: pendingDeleteHVId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
+  if (hv) auditLog('delete', hv);
   toast('Đã xóa học viên', 'success');
   closeModal('modalDeleteHV');
   pendingDeleteHVId = null;
@@ -1324,6 +1443,234 @@ function toast(msg, type='success') {
   el.textContent = msg;
   document.getElementById('toast').appendChild(el);
   setTimeout(() => el.remove(), 3500);
+}
+
+// =============================================
+// AUDIT LOG
+// =============================================
+const AUDIT_KEY = 'sc_audit_log';
+const AUDIT_MAX = 500;
+const AUDIT_PER_PAGE = 30;
+
+function auditLog(action, hv, changes = null) {
+  const logs = getAuditLogs();
+  logs.unshift({
+    ts: Date.now(),
+    user: currentUser?.ten || currentUser?.username || '?',
+    action, // 'add' | 'edit' | 'delete'
+    maHV: hv.maHV || '',
+    name: ((hv.ho || '') + ' ' + (hv.ten || '')).trim(),
+    changes
+  });
+  localStorage.setItem(AUDIT_KEY, JSON.stringify(logs.slice(0, AUDIT_MAX)));
+}
+
+function getAuditLogs() {
+  try { return JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function clearAuditLog() {
+  if (!confirm('Xóa toàn bộ lịch sử chỉnh sửa?')) return;
+  localStorage.removeItem(AUDIT_KEY);
+  renderAuditLog();
+  toast('Đã xóa lịch sử', 'success');
+}
+
+const FIELD_LABELS = {
+  maHV:'Mã HV', ho:'Họ', ten:'Tên', chucDanh:'Chức danh', donVi:'Đơn vị',
+  nguoiHD:'Người HD', sdt:'SĐT', email:'Email', ngayBatDau:'Ngày bắt đầu',
+  tenDeTai:'Đề tài', diemGD1:'Điểm GĐ1', gk1:'GK1', gk2:'GK2', gk3:'GK3',
+  diemQuyTrinh:'Điểm quá trình', trangThai:'Trạng thái', ghiChu:'Ghi chú'
+};
+
+function buildChanges(oldHv, newData) {
+  const changes = [];
+  Object.keys(FIELD_LABELS).forEach(f => {
+    const ov = (oldHv[f] || '').toString().trim();
+    const nv = (newData[f] || '').toString().trim();
+    if (ov !== nv) changes.push({ field: FIELD_LABELS[f] || f, old: ov, new: nv });
+  });
+  return changes;
+}
+
+function renderAuditLog() {
+  const q = (document.getElementById('auditSearch')?.value || '').toLowerCase();
+  let logs = getAuditLogs().filter(l => {
+    if (!q) return true;
+    return (l.maHV||'').toLowerCase().includes(q)
+        || (l.name||'').toLowerCase().includes(q)
+        || (l.user||'').toLowerCase().includes(q);
+  });
+
+  const total = logs.length;
+  const start = auditPage * AUDIT_PER_PAGE;
+  const page  = logs.slice(start, start + AUDIT_PER_PAGE);
+
+  const actionBadge = a => {
+    const cls = a==='add' ? 'audit-action-add' : a==='edit' ? 'audit-action-edit' : 'audit-action-delete';
+    const lbl = a==='add' ? 'Thêm mới' : a==='edit' ? 'Chỉnh sửa' : 'Xóa';
+    return `<span class="badge ${cls}">${lbl}</span>`;
+  };
+
+  const tbody = document.getElementById('auditBody');
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Không có dữ liệu</td></tr>';
+    document.getElementById('auditPager').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(l => {
+    const dt = new Date(l.ts);
+    const timeStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+    let diffHtml = '–';
+    if (l.changes && l.changes.length) {
+      diffHtml = `<div class="audit-diff">`
+        + l.changes.slice(0, 4).map(c =>
+            `<div><span class="audit-diff-field">${c.field}:</span>`
+            + (c.old ? `<span class="audit-diff-old">${c.old}</span>` : '')
+            + `<span class="audit-diff-new">${c.new || '(xóa)'}</span></div>`
+          ).join('')
+        + (l.changes.length > 4 ? `<div style="color:var(--text-faint)">+${l.changes.length-4} trường khác</div>` : '')
+        + '</div>';
+    } else if (l.action === 'delete') {
+      diffHtml = '<span style="color:var(--red);font-size:12px">Đã xóa khỏi hệ thống</span>';
+    } else if (l.action === 'add') {
+      diffHtml = '<span style="color:var(--green);font-size:12px">Thêm hồ sơ mới</span>';
+    }
+    return `<tr>
+      <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${timeStr}</td>
+      <td style="font-size:12px">${l.user}</td>
+      <td>${actionBadge(l.action)}</td>
+      <td class="td-code">${l.maHV}</td>
+      <td style="font-size:12px">${l.name}</td>
+      <td>${diffHtml}</td>
+    </tr>`;
+  }).join('');
+
+  const totalPages = Math.ceil(total / AUDIT_PER_PAGE);
+  document.getElementById('auditPager').innerHTML =
+    `<span>${total} bản ghi</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="auditPage=Math.max(0,auditPage-1);renderAuditLog()" ${auditPage===0?'disabled':''}>‹ Trước</button>
+      <span style="padding:5px 8px;font-size:11px">Trang ${auditPage+1}/${totalPages||1}</span>
+      <button class="btn btn-sm" onclick="auditPage++;renderAuditLog()" ${auditPage>=totalPages-1?'disabled':''}>Sau ›</button>
+    </div>`;
+}
+
+// =============================================
+// DETAIL VIEW HỌC VIÊN
+// =============================================
+function openDetail(id) {
+  const hv = hvData.find(h => h.id == id);
+  if (!hv) return;
+
+  const { bth, gd2, bq } = computeScores(hv);
+  const start = hv.ngayBatDau;
+  const ngayGiao      = start ? addMonths(start, 2) : '';
+  const ngayHoanThanh = start ? addMonths(start, 6) : '';
+  const hanNop        = start ? addDays(addMonths(start, 6), -10) : '';
+  const today         = new Date(); today.setHours(0,0,0,0);
+  const daysLeft      = hanNop ? Math.ceil((new Date(hanNop) - today) / 86400000) : null;
+
+  const initials = ((hv.ho||'')[0]||'') + ((hv.ten||'')[0]||'');
+
+  const scoreRow = (label, val, note='') => {
+    if (val === null || val === undefined) return '';
+    const cls = val < 5 ? 'color:var(--red)' : val < 7 ? 'color:#BA7517' : 'color:var(--green)';
+    return `<div class="detail-row">
+      <span class="detail-row-label">${label}${note ? `<span style="color:var(--text-faint);font-weight:400"> ${note}</span>` : ''}</span>
+      <span class="detail-row-val" style="${cls};font-size:14px">${val.toFixed(2)}</span>
+    </div>`;
+  };
+
+  const infoRow = (label, val) =>
+    `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val">${val||'–'}</span></div>`;
+
+  const tlItems = [
+    { label:'Bắt đầu thực tập',   date: start,          state: start ? 'done' : 'upcoming' },
+    { label:'Giao đề tài',         date: ngayGiao,        state: ngayGiao && new Date(ngayGiao) <= today ? 'done' : 'upcoming' },
+    { label:'Hoàn thành thực tập', date: ngayHoanThanh,   state: ngayHoanThanh && new Date(ngayHoanThanh) <= today ? 'done' : 'upcoming' },
+    { label:'Hạn nộp bài',         date: hanNop,
+      state: !hanNop ? 'upcoming' : daysLeft < 0 && !isDone(hv) ? 'overdue' : daysLeft !== null && daysLeft <= 14 ? 'warn' : new Date(hanNop) <= today ? 'done' : 'upcoming'
+    },
+  ];
+
+  const urgencyNote = () => {
+    if (!hanNop) return '';
+    if (isDone(hv)) return `<span class="badge badge-done">Đã hoàn thành</span>`;
+    if (daysLeft < 0) return `<span class="badge" style="background:var(--red-light);color:var(--red)">Quá hạn ${Math.abs(daysLeft)} ngày</span>`;
+    if (daysLeft <= 7) return `<span class="badge" style="background:var(--red-light);color:var(--red)">Còn ${daysLeft} ngày</span>`;
+    if (daysLeft <= 14) return `<span class="badge badge-pending">Còn ${daysLeft} ngày</span>`;
+    return `<span class="badge badge-new">Còn ${daysLeft} ngày</span>`;
+  };
+
+  document.getElementById('detail-breadcrumb').textContent = `${hv.maHV} · ${hv.ho} ${hv.ten}`;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-avatar">${initials.toUpperCase()}</div>
+      <div class="detail-meta">
+        <div class="detail-name">${hv.ho} ${hv.ten}</div>
+        <div class="detail-sub">
+          <span><b>Mã:</b> ${hv.maHV}</span>
+          ${hv.chucDanh ? `<span class="badge ${getBadgeCD(hv.chucDanh)}">${hv.chucDanh}</span>` : ''}
+          ${hv.donVi ? `<span>🏢 ${hv.donVi}</span>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-sm btn-primary" onclick="closeDetail();openEditHV('${hv.id}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Sửa
+        </button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Thông tin liên hệ</div>
+        ${infoRow('Người hướng dẫn', hv.nguoiHD)}
+        ${infoRow('SĐT', hv.sdt)}
+        ${infoRow('Email', hv.email)}
+        ${infoRow('Ghi chú', hv.ghiChu)}
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-title">Điểm số</div>
+        ${scoreRow('Điểm GĐ1', isNaN(parseFloat(hv.diemGD1)) ? null : parseFloat(hv.diemGD1), '(nhập tay)')}
+        ${scoreRow('GK1', isNaN(parseFloat(hv.gk1)) ? null : parseFloat(hv.gk1))}
+        ${scoreRow('GK2', isNaN(parseFloat(hv.gk2)) ? null : parseFloat(hv.gk2))}
+        ${scoreRow('GK3', isNaN(parseFloat(hv.gk3)) ? null : parseFloat(hv.gk3))}
+        ${scoreRow('Điểm quá trình', isNaN(parseFloat(hv.diemQuyTrinh)) ? null : parseFloat(hv.diemQuyTrinh))}
+        ${scoreRow('Điểm GĐ2', gd2, '(tự tính)')}
+        ${scoreRow('Bình quân chung', bq, '(GĐ1×30% + GĐ2×70%)')}
+      </div>
+    </div>
+
+    <div class="detail-card" style="margin-bottom:12px">
+      <div class="detail-card-title">Đề tài thực tập</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;margin:0">${hv.tenDeTai || '<span style="color:var(--text-faint)">Chưa có đề tài</span>'}</p>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-title" style="margin-bottom:16px">Timeline thực tập</div>
+      <div class="timeline">
+        ${tlItems.map(item => `
+          <div class="tl-item">
+            <div class="tl-dot ${item.state}"></div>
+            <div class="tl-label">${item.label}</div>
+            <div class="tl-date">${item.date ? fmtDate(item.date) : 'Chưa xác định'}</div>
+            ${item.label === 'Hạn nộp bài' ? `<div class="tl-badge">${urgencyNote()}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('detailOverlay').style.display = 'block';
+  document.documentElement.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').style.display = 'none';
+  document.documentElement.style.overflow = '';
 }
 </script>
 </body>
