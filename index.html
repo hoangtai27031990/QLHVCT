@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý học viên cấp trung – Saigon Co-op</title>
+<title>Quản lý học viên cấp trung – Saigon Co.op</title>
 <style>
 :root {
   --green: #0F6E56;
@@ -252,7 +252,7 @@ tbody tr:hover td{background:var(--gray-50)}
   <div class="login-card">
     <div class="login-logo">
       <div class="login-logo-icon">SC</div>
-      <span>Saigon Co-op Training</span>
+      <span>Saigon Co.op Training</span>
     </div>
     <h2>Đăng nhập</h2>
     <p>Hệ thống quản lý học viên cấp trung</p>
@@ -332,7 +332,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="toolbar">
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="renderTable()">
+                <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="hvPage=0;renderTable()">
               </div>
               <button class="btn" onclick="downloadTemplate()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -353,6 +353,19 @@ tbody tr:hover td{background:var(--gray-50)}
               </button>
             </div>
           </div>
+          <div id="bulkBar" style="display:none;align-items:center;gap:8px;background:var(--green-light);border:0.5px solid var(--green-mid);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green-dark)">
+            <span id="bulkCount" style="font-weight:600"></span>
+            <div style="flex:1"></div>
+            <button class="btn btn-sm" onclick="exportSelectedCSV()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất CSV
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="bulkDeleteHV()" id="bulkDeleteBtn" style="${currentUser.role==='admin'?'':'display:none'}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Xóa
+            </button>
+            <button class="btn btn-sm" onclick="clearSelection()">Bỏ chọn</button>
+          </div>
           <div class="filter-row" id="filterRow">
             <div class="chip on" onclick="setFilter('')">Tất cả</div>
             <div class="chip" onclick="setFilter('Thực tập Giám đốc')">TT Giám đốc</div>
@@ -367,6 +380,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <table id="hvTable">
               <thead>
                 <tr>
+                  <th style="width:32px"><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)"></th>
                   <th>Mã HV</th>
                   <th>Họ tên</th>
                   <th>Chức danh</th>
@@ -386,10 +400,11 @@ tbody tr:hover td{background:var(--gray-50)}
                 </tr>
               </thead>
               <tbody id="hvBody">
-                <tr><td colspan="16" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="17" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
+          <div id="hvPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
         </div>
       </div>
 
@@ -713,6 +728,9 @@ let filterChucDanh = '';
 let editingHVId = null;
 let editingGVId = null;
 let auditPage = 0;
+let hvPage = 0;
+const HV_PER_PAGE = 20;
+let selectedHV = new Set();
 
 // =============================================
 // API
@@ -916,6 +934,7 @@ function getBadgeCD(cd) {
 
 function setFilter(val) {
   filterChucDanh = val;
+  hvPage = 0;
   document.querySelectorAll('#filterRow .chip').forEach(c => {
     c.classList.toggle('on', c.textContent.trim() === (val || 'Tất cả'));
   });
@@ -933,12 +952,20 @@ function renderTable() {
 
   const tbody = document.getElementById('hvBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="16" class="empty">Không có học viên nào</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="empty">Không có học viên nào</td></tr>';
+    document.getElementById('hvPager').innerHTML = '';
+    updateBulkBar();
     return;
   }
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / HV_PER_PAGE));
+  if (hvPage >= totalPages) hvPage = totalPages - 1;
+  if (hvPage < 0) hvPage = 0;
+  const pageStart = hvPage * HV_PER_PAGE;
+  const pageItems = filtered.slice(pageStart, pageStart + HV_PER_PAGE);
+
   const today = new Date();
-  tbody.innerHTML = filtered.map(hv => {
+  tbody.innerHTML = pageItems.map(hv => {
     const { gd2, bq } = computeScores(hv);
     const start = hv.ngayBatDau;
     const hanNop = start ? addDays(addMonths(start, 6), -10) : '';
@@ -960,6 +987,7 @@ function renderTable() {
     const gd1v = parseFloat(hv.diemGD1);
 
     return `<tr>
+      <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
       <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${hv.maHV}</td>
       <td style="min-width:120px;cursor:pointer" onclick="openDetail('${hv.id}')">${hv.ho} ${hv.ten}</td>
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${hv.chucDanh}</span></td>
@@ -990,6 +1018,116 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
+
+  const selectAllChk = document.getElementById('selectAllChk');
+  if (selectAllChk) {
+    const allChecked = pageItems.length > 0 && pageItems.every(hv => selectedHV.has(String(hv.id)));
+    selectAllChk.checked = allChecked;
+    selectAllChk.indeterminate = !allChecked && pageItems.some(hv => selectedHV.has(String(hv.id)));
+  }
+
+  document.getElementById('hvPager').innerHTML =
+    `<span>${filtered.length} học viên</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="hvPage=Math.max(0,hvPage-1);renderTable()" ${hvPage===0?'disabled':''}>‹ Trước</button>
+      <span style="padding:5px 8px;font-size:11px">Trang ${hvPage+1}/${totalPages}</span>
+      <button class="btn btn-sm" onclick="hvPage++;renderTable()" ${hvPage>=totalPages-1?'disabled':''}>Sau ›</button>
+    </div>`;
+
+  updateBulkBar();
+}
+
+function toggleSelectAll(chk) {
+  document.querySelectorAll('#hvBody .hvChk').forEach(c => {
+    const id = c.getAttribute('data-id');
+    if (chk.checked) selectedHV.add(id); else selectedHV.delete(id);
+    c.checked = chk.checked;
+  });
+  updateBulkBar();
+}
+
+function toggleSelectRow(id, chk) {
+  if (chk.checked) selectedHV.add(String(id)); else selectedHV.delete(String(id));
+  const selectAllChk = document.getElementById('selectAllChk');
+  if (selectAllChk) {
+    const boxes = [...document.querySelectorAll('#hvBody .hvChk')];
+    selectAllChk.checked = boxes.every(c => c.checked);
+    selectAllChk.indeterminate = !selectAllChk.checked && boxes.some(c => c.checked);
+  }
+  updateBulkBar();
+}
+
+function clearSelection() {
+  selectedHV.clear();
+  renderTable();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = selectedHV.size;
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('bulkCount').textContent = `Đã chọn ${count} học viên`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function rowsToCSV(rows) {
+  const headers = ['Mã HV','Họ','Tên','Chức danh','Đơn vị TT','Người HD',
+    'SĐT','Email',
+    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài',
+    'Tên đề tài','Điểm GĐ1','GK1','GK2','GK3','Điểm quá trình',
+    'Điểm bài thu hoạch','Điểm GĐ2','Điểm BQ chung','Trạng thái','Ghi chú'];
+  const data = rows.map(h => {
+    const {bth,gd2,bq} = computeScores(h);
+    const s = h.ngayBatDau;
+    return [
+      h.maHV, h.ho, h.ten, h.chucDanh, h.donVi, h.nguoiHD,
+      h.sdt, h.email,
+      fmtDate(s), fmtDate(addMonths(s,2)), fmtDate(addMonths(s,6)), fmtDate(addDays(addMonths(s,6),-10)),
+      h.tenDeTai, h.diemGD1, h.gk1, h.gk2, h.gk3, h.diemQuyTrinh,
+      bth?.toFixed(2)||'', gd2?.toFixed(2)||'', bq?.toFixed(2)||'',
+      h.trangThai, h.ghiChu
+    ].map(v => '"'+(v||'').toString().replace(/"/g,'""')+'"');
+  });
+  return [headers.join(','), ...data.map(r=>r.join(','))].join('\n');
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function exportSelectedCSV() {
+  const rows = hvData.filter(h => selectedHV.has(String(h.id)));
+  if (!rows.length) { toast('Chưa chọn học viên nào', 'error'); return; }
+  downloadCSV(rowsToCSV(rows), 'hoc_vien_chon_' + new Date().toISOString().slice(0,10) + '.csv');
+}
+
+async function bulkDeleteHV() {
+  if (currentUser.role !== 'admin') { toast('Chỉ admin được phép xóa', 'error'); return; }
+  const ids = [...selectedHV];
+  if (!ids.length) { toast('Chưa chọn học viên nào', 'error'); return; }
+  if (!confirm(`Xác nhận xóa ${ids.length} học viên đã chọn? Hành động này không thể hoàn tác.`)) return;
+
+  let okCount = 0, failCount = 0;
+  for (const id of ids) {
+    const hv = hvData.find(h => String(h.id) === String(id));
+    const res = await api('deleteHV', { id });
+    if (res.ok) {
+      okCount++;
+      if (hv) auditLog('delete', hv);
+    } else {
+      failCount++;
+    }
+  }
+  toast(`Đã xóa ${okCount} học viên${failCount ? `, lỗi ${failCount}` : ''}`, failCount ? 'error' : 'success');
+  selectedHV.clear();
+  loadHV();
 }
 
 // =============================================
