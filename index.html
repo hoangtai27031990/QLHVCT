@@ -629,7 +629,7 @@ tbody tr:hover td{background:var(--gray-50)}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalHV')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveHV()">Lưu học viên</button>
+      <button class="btn btn-primary" id="btnSaveHV" onclick="saveHV()">Lưu học viên</button>
     </div>
   </div>
 </div>
@@ -1327,6 +1327,9 @@ function clearHVForm() {
 }
 
 async function saveHV() {
+  const btn = document.getElementById('btnSaveHV');
+  if (btn.disabled) return; // tránh nhấn lưu nhiều lần liên tiếp
+
   // Snapshot trước khi lưu để so sánh thay đổi
   const oldHv = editingHVId ? hvData.find(h => h.id == editingHVId) : null;
 
@@ -1365,33 +1368,43 @@ async function saveHV() {
     ghiChu:        document.getElementById('f-ghiChu').value.trim(),
   };
 
-  const action = editingHVId ? 'updateHV' : 'addHV';
-  const res = await api(action, data);
-  if (!res.ok) { toast(res.msg, 'error'); return; }
+  // Hiển thị trạng thái đang lưu, chặn nhấn lại
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
 
-  // Cập nhật hvData cục bộ thay vì tải lại toàn bộ danh sách
-  if (editingHVId) {
-    const idx = hvData.findIndex(h => h.id == editingHVId);
-    if (idx !== -1) {
-      hvData[idx] = { ...hvData[idx], ...data };
+  try {
+    const action = editingHVId ? 'updateHV' : 'addHV';
+    const res = await api(action, data);
+    if (!res.ok) { toast(res.msg, 'error'); return; }
+
+    // Cập nhật hvData cục bộ thay vì tải lại toàn bộ danh sách
+    if (editingHVId) {
+      const idx = hvData.findIndex(h => h.id == editingHVId);
+      if (idx !== -1) {
+        hvData[idx] = { ...hvData[idx], ...data };
+      }
+    } else {
+      // addHV trả về id mới được tạo từ server
+      hvData.push({ ...data, id: res.id });
     }
-  } else {
-    // addHV trả về id mới được tạo từ server
-    hvData.push({ ...data, id: res.id });
-  }
 
-  // Ghi audit log
-  if (editingHVId && oldHv) {
-    const changes = buildChanges(oldHv, data);
-    if (changes.length) auditLog('edit', data, changes);
-  } else {
-    auditLog('add', data);
-  }
+    // Ghi audit log
+    if (editingHVId && oldHv) {
+      const changes = buildChanges(oldHv, data);
+      if (changes.length) auditLog('edit', data, changes);
+    } else {
+      auditLog('add', data);
+    }
 
-  toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
-  closeModal('modalHV');
-  renderTable();
-  updateDashboard();
+    toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
+    closeModal('modalHV');
+    renderTable();
+    updateDashboard();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 }
 
 let pendingDeleteHVId = null;
