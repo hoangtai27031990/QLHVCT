@@ -736,6 +736,21 @@ const HV_PER_PAGE = 20;
 let selectedHV = new Set();
 
 // =============================================
+// SECURITY HELPERS
+// =============================================
+// Escape dữ liệu người dùng nhập trước khi chèn vào HTML (chống XSS)
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+// =============================================
 // API
 // Dùng GET + URLSearchParams để tránh Apps Script
 // mất body khi browser bị redirect (lỗi CORS/POST)
@@ -747,15 +762,41 @@ async function api(action, data = {}) {
       method: 'GET',
     });
     const text = await res.text();
+    let result;
     try {
-      return JSON.parse(text);
+      result = JSON.parse(text);
     } catch(pe) {
       console.error('[api] parse error, raw response:', text);
       return { ok: false, msg: 'Lỗi parse response từ server' };
     }
+    // Token hết hạn / không hợp lệ -> tự đăng xuất và báo cho người dùng
+    if (!result.ok && action !== 'login' && isAuthError(result.msg)) {
+      handleSessionExpired();
+      return result;
+    }
+    return result;
   } catch (e) {
     return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
   }
+}
+
+// Kiểm tra thông báo lỗi từ server có liên quan đến phiên đăng nhập hết hạn/không hợp lệ
+function isAuthError(msg) {
+  if (!msg) return false;
+  const m = String(msg).toLowerCase();
+  return m.includes('unauthorized')
+      || m.includes('hết hạn')
+      || m.includes('không hợp lệ')
+      || m.includes('token');
+}
+
+// Xử lý khi phiên đăng nhập hết hạn: đăng xuất và báo cho người dùng
+let sessionExpiredHandled = false;
+function handleSessionExpired() {
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+  doLogout();
+  toast('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại', 'error');
 }
 
 // =============================================
@@ -782,6 +823,7 @@ async function doLogin() {
   if (!res.ok) { errEl.textContent = res.msg; return; }
   token = res.token;
   currentUser = res.user;
+  sessionExpiredHandled = false;
   localStorage.setItem('sc_token', token);
   localStorage.setItem('sc_user', JSON.stringify(currentUser));
   startApp();
@@ -991,21 +1033,21 @@ function renderTable() {
 
     return `<tr>
       <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
-      <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${hv.maHV}</td>
-      <td style="min-width:120px;cursor:pointer" onclick="openDetail('${hv.id}')">${hv.ho} ${hv.ten}</td>
-      <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${hv.chucDanh}</span></td>
-      <td class="td-muted">${hv.donVi || '–'}</td>
-      <td class="td-muted" style="font-size:11px">${hv.nguoiHD || '–'}</td>
-      <td class="td-muted" style="font-size:11px">${hv.sdt || '–'}</td>
+      <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.maHV)}</td>
+      <td style="min-width:120px;cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</td>
+      <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
+      <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
+      <td class="td-muted" style="font-size:11px">${escapeHTML(hv.nguoiHD) || '–'}</td>
+      <td class="td-muted" style="font-size:11px">${escapeHTML(hv.sdt) || '–'}</td>
       <td class="td-muted">${fmtDate(start)}</td>
       <td class="td-muted">${fmtDate(addMonths(start,2))}</td>
       <td class="td-muted">${fmtDate(addMonths(start,6))}</td>
       <td style="${hanNopStyle}${overdue}">${fmtDate(hanNop)}</td>
-      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(hv.tenDeTai||'').replace(/"/g,'&quot;')}">${hv.tenDeTai || '–'}</td>
+      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHTML(hv.tenDeTai||'')}">${escapeHTML(hv.tenDeTai) || '–'}</td>
       <td style="text-align:center">${scoreCell(!isNaN(gd1v) ? gd1v : null)}</td>
       <td style="text-align:center">${scoreCell(gd2)}</td>
       <td style="text-align:center">${scoreCell(bq)}</td>
-      <td><span class="badge ${badgeTT}" style="white-space:normal;line-height:1.4">${tt || 'Chưa hoàn thành'}</span></td>
+      <td><span class="badge ${badgeTT}" style="white-space:normal;line-height:1.4">${escapeHTML(tt) || 'Chưa hoàn thành'}</span></td>
       <td>
         <div class="td-actions">
           <button class="btn btn-sm btn-icon" title="Chi tiết" onclick="openDetail('${hv.id}')">
@@ -1198,11 +1240,11 @@ function updateDashboard() {
       urgencyColor = 'color:var(--amber)';
     }
     return `<tr>
-      <td class="td-code">${h.maHV}</td>
-      <td style="min-width:120px">${h.ho} ${h.ten}</td>
-      <td style="min-width:100px"><span class="badge ${badgeCD(h.chucDanh)}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${h.chucDanh}</span></td>
-      <td class="td-muted">${h.donVi||'–'}</td>
-      <td class="td-muted" style="font-size:11px">${h.nguoiHD||'–'}</td>
+      <td class="td-code">${escapeHTML(h.maHV)}</td>
+      <td style="min-width:120px">${escapeHTML(h.ho)} ${escapeHTML(h.ten)}</td>
+      <td style="min-width:100px"><span class="badge ${badgeCD(h.chucDanh)}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(h.chucDanh)}</span></td>
+      <td class="td-muted">${escapeHTML(h.donVi)||'–'}</td>
+      <td class="td-muted" style="font-size:11px">${escapeHTML(h.nguoiHD)||'–'}</td>
       <td style="${urgencyColor}">${fmtDate(h.han)}</td>
       <td>${urgencyBadge}</td>
     </tr>`;
@@ -1306,10 +1348,8 @@ async function saveHV() {
     ghiChu:        document.getElementById('f-ghiChu').value.trim(),
   };
 
-  console.log('[saveHV] data gui len:', JSON.stringify(data));
   const action = editingHVId ? 'updateHV' : 'addHV';
   const res = await api(action, data);
-  console.log('[saveHV] ket qua tra ve:', JSON.stringify(res));
   if (!res.ok) { toast(res.msg, 'error'); return; }
 
   // Ghi audit log
@@ -1389,8 +1429,8 @@ function renderGV() {
     return;
   }
   tbody.innerHTML = gvData.map(gv => `<tr>
-    <td class="td-code">${gv.username}</td>
-    <td>${gv.ten}</td>
+    <td class="td-code">${escapeHTML(gv.username)}</td>
+    <td>${escapeHTML(gv.ten)}</td>
     <td><span class="badge ${gv.role==='admin'?'badge-admin':'badge-gv'}">${gv.role==='admin'?'Admin':'Giáo viên'}</span></td>
     <td>
       <div class="td-actions">
@@ -1668,9 +1708,9 @@ function renderAuditLog() {
     if (l.changes && l.changes.length) {
       diffHtml = `<div class="audit-diff">`
         + l.changes.slice(0, 4).map(c =>
-            `<div><span class="audit-diff-field">${c.field}:</span>`
-            + (c.old ? `<span class="audit-diff-old">${c.old}</span>` : '')
-            + `<span class="audit-diff-new">${c.new || '(xóa)'}</span></div>`
+            `<div><span class="audit-diff-field">${escapeHTML(c.field)}:</span>`
+            + (c.old ? `<span class="audit-diff-old">${escapeHTML(c.old)}</span>` : '')
+            + `<span class="audit-diff-new">${escapeHTML(c.new) || '(xóa)'}</span></div>`
           ).join('')
         + (l.changes.length > 4 ? `<div style="color:var(--text-faint)">+${l.changes.length-4} trường khác</div>` : '')
         + '</div>';
@@ -1681,10 +1721,10 @@ function renderAuditLog() {
     }
     return `<tr>
       <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${timeStr}</td>
-      <td style="font-size:12px">${l.user}</td>
+      <td style="font-size:12px">${escapeHTML(l.user)}</td>
       <td>${actionBadge(l.action)}</td>
-      <td class="td-code">${l.maHV}</td>
-      <td style="font-size:12px">${l.name}</td>
+      <td class="td-code">${escapeHTML(l.maHV)}</td>
+      <td style="font-size:12px">${escapeHTML(l.name)}</td>
       <td>${diffHtml}</td>
     </tr>`;
   }).join('');
@@ -1726,7 +1766,7 @@ function openDetail(id) {
   };
 
   const infoRow = (label, val) =>
-    `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val">${val||'–'}</span></div>`;
+    `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val">${escapeHTML(val)||'–'}</span></div>`;
 
   const tlItems = [
     { label:'Bắt đầu thực tập',   date: start,          state: start ? 'done' : 'upcoming' },
@@ -1751,11 +1791,11 @@ function openDetail(id) {
     <div class="detail-hero">
       <div class="detail-avatar">${initials.toUpperCase()}</div>
       <div class="detail-meta">
-        <div class="detail-name">${hv.ho} ${hv.ten}</div>
+        <div class="detail-name">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</div>
         <div class="detail-sub">
-          <span><b>Mã:</b> ${hv.maHV}</span>
-          ${hv.chucDanh ? `<span class="badge ${getBadgeCD(hv.chucDanh)}">${hv.chucDanh}</span>` : ''}
-          ${hv.donVi ? `<span>🏢 ${hv.donVi}</span>` : ''}
+          <span><b>Mã:</b> ${escapeHTML(hv.maHV)}</span>
+          ${hv.chucDanh ? `<span class="badge ${getBadgeCD(hv.chucDanh)}">${escapeHTML(hv.chucDanh)}</span>` : ''}
+          ${hv.donVi ? `<span>🏢 ${escapeHTML(hv.donVi)}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0">
@@ -1789,7 +1829,7 @@ function openDetail(id) {
 
     <div class="detail-card" style="margin-bottom:12px">
       <div class="detail-card-title">Đề tài thực tập</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.6;margin:0">${hv.tenDeTai || '<span style="color:var(--text-faint)">Chưa có đề tài</span>'}</p>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;margin:0">${hv.tenDeTai ? escapeHTML(hv.tenDeTai) : '<span style="color:var(--text-faint)">Chưa có đề tài</span>'}</p>
     </div>
 
     <div class="detail-card">
