@@ -711,6 +711,50 @@ tbody tr:hover td{background:var(--gray-50)}
   </div>
 </div>
 
+<!-- MODAL XÁC NHẬN IMPORT EXCEL -->
+<div class="overlay" id="modalImportHV">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header" style="border-bottom-color:var(--green);background:var(--green-light)">
+      <h3 style="color:var(--green-dark);display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Nhập danh sách học viên
+      </h3>
+      <button class="modal-close" onclick="closeModal('modalImportHV')">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px 20px">
+      <div style="display:flex;align-items:center;gap:14px;background:var(--green-light);border:1px solid rgba(5,150,105,.15);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px">
+        <div style="width:38px;height:38px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green-dark)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;color:var(--text-muted)">Tìm thấy</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);line-height:1.2"><span id="importRowCount">0</span> dòng dữ liệu</div>
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:var(--text);margin-bottom:12px">Xác nhận nhập danh sách học viên từ file đã chọn?</p>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:var(--text-muted)">
+          <span class="badge badge-done" style="flex-shrink:0;margin-top:1px">Cập nhật</span>
+          <span>Học viên có <b style="color:var(--text)">Mã HV đã tồn tại</b> sẽ được cập nhật thông tin mới</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:var(--text-muted)">
+          <span class="badge badge-new" style="flex-shrink:0;margin-top:1px">Thêm mới</span>
+          <span>Học viên có <b style="color:var(--text)">Mã HV chưa có</b> trong hệ thống sẽ được thêm mới</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalImportHV')">Hủy</button>
+      <button class="btn btn-primary" id="btnConfirmImport" onclick="confirmImportExcel()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Xác nhận nhập
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1577,6 +1621,8 @@ function Utilities_formatDate(d) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+let pendingImportRows = null;
+
 async function importExcel(ev) {
   const file = ev.target.files[0];
   if (!file) return;
@@ -1590,41 +1636,61 @@ async function importExcel(ev) {
 
   if (!rows.length) { toast('File không có dữ liệu', 'error'); return; }
 
-  if (!confirm(`Tìm thấy ${rows.length} dòng. Xác nhận nhập danh sách học viên?\n(Học viên có Mã HV đã tồn tại sẽ được CẬP NHẬT, mã mới sẽ được THÊM)`)) return;
+  pendingImportRows = rows;
+  document.getElementById('importRowCount').textContent = rows.length;
+  document.getElementById('modalImportHV').classList.add('open');
+}
+
+async function confirmImportExcel() {
+  const rows = pendingImportRows;
+  if (!rows) return;
+
+  const btn = document.getElementById('btnConfirmImport');
+  if (btn.disabled) return;
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Đang nhập...';
 
   let added = 0, updated = 0, failed = 0;
   const existingByMaHV = {};
   hvData.forEach(h => { if (h.maHV) existingByMaHV[String(h.maHV).trim()] = h; });
 
-  for (const row of rows) {
-    const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
-    const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
-    const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
-    if (!maHV || !ho || !ten) { failed++; continue; }
+  try {
+    for (const row of rows) {
+      const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
+      const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
+      const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
+      if (!maHV || !ho || !ten) { failed++; continue; }
 
-    const payload = {};
-    IMPORT_FIELDS.forEach(f => {
-      let v = row[f];
-      if (v === undefined) v = '';
-      if (f === 'ngayBatDau') v = excelDateToStr(v);
-      else if (f === 'sdt') v = String(v).replace(/^'/, '').trim();
-      else v = (v === null || v === undefined) ? '' : String(v).trim();
-      payload[f] = v;
-    });
+      const payload = {};
+      IMPORT_FIELDS.forEach(f => {
+        let v = row[f];
+        if (v === undefined) v = '';
+        if (f === 'ngayBatDau') v = excelDateToStr(v);
+        else if (f === 'sdt') v = String(v).replace(/^'/, '').trim();
+        else v = (v === null || v === undefined) ? '' : String(v).trim();
+        payload[f] = v;
+      });
 
-    const existing = existingByMaHV[maHV];
-    let res;
-    if (existing) {
-      res = await api('updateHV', { ...payload, id: existing.id });
-      if (res.ok) updated++; else failed++;
-    } else {
-      res = await api('addHV', payload);
-      if (res.ok) added++; else failed++;
+      const existing = existingByMaHV[maHV];
+      let res;
+      if (existing) {
+        res = await api('updateHV', { ...payload, id: existing.id });
+        if (res.ok) updated++; else failed++;
+      } else {
+        res = await api('addHV', payload);
+        if (res.ok) added++; else failed++;
+      }
     }
-  }
 
-  toast(`Hoàn tất: thêm ${added}, cập nhật ${updated}${failed ? `, lỗi ${failed}` : ''}`, failed ? 'error' : 'success');
-  loadHV();
+    toast(`Hoàn tất: thêm ${added}, cập nhật ${updated}${failed ? `, lỗi ${failed}` : ''}`, failed ? 'error' : 'success');
+    closeModal('modalImportHV');
+    loadHV();
+  } finally {
+    pendingImportRows = null;
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+  }
 }
 
 // =============================================
