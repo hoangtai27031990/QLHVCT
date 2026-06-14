@@ -1160,19 +1160,27 @@ async function bulkDeleteHV() {
   if (!confirm(`Xác nhận xóa ${ids.length} học viên đã chọn? Hành động này không thể hoàn tác.`)) return;
 
   let okCount = 0, failCount = 0;
+  const deletedIds = [];
   for (const id of ids) {
     const hv = hvData.find(h => String(h.id) === String(id));
     const res = await api('deleteHV', { id });
     if (res.ok) {
       okCount++;
       if (hv) auditLog('delete', hv);
+      deletedIds.push(String(id));
     } else {
       failCount++;
     }
   }
+
+  // Xóa các mục đã xóa thành công khỏi hvData cục bộ thay vì tải lại toàn bộ danh sách
+  hvData = hvData.filter(h => !deletedIds.includes(String(h.id)));
+  deletedIds.forEach(id => selectedHV.delete(id));
+
   toast(`Đã xóa ${okCount} học viên${failCount ? `, lỗi ${failCount}` : ''}`, failCount ? 'error' : 'success');
   selectedHV.clear();
-  loadHV();
+  renderTable();
+  updateDashboard();
 }
 
 // =============================================
@@ -1352,6 +1360,17 @@ async function saveHV() {
   const res = await api(action, data);
   if (!res.ok) { toast(res.msg, 'error'); return; }
 
+  // Cập nhật hvData cục bộ thay vì tải lại toàn bộ danh sách
+  if (editingHVId) {
+    const idx = hvData.findIndex(h => h.id == editingHVId);
+    if (idx !== -1) {
+      hvData[idx] = { ...hvData[idx], ...data };
+    }
+  } else {
+    // addHV trả về id mới được tạo từ server
+    hvData.push({ ...data, id: res.id });
+  }
+
   // Ghi audit log
   if (editingHVId && oldHv) {
     const changes = buildChanges(oldHv, data);
@@ -1362,7 +1381,8 @@ async function saveHV() {
 
   toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
   closeModal('modalHV');
-  loadHV();
+  renderTable();
+  updateDashboard();
 }
 
 let pendingDeleteHVId = null;
@@ -1406,10 +1426,16 @@ async function confirmDeleteHV() {
   const res = await api('deleteHV', { id: pendingDeleteHVId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
   if (hv) auditLog('delete', hv);
+
+  // Xóa khỏi hvData cục bộ thay vì tải lại toàn bộ danh sách
+  hvData = hvData.filter(h => h.id != pendingDeleteHVId);
+  selectedHV.delete(String(pendingDeleteHVId));
+
   toast('Đã xóa học viên', 'success');
   closeModal('modalDeleteHV');
   pendingDeleteHVId = null;
-  loadHV();
+  renderTable();
+  updateDashboard();
 }
 
 // =============================================
