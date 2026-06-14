@@ -6,72 +6,73 @@
 <title>Quản lý học viên cấp trung – Saigon Co.op</title>
 <style>
 :root {
-  --green: #0E8A6C;
-  --green-light: #E6F7F1;
-  --green-mid: #15A37E;
-  --green-dark: #0A6650;
-  --blue-light: #EAF2FE;
+  --green: #059669;
+  --green-light: #ECFDF5;
+  --green-mid: #10B981;
+  --green-dark: #047857;
+  --blue-light: #EFF6FF;
   --blue: #2563EB;
-  --purple-light: #F1EEFE;
-  --purple: #6D4FE0;
-  --amber-light: #FEF3E2;
-  --amber: #B5740A;
-  --red-light: #FDECEC;
-  --red: #D14343;
-  --gray-50: #FAFAFA;
-  --gray-100: #F4F4F5;
-  --gray-200: #E4E4E7;
-  --gray-400: #A1A1AA;
-  --gray-700: #52525B;
-  --gray-900: #18181B;
-  --text: #18181B;
-  --text-muted: #71717A;
-  --text-faint: #A1A1AA;
-  --border: #ECECEF;
-  --border-md: #E4E4E7;
-  --radius: 8px;
-  --radius-lg: 14px;
-  --shadow: 0 1px 2px rgba(16,24,40,0.04);
+  --purple-light: #F5F3FF;
+  --purple: #7C3AED;
+  --amber-light: #FFFBEB;
+  --amber: #B45309;
+  --red-light: #FEF2F2;
+  --red: #DC2626;
+  --gray-50: #F8FAFC;
+  --gray-100: #F1F5F9;
+  --gray-200: #E2E8F0;
+  --gray-400: #94A3B8;
+  --gray-700: #475569;
+  --gray-900: #0F172A;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --text-faint: #94A3B8;
+  --border: #E7EBF0;
+  --border-md: #DDE3EA;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: none;
   --accent: var(--green);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--gray-50);min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;font-size:14px;color:var(--text);background:var(--gray-50);min-height:100vh;-webkit-font-smoothing:antialiased}
 
 /* ── LOGIN ── */
-#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(160deg,var(--gray-50) 0%,var(--green-light) 100%)}
-.login-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:40px 36px;width:360px;box-shadow:0 4px 24px rgba(16,24,40,0.06)}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--gray-50)}
+#loginScreen::before{content:none}
+.login-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:40px 36px;width:368px;box-shadow:0 1px 3px rgba(15,23,42,0.04)}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.login-logo-icon{width:38px;height:38px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
-.login-logo span{font-size:15px;font-weight:600;color:var(--text)}
-.login-card h2{font-size:19px;font-weight:600;margin-bottom:6px;letter-spacing:-0.01em}
+.login-logo-icon{width:36px;height:36px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;letter-spacing:.02em}
+.login-logo span{font-size:14px;font-weight:600;color:var(--text)}
+.login-card h2{font-size:20px;font-weight:700;margin-bottom:6px;letter-spacing:-0.02em}
 .login-card p{font-size:13px;color:var(--text-muted);margin-bottom:24px}
 .field{margin-bottom:14px}
-.field label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:5px}
-.field input{width:100%;padding:10px 12px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:14px;outline:none;transition:border .15s,box-shadow .15s;background:var(--gray-50)}
-.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(14,138,108,.1);background:#fff}
-.btn-login{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .15s}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px}
+.field input{width:100%;padding:10px 12px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:14px;outline:none;transition:border .15s,box-shadow .15s;background:#fff;color:var(--text)}
+.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(5,150,105,.12)}
+.btn-login{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;transition:background .12s}
 .btn-login:hover{background:var(--green-dark)}
 .login-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
 
 /* ── APP SHELL ── */
 #app{display:none;flex-direction:column;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100}
+.topbar{background:#fff;border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100}
 .topbar-left{display:flex;align-items:center;gap:10px}
-.topbar-logo{width:30px;height:30px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
-.topbar-title{font-size:14px;font-weight:600;letter-spacing:-0.01em}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.user-info{font-size:12px;color:var(--text-muted)}
-.user-info b{color:var(--text)}
-.btn-logout{font-size:12px;color:var(--text-muted);cursor:pointer;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);background:#fff;transition:all .12s}
+.topbar-logo{width:30px;height:30px;border-radius:7px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+.topbar-title{font-size:14px;font-weight:600;letter-spacing:-0.01em;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.user-info{font-size:12.5px;color:var(--text-muted)}
+.user-info b{color:var(--text);font-weight:600}
+.btn-logout{font-size:12px;color:var(--text-muted);cursor:pointer;padding:7px 13px;border:1px solid var(--border-md);border-radius:var(--radius);background:#fff;transition:all .12s;font-weight:500}
 .btn-logout:hover{background:var(--red-light);color:var(--red);border-color:var(--red-light)}
 
 .layout{display:flex;flex:1}
-.sidebar{width:184px;background:#fff;border-right:1px solid var(--border);padding:16px 10px;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
-.nav-section{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--text-faint);padding:14px 10px 6px;text-transform:uppercase}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;font-size:12.5px;color:var(--text-muted);cursor:pointer;border-radius:var(--radius);transition:all .12s;margin-bottom:1px;font-weight:500}
+.sidebar{width:196px;background:#fff;border-right:1px solid var(--border);padding:14px 12px;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.nav-section{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--text-faint);padding:16px 10px 6px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:13px;color:var(--text-muted);cursor:pointer;border-radius:var(--radius);transition:all .12s;margin-bottom:2px;font-weight:500}
 .nav-item:hover{background:var(--gray-50);color:var(--text)}
 .nav-item.active{color:var(--green-dark);background:var(--green-light);font-weight:600}
-.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
 
 .main{flex:1;padding:24px;overflow-y:auto;background:var(--gray-50)}
 .page{display:none}
@@ -79,41 +80,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
 /* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.stat-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px 18px;box-shadow:var(--shadow)}
-.stat-label{font-size:11px;color:var(--text-faint);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.stat-val{font-size:26px;font-weight:700;line-height:1;letter-spacing:-0.02em}
-.stat-sub{font-size:11px;color:var(--text-faint);margin-top:6px}
+.stat-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px 18px}
+.stat-label{font-size:11px;color:var(--text-faint);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.stat-val{font-size:28px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:var(--text)}
+.stat-sub{font-size:11.5px;color:var(--text-faint);margin-top:8px}
 
 /* ── PANEL ── */
-.panel{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px;box-shadow:var(--shadow)}
+.panel{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px}
 .panel+.panel{margin-top:16px}
 .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
-.panel-title{font-size:14.5px;font-weight:600;letter-spacing:-0.01em}
+.panel-title{font-size:14.5px;font-weight:600;letter-spacing:-0.01em;color:var(--text)}
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
 /* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius);border:1px solid var(--border-md);font-size:12px;font-weight:500;cursor:pointer;background:#fff;color:var(--text);transition:all .12s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--radius);border:1px solid var(--border-md);font-size:12.5px;font-weight:500;cursor:pointer;background:#fff;color:var(--text);transition:all .12s;white-space:nowrap}
 .btn:hover{background:var(--gray-50);border-color:var(--gray-400)}
-.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
 .btn-primary:hover{background:var(--green-dark);border-color:var(--green-dark)}
 .btn-danger{background:#fff;border-color:var(--border-md);color:var(--red)}
 .btn-danger:hover{background:var(--red-light);border-color:var(--red-light)}
-.btn-sm{padding:5px 10px;font-size:11px}
-.btn-icon{width:28px;height:28px;padding:0;justify-content:center}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn-icon{width:30px;height:30px;padding:0;justify-content:center}
 
 /* ── SEARCH & FILTER ── */
-.search-box{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:12px;color:var(--text-muted);background:var(--gray-50);width:200px}
-.search-box input{border:none;background:none;outline:none;font-size:12px;color:var(--text);width:100%}
+.search-box{display:flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:12.5px;color:var(--text-muted);background:#fff;width:210px}
+.search-box input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text);width:100%}
 .search-box input::placeholder{color:var(--text-faint)}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
-.chip:hover{border-color:var(--green);color:var(--green)}
-.chip.on{background:var(--green);border-color:var(--green);color:#fff}
+.chip{padding:6px 13px;border-radius:var(--radius);font-size:11.5px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
+.chip:hover{border-color:var(--green);color:var(--green-dark)}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
 
 /* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
-table{width:100%;border-collapse:collapse;font-size:12px}
-thead th{font-size:10.5px;font-weight:600;letter-spacing:.03em;color:var(--text-faint);text-align:left;padding:10px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
 /* Column width hints */
 #hvTable th:nth-child(1){min-width:60px}   /* Mã HV */
 #hvTable th:nth-child(2){min-width:130px}  /* Họ tên */
@@ -130,29 +131,29 @@ thead th{font-size:10.5px;font-weight:600;letter-spacing:.03em;color:var(--text-
 #hvTable th:nth-child(13),
 #hvTable th:nth-child(14){min-width:60px;text-align:center} /* Điểm */
 #hvTable th:nth-child(15){min-width:110px} /* Trạng thái */
-tbody td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);word-break:break-word}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);word-break:break-word}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--gray-50)}
 .td-muted{color:var(--text-muted)!important}
 .td-code{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text)}
 .td-score{font-weight:700;color:var(--green)}
-.td-score.warn{color:#B5740A}
+.td-score.warn{color:var(--amber)}
 .td-score.danger{color:var(--red)}
 .td-actions{display:flex;gap:4px}
 
 /* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
 .badge-ktt{background:var(--green-light);color:var(--green-dark)}
 .badge-gd{background:var(--blue-light);color:var(--blue)}
 .badge-pgd{background:var(--purple-light);color:var(--purple)}
 .badge-ttgd{background:var(--blue-light);color:var(--blue)}
-.badge-qgd{background:#E8F5E9;color:#1B5E20}
+.badge-qgd{background:#ECFDF5;color:#065F46}
 .badge-qktt{background:var(--amber-light);color:var(--amber)}
-.badge-ttktt{background:#FFF3E0;color:#E65100}
-.badge-nvkt{background:#F3E5F5;color:#6A1B9A}
+.badge-ttktt{background:#FFF7ED;color:#C2410C}
+.badge-nvkt{background:#FAF5FF;color:#7E22CE}
 .badge-ttpgd{background:var(--purple-light);color:var(--purple)}
-.badge-pgdgq{background:#EDE7F6;color:#4527A0}
-.badge-done{background:#EAF3DE;color:#27500A}
+.badge-pgdgq{background:#F5F3FF;color:#5B21B6}
+.badge-done{background:var(--green-light);color:var(--green-dark)}
 .badge-sent{background:var(--green-light);color:var(--green-dark)}
 .badge-pending{background:var(--amber-light);color:var(--amber)}
 .badge-new{background:var(--gray-100);color:var(--text-muted)}
@@ -160,9 +161,9 @@ tbody tr:hover td{background:var(--gray-50)}
 .badge-gv{background:var(--blue-light);color:var(--blue)}
 
 /* ── MODAL ── */
-.overlay{display:none;position:fixed;inset:0;background:rgba(24,24,27,.4);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;align-items:center;justify-content:center;padding:20px}
 .overlay.open{display:flex}
-.modal{background:#fff;border-radius:var(--radius-lg);width:680px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(16,24,40,.16)}
+.modal{background:#fff;border-radius:var(--radius-lg);width:680px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(15,23,42,.18)}
 .modal-header{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
 .modal-header h3{font-size:15px;font-weight:600;letter-spacing:-0.01em}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:2px 6px;border-radius:6px}
@@ -174,14 +175,14 @@ tbody tr:hover td{background:var(--gray-50)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
 .form-full{grid-column:1/-1}
-.form-field{display:flex;flex-direction:column;gap:4px}
-.form-field label{font-size:11px;font-weight:600;color:var(--text-muted)}
-.form-field input,.form-field select,.form-field textarea{padding:8px 10px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border .12s,box-shadow .12s}
-.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(14,138,108,.08)}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:11.5px;font-weight:600;color:var(--text-muted)}
+.form-field input,.form-field select,.form-field textarea{padding:8px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border .12s,box-shadow .12s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(5,150,105,.10)}
 .form-field input[readonly]{background:var(--gray-50);color:var(--text-muted)}
 .form-field textarea{resize:vertical;min-height:60px}
 .form-divider{grid-column:1/-1;border:none;border-top:1px solid var(--border);margin:4px 0}
-.form-section-title{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:2px;border-bottom:1px solid var(--border)}
+.form-section-title{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px}
 .calc-note{font-size:11px;color:var(--text-faint);margin-top:2px}
 
 /* ── DATE ALERT ── */
@@ -195,7 +196,7 @@ tbody tr:hover td{background:var(--gray-50)}
 
 /* ── TOAST ── */
 #toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
-.toast-item{padding:10px 16px;border-radius:var(--radius);font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(16,24,40,.18);animation:slideIn .2s ease}
+.toast-item{padding:10px 16px;border-radius:var(--radius);font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(15,23,42,.18);animation:slideIn .2s ease}
 .toast-item.success{background:var(--green)}
 .toast-item.error{background:var(--red)}
 @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -221,15 +222,15 @@ tbody tr:hover td{background:var(--gray-50)}
 .audit-diff-new{color:var(--green)}
 
 /* ── DETAIL VIEW ── */
-.detail-hero{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:16px;display:flex;align-items:flex-start;gap:20px;box-shadow:var(--shadow)}
+.detail-hero{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:16px;display:flex;align-items:flex-start;gap:20px}
 .detail-avatar{width:52px;height:52px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--green-dark);flex-shrink:0}
 .detail-meta{flex:1}
 .detail-name{font-size:20px;font-weight:700;margin-bottom:4px;letter-spacing:-0.01em}
-.detail-sub{font-size:13px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px}
+.detail-sub{font-size:13px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.detail-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow)}
-.detail-card-title{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
-.detail-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.detail-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.detail-card-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px}
 .detail-row:last-child{border-bottom:none}
 .detail-row-label{color:var(--text-muted)}
 .detail-row-val{font-weight:600;text-align:right;max-width:60%}
@@ -238,11 +239,11 @@ tbody tr:hover td{background:var(--gray-50)}
 .tl-item{position:relative;margin-bottom:16px}
 .tl-dot{position:absolute;left:-24px;top:4px;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--border-md)}
 .tl-dot.done{background:var(--green)}
-.tl-dot.warn{background:#B5740A}
+.tl-dot.warn{background:var(--amber)}
 .tl-dot.upcoming{background:var(--gray-200)}
 .tl-dot.overdue{background:var(--red)}
-.tl-label{font-size:12px;font-weight:600;color:var(--text)}
-.tl-date{font-size:11px;color:var(--text-muted);margin-top:1px}
+.tl-label{font-size:12.5px;font-weight:600;color:var(--text)}
+.tl-date{font-size:11.5px;color:var(--text-muted);margin-top:1px}
 .tl-badge{display:inline-flex;margin-top:4px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -316,7 +317,7 @@ tbody tr:hover td{background:var(--gray-50)}
           <div class="stat-card"><div class="stat-label">Tổng học viên</div><div class="stat-val" id="s-total">–</div><div class="stat-sub">đang theo dõi</div></div>
           <div class="stat-card"><div class="stat-label">Đã nộp bài</div><div class="stat-val" id="s-done" style="color:var(--green)">–</div><div class="stat-sub" id="s-done-pct"></div></div>
           <div class="stat-card"><div class="stat-label">Điểm BQ chung</div><div class="stat-val" id="s-avg" style="color:var(--blue)">–</div><div class="stat-sub">điểm trung bình</div></div>
-          <div class="stat-card"><div class="stat-label">Sắp hết hạn</div><div class="stat-val" id="s-due" style="color:#BA7517">–</div><div class="stat-sub">trong 30 ngày tới</div></div>
+          <div class="stat-card"><div class="stat-label">Sắp hết hạn</div><div class="stat-val" id="s-due" style="color:var(--amber)">–</div><div class="stat-sub">trong 30 ngày tới</div></div>
         </div>
         <div class="panel">
           <div class="panel-header">
@@ -355,7 +356,7 @@ tbody tr:hover td{background:var(--gray-50)}
               </button>
             </div>
           </div>
-          <div id="bulkBar" style="display:none;align-items:center;gap:8px;background:var(--green-light);border:0.5px solid var(--green-mid);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green-dark)">
+          <div id="bulkBar" style="display:none;align-items:center;gap:8px;background:var(--green-light);border:1px solid var(--green-mid);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green-dark)">
             <span id="bulkCount" style="font-weight:600"></span>
             <div style="flex:1"></div>
             <button class="btn btn-sm" onclick="exportSelectedCSV()">
@@ -480,7 +481,7 @@ tbody tr:hover td{background:var(--gray-50)}
 <!-- DETAIL OVERLAY: Xem chi tiết học viên -->
 <div id="detailOverlay" style="display:none;position:fixed;inset:0;background:#fff;z-index:150;overflow-y:auto">
   <div style="max-width:860px;margin:0 auto;padding:24px 20px 48px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;position:sticky;top:0;background:#fff;padding:12px 0;border-bottom:0.5px solid var(--border);z-index:1">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;position:sticky;top:0;background:#fff;padding:12px 0;border-bottom:1px solid var(--border);z-index:1">
       <button class="btn" onclick="closeDetail()" style="gap:6px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
         Quay lại
@@ -682,7 +683,7 @@ tbody tr:hover td{background:var(--gray-50)}
     </div>
     <div class="modal-body" style="padding:24px 20px">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Bạn sắp xóa vĩnh viễn học viên:</p>
-      <div id="deleteHVInfo" style="background:var(--red-light);border:0.5px solid rgba(163,45,45,.2);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px">
+      <div id="deleteHVInfo" style="background:var(--red-light);border:1px solid rgba(220,38,38,.15);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px">
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="deleteHVName"></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:3px" id="deleteHVMeta"></div>
       </div>
@@ -974,7 +975,7 @@ function renderTable() {
     const daysLeft = hanNop ? Math.ceil((new Date(hanNop) - today) / 86400000) : null;
 
     const hanNopStyle = daysLeft !== null && daysLeft <= 14 && daysLeft >= 0
-      ? 'color:#BA7517;font-weight:600' : '';
+      ? 'color:var(--amber);font-weight:600' : '';
     const overdue = daysLeft !== null && daysLeft < 0 && hv.trangThai === 'Chưa hoàn thành'
       ? 'color:var(--red);font-weight:600' : '';
 
@@ -1190,11 +1191,11 @@ function updateDashboard() {
       urgencyBadge = `<span class="badge" style="background:var(--red-light);color:var(--red)">Còn ${h.diff} ngày</span>`;
       urgencyColor = 'color:var(--red);font-weight:600';
     } else if (h.diff <= 14) {
-      urgencyBadge = `<span class="badge" style="background:#FAEEDA;color:#993C1D">Còn ${h.diff} ngày</span>`;
-      urgencyColor = 'color:#993C1D;font-weight:600';
+      urgencyBadge = `<span class="badge" style="background:var(--amber-light);color:var(--amber)">Còn ${h.diff} ngày</span>`;
+      urgencyColor = 'color:var(--amber);font-weight:600';
     } else {
       urgencyBadge = `<span class="badge badge-pending">Còn ${h.diff} ngày</span>`;
-      urgencyColor = 'color:#BA7517';
+      urgencyColor = 'color:var(--amber)';
     }
     return `<tr>
       <td class="td-code">${h.maHV}</td>
@@ -1217,7 +1218,7 @@ function updateDashboard() {
   }
 
   if (dueSoon.length) {
-    html += `<tr><td colspan="7" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:#633806;letter-spacing:.04em;background:#FAEEDA">
+    html += `<tr><td colspan="7" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--amber);letter-spacing:.04em;background:var(--amber-light)">
       🔔 SẮP ĐẾN HẠN (trong 30 ngày) — ${dueSoon.length} học viên
     </td></tr>`;
     html += dueSoon.map(rowHTML).join('');
@@ -1717,7 +1718,7 @@ function openDetail(id) {
 
   const scoreRow = (label, val, note='') => {
     if (val === null || val === undefined) return '';
-    const cls = val < 5 ? 'color:var(--red)' : val < 7 ? 'color:#BA7517' : 'color:var(--green)';
+    const cls = val < 5 ? 'color:var(--red)' : val < 7 ? 'color:var(--amber)' : 'color:var(--green)';
     return `<div class="detail-row">
       <span class="detail-row-label">${label}${note ? `<span style="color:var(--text-faint);font-weight:400"> ${note}</span>` : ''}</span>
       <span class="detail-row-val" style="${cls};font-size:14px">${val.toFixed(2)}</span>
