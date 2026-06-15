@@ -1005,6 +1005,16 @@ function calcScores() {
 
 // Tính từ object dữ liệu (dùng khi hiển thị bảng)
 function computeScores(hv) {
+  const storedBth = parseFloat(hv.diemBTH);
+  const storedGd2 = parseFloat(hv.diemGD2);
+  const storedBq  = parseFloat(hv.diemBQ);
+  if (!isNaN(storedGd2) || !isNaN(storedBq)) {
+    return {
+      bth: isNaN(storedBth) ? null : storedBth,
+      gd2: isNaN(storedGd2) ? null : storedGd2,
+      bq:  isNaN(storedBq)  ? null : storedBq,
+    };
+  }
   const vals = ['gk1','gk2','gk3'].map(k => parseFloat(hv[k])).filter(v => !isNaN(v) && v !== '');
   const bth = vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
   const qTrinh = parseFloat(hv.diemQuyTrinh);
@@ -1429,6 +1439,9 @@ async function saveHV() {
     diemQuyTrinh:  document.getElementById('f-diemQuyTrinh').value,
     trangThai:     document.getElementById('f-trangThai').value,
     ghiChu:        document.getElementById('f-ghiChu').value.trim(),
+    diemBTH:       document.getElementById('f-diemBTH').value,
+    diemGD2:       document.getElementById('f-diemGD2').value,
+    diemBQ:        document.getElementById('f-diemBQ').value,
   };
 
   // Hiển thị trạng thái đang lưu, chặn nhấn lại
