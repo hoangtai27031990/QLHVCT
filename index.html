@@ -115,22 +115,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
-/* Column width hints */
-#hvTable th:nth-child(1){min-width:60px}   /* Mã HV */
-#hvTable th:nth-child(2){min-width:130px}  /* Họ tên */
-#hvTable th:nth-child(3){min-width:110px;white-space:normal;word-break:keep-all}  /* Chức danh */
-#hvTable th:nth-child(4){min-width:90px}   /* Đơn vị TT */
-#hvTable th:nth-child(5){min-width:90px}   /* Người HD */
-#hvTable th:nth-child(6){min-width:90px}   /* SĐT */
-#hvTable th:nth-child(7),
-#hvTable th:nth-child(8),
+/* Column width hints — 10 cột cốt lõi */
+#hvTable th:nth-child(1){width:32px}        /* checkbox */
+#hvTable th:nth-child(2){min-width:60px}    /* Mã HV */
+#hvTable th:nth-child(3){min-width:130px}   /* Họ tên */
+#hvTable th:nth-child(4){min-width:110px;white-space:normal;word-break:keep-all}  /* Chức danh */
+#hvTable th:nth-child(5){min-width:90px}    /* Đơn vị TT */
+#hvTable th:nth-child(6){min-width:90px}    /* Người HD */
+#hvTable th:nth-child(7){min-width:90px;white-space:normal;word-break:keep-all;line-height:1.3} /* Hạn nộp bài */
+#hvTable th:nth-child(8){min-width:150px}   /* Đề tài */
 #hvTable th:nth-child(9),
-#hvTable th:nth-child(10){min-width:80px;white-space:normal;word-break:keep-all;line-height:1.3}  /* Các cột ngày */
-#hvTable th:nth-child(11){min-width:120px} /* Đề tài */
-#hvTable th:nth-child(12),
-#hvTable th:nth-child(13),
-#hvTable th:nth-child(14){min-width:60px;text-align:center} /* Điểm */
-#hvTable th:nth-child(15){min-width:110px} /* Trạng thái */
+#hvTable th:nth-child(10){min-width:60px;text-align:center} /* Điểm GĐ2, BQ */
+#hvTable th:nth-child(11){min-width:110px}  /* Trạng thái */
+
+/* Tooltip đề tài */
+.td-detai-wrap{position:relative;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+.td-detai-wrap .detai-tooltip{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;
+  background:#1e293b;color:#fff;border-radius:6px;padding:8px 11px;
+  font-size:12px;line-height:1.6;width:260px;box-shadow:0 4px 16px rgba(0,0,0,.22);
+  white-space:normal;word-break:break-word;pointer-events:none
+}
+.td-detai-wrap:hover .detai-tooltip{display:block}
 tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);word-break:break-word}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--gray-50)}
@@ -389,13 +395,8 @@ tbody tr:hover td{background:var(--gray-50)}
                   <th>Chức danh</th>
                   <th>Đơn vị TT</th>
                   <th>Người HD</th>
-                  <th>SĐT</th>
-                  <th>Bắt đầu TT</th>
-                  <th>Giao đề tài</th>
-                  <th>Hoàn thành</th>
                   <th>Hạn nộp bài</th>
                   <th>Đề tài</th>
-                  <th>Điểm GĐ1</th>
                   <th>Điểm GĐ2</th>
                   <th>BQ chung</th>
                   <th>Trạng thái</th>
@@ -403,7 +404,7 @@ tbody tr:hover td{background:var(--gray-50)}
                 </tr>
               </thead>
               <tbody id="hvBody">
-                <tr><td colspan="17" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="12" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1068,7 +1069,7 @@ function renderTable() {
 
   const tbody = document.getElementById('hvBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="17" class="empty">Không có học viên nào</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty">Không có học viên nào</td></tr>';
     document.getElementById('hvPager').innerHTML = '';
     updateBulkBar();
     return;
@@ -1102,6 +1103,14 @@ function renderTable() {
       : '<span style="color:var(--text-faint)">–</span>';
 
     const gd1v = parseFloat(hv.diemGD1);
+    // Nội dung tooltip cho ô Đề tài
+    const tooltipLines = [
+      hv.tenDeTai ? `📋 ${escapeHTML(hv.tenDeTai)}` : '📋 Chưa có đề tài',
+      hv.ngayBatDau ? `📅 Bắt đầu: ${fmtDate(hv.ngayBatDau)} · Giao đề: ${fmtDate(addMonths(hv.ngayBatDau,2))} · Hoàn thành: ${fmtDate(addMonths(hv.ngayBatDau,6))}` : '',
+      hv.sdt ? `📞 SĐT: ${escapeHTML(hv.sdt)}` : '',
+      !isNaN(gd1v) ? `🎯 Điểm GĐ1: ${gd1v.toFixed(2)}` : '',
+      hv.email ? `✉ ${escapeHTML(hv.email)}` : '',
+    ].filter(Boolean).join('<br>');
 
     return `<tr>
       <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
@@ -1110,13 +1119,13 @@ function renderTable() {
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
       <td class="td-muted" style="font-size:11px">${escapeHTML(hv.nguoiHD) || '–'}</td>
-      <td class="td-muted" style="font-size:11px">${escapeHTML(hv.sdt) || '–'}</td>
-      <td class="td-muted">${fmtDate(start)}</td>
-      <td class="td-muted">${fmtDate(addMonths(start,2))}</td>
-      <td class="td-muted">${fmtDate(addMonths(start,6))}</td>
       <td style="${hanNopStyle}${overdue}">${fmtDate(hanNop)}</td>
-      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHTML(hv.tenDeTai||'')}">${escapeHTML(hv.tenDeTai) || '–'}</td>
-      <td style="text-align:center">${scoreCell(!isNaN(gd1v) ? gd1v : null)}</td>
+      <td>
+        <div class="td-detai-wrap">
+          ${escapeHTML(hv.tenDeTai) || '<span style="color:var(--text-faint)">–</span>'}
+          <div class="detai-tooltip">${tooltipLines}</div>
+        </div>
+      </td>
       <td style="text-align:center">${scoreCell(gd2)}</td>
       <td style="text-align:center">${scoreCell(bq)}</td>
       <td><span class="badge ${badgeTT}" style="white-space:normal;line-height:1.4">${escapeHTML(tt) || 'Chưa hoàn thành'}</span></td>
