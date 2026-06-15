@@ -938,22 +938,39 @@ function navigate(page, el) {
 // =============================================
 // DATE CALCULATIONS
 // =============================================
+
+// [FIX] Parse 'yyyy-MM-dd' thành local date (không qua UTC),
+// tránh bị lùi 1 ngày khi browser ở GMT+7
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-');
+  if (parts.length !== 3) return new Date(dateStr);
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
 function addMonths(dateStr, months) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
+  if (!d || isNaN(d)) return '';
   d.setMonth(d.getMonth() + months);
-  return d.toISOString().split('T')[0];
+  // Trả về yyyy-MM-dd theo local time
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
 }
 function addDays(dateStr, days) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
+  if (!d || isNaN(d)) return '';
   d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
 }
 function fmtDate(str) {
   if (!str) return '–';
-  const d = new Date(str);
-  if (isNaN(d)) return str;
+  const d = parseLocalDate(str);
+  if (!d || isNaN(d)) return str;
   return d.toLocaleDateString('vi-VN');
 }
 function calcDates() {
@@ -1058,7 +1075,8 @@ function renderTable() {
     const { gd2, bq } = computeScores(hv);
     const start = hv.ngayBatDau;
     const hanNop = start ? addDays(addMonths(start, 6), -10) : '';
-    const daysLeft = hanNop ? Math.ceil((new Date(hanNop) - today) / 86400000) : null;
+    // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
+    const daysLeft = hanNop ? Math.ceil((parseLocalDate(hanNop) - today) / 86400000) : null;
 
     const hanNopStyle = daysLeft !== null && daysLeft <= 14 && daysLeft >= 0
       ? 'color:var(--amber);font-weight:600' : '';
@@ -1248,7 +1266,8 @@ function updateDashboard() {
   const pending = hvData.filter(h => !isDone(h) && h.ngayBatDau);
   const withDiff = pending.map(h => {
     const han = addDays(addMonths(h.ngayBatDau, 6), -10);
-    const diff = Math.ceil((new Date(han) - today) / 86400000);
+    // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
+    const diff = Math.ceil((parseLocalDate(han) - today) / 86400000);
     return { ...h, han, diff };
   });
 
@@ -1866,7 +1885,8 @@ function openDetail(id) {
   const ngayHoanThanh = start ? addMonths(start, 6) : '';
   const hanNop        = start ? addDays(addMonths(start, 6), -10) : '';
   const today         = new Date(); today.setHours(0,0,0,0);
-  const daysLeft      = hanNop ? Math.ceil((new Date(hanNop) - today) / 86400000) : null;
+  // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
+  const daysLeft      = hanNop ? Math.ceil((parseLocalDate(hanNop) - today) / 86400000) : null;
 
   const initials = ((hv.ho||'')[0]||'') + ((hv.ten||'')[0]||'');
 
@@ -1884,10 +1904,10 @@ function openDetail(id) {
 
   const tlItems = [
     { label:'Bắt đầu thực tập',   date: start,          state: start ? 'done' : 'upcoming' },
-    { label:'Giao đề tài',         date: ngayGiao,        state: ngayGiao && new Date(ngayGiao) <= today ? 'done' : 'upcoming' },
-    { label:'Hoàn thành thực tập', date: ngayHoanThanh,   state: ngayHoanThanh && new Date(ngayHoanThanh) <= today ? 'done' : 'upcoming' },
+    { label:'Giao đề tài',         date: ngayGiao,        state: ngayGiao && parseLocalDate(ngayGiao) <= today ? 'done' : 'upcoming' },
+    { label:'Hoàn thành thực tập', date: ngayHoanThanh,   state: ngayHoanThanh && parseLocalDate(ngayHoanThanh) <= today ? 'done' : 'upcoming' },
     { label:'Hạn nộp bài',         date: hanNop,
-      state: !hanNop ? 'upcoming' : daysLeft < 0 && !isDone(hv) ? 'overdue' : daysLeft !== null && daysLeft <= 14 ? 'warn' : new Date(hanNop) <= today ? 'done' : 'upcoming'
+      state: !hanNop ? 'upcoming' : daysLeft < 0 && !isDone(hv) ? 'overdue' : daysLeft !== null && daysLeft <= 14 ? 'warn' : parseLocalDate(hanNop) <= today ? 'done' : 'upcoming'
     },
   ];
 
