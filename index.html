@@ -129,7 +129,7 @@ thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-
 #hvTable th:nth-child(11){min-width:110px}  /* Trạng thái */
 
 /* Tooltip đề tài */
-.td-detai-wrap{position:relative;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+.td-detai-wrap{position:relative;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;color:var(--text)}
 .td-detai-wrap .detai-tooltip{
   display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;
   background:#1e293b;color:#fff;border-radius:6px;padding:8px 11px;
@@ -137,6 +137,12 @@ thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-
   white-space:normal;word-break:break-word;pointer-events:none
 }
 .td-detai-wrap:hover .detai-tooltip{display:block}
+
+/* Score badge có nền màu */
+.score-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600;min-width:44px}
+.score-ok{background:#DCFCE7;color:#166534}
+.score-warn{background:#FEF9C3;color:#854D0E}
+.score-danger{background:#FEE2E2;color:#991B1B}
 tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);word-break:break-word}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--gray-50)}
@@ -1098,9 +1104,13 @@ function renderTable() {
     const tt = hv.trangThai || '';
     const badgeTT = tt.includes('chuyển') ? 'badge-sent' : tt.includes('nộp') ? 'badge-done' : 'badge-new';
 
-    const scoreCell = (v) => v != null
-      ? `<span class="td-score${v < 5 ? ' danger' : v < 7 ? ' warn' : ''}">${v.toFixed(2)}</span>`
-      : '<span style="color:var(--text-faint)">–</span>';
+    const scoreCell = (v) => {
+      if (v == null) return '<span style="color:var(--text-faint)">–</span>';
+      const cls = v < 5 ? 'score-danger' : v < 7 ? 'score-warn' : 'score-ok';
+      return `<span class="score-badge ${cls}">${v.toFixed(2)}</span>`;
+    };
+
+    const calIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;opacity:.55"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
     const gd1v = parseFloat(hv.diemGD1);
     // Nội dung tooltip cho ô Đề tài
@@ -1119,7 +1129,7 @@ function renderTable() {
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
       <td class="td-muted" style="font-size:11px">${escapeHTML(hv.nguoiHD) || '–'}</td>
-      <td style="${hanNopStyle}${overdue}">${fmtDate(hanNop)}</td>
+      <td style="${hanNopStyle}${overdue}">${calIcon}${fmtDate(hanNop)}</td>
       <td>
         <div class="td-detai-wrap">
           ${escapeHTML(hv.tenDeTai) || '<span style="color:var(--text-faint)">–</span>'}
