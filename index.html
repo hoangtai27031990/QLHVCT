@@ -316,7 +316,7 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="stats-grid" id="statsGrid">
           <div class="stat-card"><div class="stat-label">Tổng học viên</div><div class="stat-val" id="s-total">–</div><div class="stat-sub">đang theo dõi</div></div>
           <div class="stat-card"><div class="stat-label">Đã nộp bài</div><div class="stat-val" id="s-done" style="color:var(--green)">–</div><div class="stat-sub" id="s-done-pct"></div></div>
-          <div class="stat-card"><div class="stat-label">Điểm BQ chung</div><div class="stat-val" id="s-avg" style="color:var(--blue)">–</div><div class="stat-sub">điểm trung bình</div></div>
+          <div class="stat-card"><div class="stat-label">Điểm BQ GĐ2</div><div class="stat-val" id="s-avg" style="color:var(--blue)">–</div><div class="stat-sub">điểm trung bình</div></div>
           <div class="stat-card"><div class="stat-label">Sắp hết hạn</div><div class="stat-val" id="s-due" style="color:var(--amber)">–</div><div class="stat-sub">trong 30 ngày tới</div></div>
         </div>
         <div class="panel">
@@ -1269,7 +1269,7 @@ function updateDashboard() {
 
   const total = hvData.length;
   const done  = hvData.filter(h => isDone(h)).length;
-  const scores = hvData.map(h => computeScores(h).bq).filter(v => v != null);
+  const scores = hvData.map(h => computeScores(h).gd2).filter(v => v != null);
   const avg = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : null;
 
   // Phân nhóm: chỉ HV chưa hoàn thành mới cần cảnh báo
