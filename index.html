@@ -179,7 +179,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .search-box{display:flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:12.5px;color:var(--text-muted);background:#fff;width:210px}
 .search-box input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text);width:100%}
 .search-box input::placeholder{color:var(--text-faint)}
-.filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
 .chip{padding:6px 13px;border-radius:var(--radius);font-size:11.5px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
 .chip:hover{border-color:var(--green);color:var(--green-dark)}
 .chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
