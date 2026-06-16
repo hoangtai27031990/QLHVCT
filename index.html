@@ -70,44 +70,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
   flex:1;display:flex;align-items:center;
   justify-content:center;background:#fff;padding:48px 44px
 }
-.login-card{width:100%;max-width:560px}
+.login-card{width:100%;max-width:520px}
 .login-card-header{margin-bottom:32px}
-.login-card-header h2{font-size:22px;font-weight:700;letter-spacing:-.025em;color:var(--text);margin-bottom:6px}
-.login-card-header p{font-size:13px;color:var(--text-muted);line-height:1.5}
+.login-card-header h2{font-size:26px;font-weight:700;letter-spacing:-.025em;color:var(--text);margin-bottom:6px}
+.login-card-header p{font-size:15px;color:var(--text-muted);line-height:1.5}
 
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:7px;letter-spacing:.02em;text-transform:uppercase}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;letter-spacing:.02em;text-transform:uppercase}
 .field-input-wrap{position:relative}
 .field-icon{
-  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);
   color:var(--text-faint);pointer-events:none;display:flex
 }
-.field-icon svg{width:16px;height:16px}
+.field-icon svg{width:18px;height:18px}
 .field input{
-  width:100%;padding:11px 12px 11px 38px;border:1.5px solid var(--border-md);
-  border-radius:8px;font-size:14px;outline:none;
+  width:100%;padding:13px 13px 13px 42px;border:1.5px solid var(--border-md);
+  border-radius:8px;font-size:15px;outline:none;
   transition:border .15s,box-shadow .15s;background:#fff;color:var(--text)
 }
 .field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(5,150,105,.1)}
 .field input::placeholder{color:var(--text-faint)}
 .field-toggle{
-  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  position:absolute;right:13px;top:50%;transform:translateY(-50%);
   color:var(--text-faint);cursor:pointer;display:flex;padding:2px;
   border:none;background:none;outline:none
 }
 .field-toggle:hover{color:var(--text-muted)}
-.field-toggle svg{width:16px;height:16px}
+.field-toggle svg{width:18px;height:18px}
 
 .btn-login{
-  width:100%;padding:12px;background:var(--green);color:#fff;border:none;
-  border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+  width:100%;padding:14px;background:var(--green);color:#fff;border:none;
+  border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;
   margin-top:6px;transition:background .12s,opacity .12s;
   display:flex;align-items:center;justify-content:center;gap:8px
 }
 .btn-login:hover{background:var(--green-dark)}
 .btn-login:disabled{opacity:.65;cursor:not-allowed}
 .btn-login .spinner-sm{
-  width:14px;height:14px;border:2px solid rgba(255,255,255,.35);
+  width:16px;height:16px;border:2px solid rgba(255,255,255,.35);
   border-top-color:#fff;border-radius:50%;
   animation:spin .7s linear infinite;display:none
 }
@@ -115,12 +115,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .btn-login.loading .btn-login-text{opacity:.7}
 
 .login-err{
-  display:flex;align-items:center;gap:6px;color:var(--red);font-size:12.5px;
+  display:flex;align-items:center;gap:6px;color:var(--red);font-size:13.5px;
   margin-top:10px;min-height:20px;font-weight:500
 }
-.login-err svg{width:14px;height:14px;flex-shrink:0}
+.login-err svg{width:15px;height:15px;flex-shrink:0}
 
-.login-footer{margin-top:28px;padding-top:20px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-faint)}
+.login-footer{margin-top:28px;padding-top:20px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text-faint)}
 
 @media(max-width:680px){
   .login-panel-left{display:none}
