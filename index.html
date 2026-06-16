@@ -229,16 +229,19 @@ tbody tr:hover td{background:var(--gray-50)}
 
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
-.badge-ktt{background:var(--green-light);color:var(--green-dark)}
+.badge-gd-group{background:var(--blue-light);color:var(--blue)}
+.badge-ktt-group{background:var(--purple-light);color:var(--purple)}
+.badge-neutral{background:var(--gray-100);color:var(--text-muted)}
+.badge-ktt{background:var(--purple-light);color:var(--purple)}
 .badge-gd{background:var(--blue-light);color:var(--blue)}
-.badge-pgd{background:var(--purple-light);color:var(--purple)}
+.badge-pgd{background:var(--blue-light);color:var(--blue)}
 .badge-ttgd{background:var(--blue-light);color:var(--blue)}
-.badge-qgd{background:#ECFDF5;color:#065F46}
-.badge-qktt{background:var(--amber-light);color:var(--amber)}
-.badge-ttktt{background:#FFF7ED;color:#C2410C}
-.badge-nvkt{background:#FAF5FF;color:#7E22CE}
-.badge-ttpgd{background:var(--purple-light);color:var(--purple)}
-.badge-pgdgq{background:#F5F3FF;color:#5B21B6}
+.badge-qgd{background:var(--blue-light);color:var(--blue)}
+.badge-qktt{background:var(--purple-light);color:var(--purple)}
+.badge-ttktt{background:var(--purple-light);color:var(--purple)}
+.badge-nvkt{background:var(--purple-light);color:var(--purple)}
+.badge-ttpgd{background:var(--blue-light);color:var(--blue)}
+.badge-pgdgq{background:var(--blue-light);color:var(--blue)}
 .badge-done{background:var(--green-light);color:var(--green-dark)}
 .badge-sent{background:var(--green-light);color:var(--green-dark)}
 .badge-pending{background:var(--amber-light);color:var(--amber)}
@@ -1289,7 +1292,7 @@ function renderTable() {
     return `<tr>
       <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
       <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.maHV)}</td>
-      <td style="min-width:120px;cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</td>
+      <td style="min-width:120px;cursor:pointer;font-weight:500" onclick="openDetail('${hv.id}')">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</td>
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
       <td class="td-muted" style="font-size:11px">${escapeHTML(hv.nguoiHD) || '–'}</td>
@@ -1327,11 +1330,11 @@ function renderTable() {
   }
 
   document.getElementById('hvPager').innerHTML =
-    `<span>${filtered.length} học viên</span>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-sm" onclick="hvPage=Math.max(0,hvPage-1);renderTable()" ${hvPage===0?'disabled':''}>‹ Trước</button>
-      <span style="padding:5px 8px;font-size:11px">Trang ${hvPage+1}/${totalPages}</span>
-      <button class="btn btn-sm" onclick="hvPage++;renderTable()" ${hvPage>=totalPages-1?'disabled':''}>Sau ›</button>
+    `<span style="font-size:13px">Hiển thị ${pageStart+1}–${Math.min(pageStart+pageItems.length,filtered.length)} / ${filtered.length} học viên</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvPage=Math.max(0,hvPage-1);renderTable()" ${hvPage===0?'disabled':''}>‹ Trước</button>
+      <span style="padding:5px 8px;font-size:13px">Trang ${hvPage+1} / ${totalPages}</span>
+      <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvPage++;renderTable()" ${hvPage>=totalPages-1?'disabled':''}>Sau ›</button>
     </div>`;
 
   updateBulkBar();
