@@ -1430,7 +1430,7 @@ function bulkDeleteHV() {
       <span style="font-size:11px;color:var(--text-muted);margin-left:auto">${escapeHTML(hv.chucDanh||'')}</span>
     </div>`).join('');
 
-  openModal('modalBulkDeleteHV');
+  document.getElementById('modalBulkDeleteHV').classList.add('open');
   setTimeout(() => document.getElementById('bulkDeleteConfirmInput').focus(), 150);
 }
 
