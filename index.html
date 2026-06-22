@@ -285,6 +285,33 @@ tbody tr:hover td{background:var(--gray-50)}
 .form-section-title{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px}
 .calc-note{font-size:11px;color:var(--text-faint);margin-top:2px}
 
+/* ── INLINE VALIDATION ── */
+/* Trường lỗi: viền đỏ + shake nhẹ */
+.form-field.field-error input,
+.form-field.field-error select,
+.form-field.field-error textarea {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(220,38,38,.10) !important;
+  animation: shake .25s ease;
+}
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-4px)}
+  60%{transform:translateX(4px)}
+}
+/* Trường hợp lệ: viền xanh mờ khi đã điền đúng */
+.form-field.field-ok input,
+.form-field.field-ok select {
+  border-color: var(--green) !important;
+}
+/* Thông báo lỗi nhỏ bên dưới input */
+.field-err-msg {
+  font-size: 11px; color: var(--red); margin-top: 3px;
+  display: none; align-items: center; gap: 4px;
+}
+.field-err-msg.show { display: flex; }
+.field-err-msg svg { flex-shrink: 0; }
+
 /* ── DATE ALERT ── */
 .date-alert{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius);font-size:12px;margin-top:10px}
 .date-alert.warn{background:var(--amber-light);color:var(--amber)}
@@ -474,7 +501,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="toolbar">
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="hvPage=0;renderTable()">
+                <input type="text" id="searchInput" placeholder="Tìm mã HV, họ tên..." oninput="debouncedRenderTable()">
               </div>
               <button class="btn" onclick="downloadTemplate()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -636,11 +663,12 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="form-section-title">Thông tin cá nhân</div>
         <div class="form-field">
           <label>Mã học viên *</label>
-          <input type="text" id="f-maHV" placeholder="VD: 12446">
+          <input type="text" id="f-maHV" placeholder="VD: 12446" onblur="validateField('f-maHV')" oninput="clearFieldError('f-maHV')">
+          <span class="field-err-msg" id="f-maHV-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập mã học viên</span></span>
         </div>
         <div class="form-field">
           <label>Chức danh học tập *</label>
-          <select id="f-chucDanh">
+          <select id="f-chucDanh" onchange="validateField('f-chucDanh')">
             <option value="">-- Chọn --</option>
             <optgroup label="Nhóm Giám đốc">
               <option value="Thực tập Giám đốc">Thực tập Giám đốc</option>
@@ -659,14 +687,17 @@ tbody tr:hover td{background:var(--gray-50)}
               <option value="PGĐ">PGĐ</option>
             </optgroup>
           </select>
+          <span class="field-err-msg" id="f-chucDanh-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn chức danh</span></span>
         </div>
         <div class="form-field">
           <label>Họ *</label>
-          <input type="text" id="f-ho" placeholder="Họ và tên đệm">
+          <input type="text" id="f-ho" placeholder="Họ và tên đệm" onblur="validateField('f-ho')" oninput="clearFieldError('f-ho')">
+          <span class="field-err-msg" id="f-ho-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập họ</span></span>
         </div>
         <div class="form-field">
           <label>Tên *</label>
-          <input type="text" id="f-ten" placeholder="Tên">
+          <input type="text" id="f-ten" placeholder="Tên" onblur="validateField('f-ten')" oninput="clearFieldError('f-ten')">
+          <span class="field-err-msg" id="f-ten-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập tên</span></span>
         </div>
         <div class="form-field">
           <label>Số điện thoại</label>
@@ -688,7 +719,8 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="form-section-title">Thời gian thực tập</div>
         <div class="form-field">
           <label>Ngày bắt đầu thực tập *</label>
-          <input type="date" id="f-ngayBatDau" oninput="calcDates()">
+          <input type="date" id="f-ngayBatDau" oninput="calcDates();validateField('f-ngayBatDau')">
+          <span class="field-err-msg" id="f-ngayBatDau-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn ngày bắt đầu</span></span>
         </div>
         <div class="form-field">
           <label>Ngày giao đề tài (+ 2 tháng)</label>
@@ -966,6 +998,22 @@ function escapeHTML(str) {
 }
 
 // =============================================
+// CRYPTO — Hash mật khẩu SHA-256 trước khi gửi lên server.
+// Mật khẩu plaintext KHÔNG bao giờ rời khỏi trình duyệt.
+// Server nhận và lưu chuỗi hash hex (64 ký tự), không phải
+// mật khẩu gốc. Khi đăng nhập, client hash rồi so sánh hash.
+// =============================================
+async function sha256(str) {
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(str)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// =============================================
 // API
 // Dùng GET + URLSearchParams để tránh Apps Script
 // mất body khi browser bị redirect (lỗi CORS/POST)
@@ -1046,7 +1094,10 @@ async function doLogin() {
   btn.classList.add('loading');
   btn.disabled = true;
 
-  const payload = JSON.stringify({ action: 'login', username, password });
+  // [SECURITY] Hash mật khẩu bằng SHA-256 trước khi gửi lên server.
+  // Mật khẩu gốc không bao giờ truyền qua mạng hoặc lưu vào localStorage.
+  const passwordHash = await sha256(password);
+  const payload = JSON.stringify({ action: 'login', username, password: passwordHash });
   const res = await fetch(API_URL + '?payload=' + encodeURIComponent(payload), {
     method: 'GET',
   }).then(r => r.json()).catch(() => ({ ok: false, msg: 'Không thể kết nối đến server' }));
@@ -1225,6 +1276,110 @@ function computeScores(hv) {
   const gd1 = parseFloat(hv.diemGD1);
   const bq = (gd2 !== null && !isNaN(gd1)) ? (gd1 * 0.3 + gd2 * 0.7) : null;
   return { bth, gd2, bq };
+}
+
+// =============================================
+// PERFORMANCE — Debounce để tránh renderTable() chạy
+// mỗi lần gõ phím. Đợi 300ms sau lần gõ cuối cùng.
+// =============================================
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+const debouncedRenderTable = debounce(() => { hvPage = 0; renderTable(); }, 300);
+
+// =============================================
+// INLINE FORM VALIDATION
+// =============================================
+// Danh sách trường bắt buộc và thông báo lỗi tùy chỉnh
+const REQUIRED_FIELDS = {
+  'f-maHV':       { msg: 'Vui lòng nhập mã học viên' },
+  'f-chucDanh':   { msg: 'Vui lòng chọn chức danh' },
+  'f-ho':         { msg: 'Vui lòng nhập họ' },
+  'f-ten':        { msg: 'Vui lòng nhập tên' },
+  'f-ngayBatDau': { msg: 'Vui lòng chọn ngày bắt đầu' },
+};
+
+// Validate một trường khi blur (rời khỏi ô) hoặc khi submit
+function validateField(fieldId, customMsg) {
+  const el = document.getElementById(fieldId);
+  if (!el) return true;
+  const wrap = el.closest('.form-field');
+  const errSpan = document.getElementById(fieldId + '-err');
+  const val = el.value.trim ? el.value.trim() : el.value;
+  const isEmpty = !val;
+
+  if (wrap) wrap.classList.remove('field-error', 'field-ok');
+
+  if (isEmpty) {
+    if (wrap) wrap.classList.add('field-error');
+    if (errSpan) {
+      // Nếu có thông báo lỗi tùy chỉnh (VD: mã HV trùng), hiện thông báo đó
+      if (customMsg) errSpan.querySelector('span').textContent = customMsg;
+      else if (REQUIRED_FIELDS[fieldId]) errSpan.querySelector('span').textContent = REQUIRED_FIELDS[fieldId].msg;
+      errSpan.classList.add('show');
+    }
+    return false;
+  } else {
+    if (wrap) wrap.classList.add('field-ok');
+    if (errSpan) errSpan.classList.remove('show');
+    return true;
+  }
+}
+
+// Xóa trạng thái lỗi khi người dùng bắt đầu gõ lại
+function clearFieldError(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return;
+  const wrap = el.closest('.form-field');
+  const errSpan = document.getElementById(fieldId + '-err');
+  if (wrap) wrap.classList.remove('field-error');
+  if (errSpan) errSpan.classList.remove('show');
+}
+
+// Validate toàn bộ form trước khi submit, trả về true nếu hợp lệ
+function validateHVForm(maHV) {
+  let isValid = true;
+  // Kiểm tra các trường bắt buộc
+  for (const fieldId of Object.keys(REQUIRED_FIELDS)) {
+    if (!validateField(fieldId)) isValid = false;
+  }
+  // Kiểm tra riêng trùng mã HV (chỉ khi maHV đã điền)
+  if (maHV) {
+    const dup = hvData.find(h =>
+      String(h.maHV || '').trim().toLowerCase() === maHV.toLowerCase()
+      && String(h.id) !== String(editingHVId)
+    );
+    if (dup) {
+      const wrap = document.getElementById('f-maHV')?.closest('.form-field');
+      const errSpan = document.getElementById('f-maHV-err');
+      if (wrap) { wrap.classList.remove('field-ok'); wrap.classList.add('field-error'); }
+      if (errSpan) {
+        errSpan.querySelector('span').textContent = `Mã HV "${maHV}" đã tồn tại (${dup.ho} ${dup.ten})`;
+        errSpan.classList.add('show');
+      }
+      isValid = false;
+    }
+  }
+  // Cuộn đến trường lỗi đầu tiên
+  if (!isValid) {
+    const firstErr = document.querySelector('#modalHV .field-error input, #modalHV .field-error select');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  return isValid;
+}
+
+// Xóa tất cả trạng thái validation khi mở lại form
+function clearAllValidation() {
+  document.querySelectorAll('#modalHV .form-field').forEach(wrap => {
+    wrap.classList.remove('field-error', 'field-ok');
+  });
+  document.querySelectorAll('#modalHV .field-err-msg').forEach(el => {
+    el.classList.remove('show');
+  });
 }
 
 // =============================================
@@ -1653,6 +1808,7 @@ function openAddHV() {
   editingHVId = null;
   document.getElementById('modalHVTitle').textContent = 'Thêm học viên';
   clearHVForm();
+  clearAllValidation();
   document.getElementById('modalHV').classList.add('open');
 }
 
@@ -1682,6 +1838,7 @@ function openEditHV(id) {
 
   calcDates();
   calcScores();
+  clearAllValidation();
   document.getElementById('modalHV').classList.add('open');
 }
 
@@ -1707,21 +1864,9 @@ async function saveHV() {
   const ten  = document.getElementById('f-ten').value.trim();
   const chucDanh = document.getElementById('f-chucDanh').value;
   const ngayBatDauVal = document.getElementById('f-ngayBatDau').value;
-  // [FIX] Form đánh dấu (*) bắt buộc cho cả "Chức danh học tập" và "Ngày bắt đầu
-  // thực tập" nhưng trước đây chỉ kiểm tra maHV/ho/ten -> bổ sung đủ 2 trường này
-  // để khớp với những gì người dùng thấy trên giao diện.
-  if (!maHV || !ho || !ten || !chucDanh || !ngayBatDauVal) {
-    toast('Vui lòng điền đầy đủ thông tin bắt buộc (*)', 'error'); return;
-  }
 
-  // Kiểm tra trùng Mã HV (bỏ qua chính bản ghi đang sửa)
-  const dup = hvData.find(h =>
-    String(h.maHV || '').trim().toLowerCase() === maHV.toLowerCase()
-    && String(h.id) !== String(editingHVId)
-  );
-  if (dup) {
-    toast(`Mã HV "${maHV}" đã tồn tại (${dup.ho} ${dup.ten})`, 'error'); return;
-  }
+  // [UX] Dùng inline validation thay vì toast chung — highlight đúng trường lỗi
+  if (!validateHVForm(maHV)) return;
 
   const data = {
     id: editingHVId,
@@ -1894,7 +2039,8 @@ async function saveGV() {
   if (!editingGVId && !password) { toast('Cần nhập mật khẩu','error'); return; }
 
   const data = { id: editingGVId, ten, username, role };
-  if (password) data.password = password;
+  // [SECURITY] Hash mật khẩu SHA-256 trước khi gửi — không bao giờ gửi plaintext
+  if (password) data.password = await sha256(password);
 
   const action = editingGVId ? 'updateGV' : 'addGV';
   const res = await api(action, data);
