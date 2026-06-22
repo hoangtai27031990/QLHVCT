@@ -1511,7 +1511,7 @@ async function confirmBulkDeleteHV() {
     const res = await api('deleteHV', { id });
     if (res.ok) {
       okCount++;
-      if (hv) auditLog('delete', hv);
+      if (hv) await auditLog('delete', hv);
       deletedIds.push(String(id));
     } else {
       failCount++;
@@ -1740,9 +1740,9 @@ async function saveHV() {
     // Ghi audit log
     if (editingHVId && oldHv) {
       const changes = buildChanges(oldHv, data);
-      if (changes.length) auditLog('edit', data, changes);
+      if (changes.length) await auditLog('edit', data, changes);
     } else {
-      auditLog('add', data);
+      await auditLog('add', data);
     }
 
     toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
@@ -1795,7 +1795,7 @@ async function confirmDeleteHV() {
   const hv = hvData.find(h => h.id == pendingDeleteHVId);
   const res = await api('deleteHV', { id: pendingDeleteHVId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
-  if (hv) auditLog('delete', hv);
+  if (hv) await auditLog('delete', hv);
 
   // Xóa khỏi hvData cục bộ thay vì tải lại toàn bộ danh sách
   hvData = hvData.filter(h => h.id != pendingDeleteHVId);
@@ -2046,33 +2046,48 @@ function toast(msg, type='success') {
 
 // =============================================
 // AUDIT LOG
+// [FIX] Chuyển lưu trữ lịch sử chỉnh sửa từ localStorage (dễ mất khi xóa cache/
+// đổi máy/đổi trình duyệt) sang lưu trên Google Sheet qua GAS backend, để dữ liệu
+// dùng chung và bền vững giữa nhiều người dùng/thiết bị.
 // =============================================
-const AUDIT_KEY = 'sc_audit_log';
-const AUDIT_MAX = 500;
 const AUDIT_PER_PAGE = 30;
 
-function auditLog(action, hv, changes = null) {
-  const logs = getAuditLogs();
-  logs.unshift({
+async function auditLog(action, hv, changes = null) {
+  const entry = {
     ts: Date.now(),
     user: currentUser?.ten || currentUser?.username || '?',
     action, // 'add' | 'edit' | 'delete'
     maHV: hv.maHV || '',
     name: ((hv.ho || '') + ' ' + (hv.ten || '')).trim(),
     changes
-  });
-  localStorage.setItem(AUDIT_KEY, JSON.stringify(logs.slice(0, AUDIT_MAX)));
+  };
+  try {
+    const res = await api('addAuditLog', { entry });
+    if (!res.ok) console.error('[auditLog] lưu thất bại:', res.msg);
+  } catch (e) {
+    console.error('[auditLog] lỗi kết nối:', e);
+  }
 }
 
-function getAuditLogs() {
-  try { return JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]'); }
-  catch { return []; }
+async function getAuditLogs() {
+  try {
+    const res = await api('getAuditLog');
+    if (!res.ok) {
+      toast(res.msg || 'Không tải được lịch sử chỉnh sửa', 'error');
+      return [];
+    }
+    return res.logs || [];
+  } catch (e) {
+    toast('Lỗi kết nối khi tải lịch sử chỉnh sửa', 'error');
+    return [];
+  }
 }
 
-function clearAuditLog() {
-  if (!confirm('Xóa toàn bộ lịch sử chỉnh sửa?')) return;
-  localStorage.removeItem(AUDIT_KEY);
-  renderAuditLog();
+async function clearAuditLog() {
+  if (!confirm('Xóa toàn bộ lịch sử chỉnh sửa trên Google Sheet?')) return;
+  const res = await api('clearAuditLog');
+  if (!res.ok) { toast(res.msg || 'Xóa thất bại', 'error'); return; }
+  await renderAuditLog();
   toast('Đã xóa lịch sử', 'success');
 }
 
@@ -2093,9 +2108,10 @@ function buildChanges(oldHv, newData) {
   return changes;
 }
 
-function renderAuditLog() {
+async function renderAuditLog() {
   const q = (document.getElementById('auditSearch')?.value || '').toLowerCase();
-  let logs = getAuditLogs().filter(l => {
+  const allLogs = await getAuditLogs();
+  let logs = allLogs.filter(l => {
     if (!q) return true;
     return (l.maHV||'').toLowerCase().includes(q)
         || (l.name||'').toLowerCase().includes(q)
