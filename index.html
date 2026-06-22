@@ -947,6 +947,14 @@ tbody tr:hover td{background:var(--gray-50)}
           <span>Học viên có <b style="color:var(--text)">Mã HV chưa có</b> trong hệ thống sẽ được thêm mới</span>
         </div>
       </div>
+
+      <div id="importErrorBox" style="display:none;margin-top:16px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--red);margin-bottom:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="importErrorTitle">Có dòng lỗi</span>
+        </div>
+        <div id="importErrorList" style="max-height:180px;overflow-y:auto;border:1px solid rgba(220,38,38,.2);background:rgba(220,38,38,.05);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:6px"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalImportHV')">Hủy</button>
@@ -2116,6 +2124,8 @@ async function importExcel(ev) {
 
   pendingImportRows = rows;
   document.getElementById('importRowCount').textContent = rows.length;
+  document.getElementById('importErrorBox').style.display = 'none';
+  document.getElementById('importErrorList').innerHTML = '';
   document.getElementById('modalImportHV').classList.add('open');
 }
 
@@ -2177,12 +2187,25 @@ async function confirmImportExcel() {
     }
 
     if (failedRows.length) console.error('[Import Excel] Các dòng lỗi:', failedRows);
+
     toast(
-      `Hoàn tất: thêm ${added}, cập nhật ${updated}` +
-      (failed ? `, lỗi ${failed} (xem chi tiết trong Console - F12)` : ''),
+      `Hoàn tất: thêm ${added}, cập nhật ${updated}` + (failed ? `, lỗi ${failed}` : ''),
       failed ? 'error' : 'success'
     );
-    closeModal('modalImportHV');
+
+    const errBox = document.getElementById('importErrorBox');
+    const errList = document.getElementById('importErrorList');
+    if (failedRows.length) {
+      document.getElementById('importErrorTitle').textContent = `${failedRows.length} dòng lỗi`;
+      errList.innerHTML = failedRows.map(msg =>
+        `<div style="font-size:12px;color:var(--text);line-height:1.5">• ${escapeHTML(msg)}</div>`
+      ).join('');
+      errBox.style.display = 'block';
+    } else {
+      errBox.style.display = 'none';
+      closeModal('modalImportHV');
+    }
+
     loadHV();
   } finally {
     pendingImportRows = null;
