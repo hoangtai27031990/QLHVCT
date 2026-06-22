@@ -280,6 +280,9 @@ tbody tr:hover td{background:var(--gray-50)}
 .form-field input,.form-field select,.form-field textarea{padding:8px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border .12s,box-shadow .12s}
 .form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(5,150,105,.10)}
 .form-field input[readonly]{background:var(--gray-50);color:var(--text-muted)}
+.score-input-teacher input{background:var(--amber-light)!important;border-color:rgba(180,83,9,.35)!important}
+.score-input-teacher input:focus{border-color:var(--amber)!important;box-shadow:0 0 0 3px rgba(180,83,9,.12)!important}
+.score-input-teacher label{color:var(--amber)!important}
 .form-field textarea{resize:vertical;min-height:60px}
 .form-divider{grid-column:1/-1;border:none;border-top:1px solid var(--border);margin:4px 0}
 .form-section-title{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px}
@@ -742,23 +745,23 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
 
         <div class="form-section-title">Điểm số</div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>Điểm GĐ1 (nhập tay)</label>
           <input type="number" id="f-diemGD1" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>GK1 – Bài thu hoạch</label>
           <input type="number" id="f-gk1" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>GK2 – Bài thu hoạch</label>
           <input type="number" id="f-gk2" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="Để trống nếu không có">
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>GK3 – Bài thu hoạch</label>
           <input type="number" id="f-gk3" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="Để trống nếu không có">
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>Điểm đánh giá quá trình (1 GK)</label>
           <input type="number" id="f-diemQuyTrinh" step="0.1" min="0" max="10" oninput="calcScores()" placeholder="0 – 10">
         </div>
