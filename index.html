@@ -1706,7 +1706,11 @@ async function saveHV() {
   const ho   = document.getElementById('f-ho').value.trim();
   const ten  = document.getElementById('f-ten').value.trim();
   const chucDanh = document.getElementById('f-chucDanh').value;
-  if (!maHV || !ho || !ten) {
+  const ngayBatDauVal = document.getElementById('f-ngayBatDau').value;
+  // [FIX] Form đánh dấu (*) bắt buộc cho cả "Chức danh học tập" và "Ngày bắt đầu
+  // thực tập" nhưng trước đây chỉ kiểm tra maHV/ho/ten -> bổ sung đủ 2 trường này
+  // để khớp với những gì người dùng thấy trên giao diện.
+  if (!maHV || !ho || !ten || !chucDanh || !ngayBatDauVal) {
     toast('Vui lòng điền đầy đủ thông tin bắt buộc (*)', 'error'); return;
   }
 
@@ -1980,6 +1984,7 @@ async function confirmImportExcel() {
   btn.textContent = 'Đang nhập...';
 
   let added = 0, updated = 0, failed = 0;
+  const failedRows = [];
   const existingByMaHV = {};
   hvData.forEach(h => { if (h.maHV) existingByMaHV[String(h.maHV).trim()] = h; });
 
@@ -1988,7 +1993,21 @@ async function confirmImportExcel() {
       const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
       const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
       const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
-      if (!maHV || !ho || !ten) { failed++; continue; }
+      const chucDanh = String(row.chucDanh ?? row['Chức danh'] ?? '').trim();
+      const ngayBD   = excelDateToStr(row.ngayBatDau ?? row['Ngày bắt đầu'] ?? '');
+      // [FIX] Khớp với điều kiện bắt buộc (*) ở form nhập tay: thiếu chức danh
+      // hoặc ngày bắt đầu cũng tính là dòng lỗi, không tạo bản ghi thiếu dữ liệu.
+      if (!maHV || !ho || !ten || !chucDanh || !ngayBD) {
+        failed++;
+        const missing = [];
+        if (!maHV) missing.push('Mã HV');
+        if (!ho) missing.push('Họ');
+        if (!ten) missing.push('Tên');
+        if (!chucDanh) missing.push('Chức danh');
+        if (!ngayBD) missing.push('Ngày bắt đầu');
+        failedRows.push(`${maHV || ho + ' ' + ten || '(dòng trống)'}: thiếu ${missing.join(', ')}`);
+        continue;
+      }
 
       const payload = {};
       IMPORT_FIELDS.forEach(f => {
@@ -2004,14 +2023,19 @@ async function confirmImportExcel() {
       let res;
       if (existing) {
         res = await api('updateHV', { ...payload, id: existing.id });
-        if (res.ok) updated++; else failed++;
+        if (res.ok) updated++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi cập nhật'}`); }
       } else {
         res = await api('addHV', payload);
-        if (res.ok) added++; else failed++;
+        if (res.ok) added++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi thêm mới'}`); }
       }
     }
 
-    toast(`Hoàn tất: thêm ${added}, cập nhật ${updated}${failed ? `, lỗi ${failed}` : ''}`, failed ? 'error' : 'success');
+    if (failedRows.length) console.error('[Import Excel] Các dòng lỗi:', failedRows);
+    toast(
+      `Hoàn tất: thêm ${added}, cập nhật ${updated}` +
+      (failed ? `, lỗi ${failed} (xem chi tiết trong Console - F12)` : ''),
+      failed ? 'error' : 'success'
+    );
     closeModal('modalImportHV');
     loadHV();
   } finally {
