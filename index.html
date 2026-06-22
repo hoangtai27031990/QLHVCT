@@ -1264,6 +1264,27 @@ function renderTable() {
     return matchFilter && matchSearch;
   });
 
+  // [FIX] Đưa học viên có trạng thái "Đã chuyển QTĐT" xuống cuối danh sách,
+  // trong nhóm còn lại sắp theo hạn nộp bài gần nhất lên trước
+  const getHanNopDays = (hv) => {
+    const start = hv.ngayBatDau;
+    if (!start) return null;
+    const hanNop = addDays(addMonths(start, 6), -10);
+    return hanNop ? Math.ceil((parseLocalDate(hanNop) - new Date()) / 86400000) : null;
+  };
+  filtered.sort((a, b) => {
+    const aQTDT = a.trangThai === 'Đã chuyển QTĐT' ? 1 : 0;
+    const bQTDT = b.trangThai === 'Đã chuyển QTĐT' ? 1 : 0;
+    if (aQTDT !== bQTDT) return aQTDT - bQTDT;
+    if (aQTDT === 1) return 0; // nhóm QTĐT giữ thứ tự gốc
+    const da = getHanNopDays(a);
+    const db = getHanNopDays(b);
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return da - db;
+  });
+
   const tbody = document.getElementById('hvBody');
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="12" class="empty">Không có học viên nào</td></tr>';
@@ -1279,7 +1300,15 @@ function renderTable() {
   const pageItems = filtered.slice(pageStart, pageStart + HV_PER_PAGE);
 
   const today = new Date();
-  tbody.innerHTML = pageItems.map(hv => {
+  let qtdtSeparatorInserted = false;
+  tbody.innerHTML = pageItems.map((hv, idx) => {
+    const isQTDT = hv.trangThai === 'Đã chuyển QTĐT';
+    let separatorRow = '';
+    if (isQTDT && !qtdtSeparatorInserted) {
+      qtdtSeparatorInserted = true;
+      separatorRow = `<tr class="qtdt-separator"><td colspan="12" style="text-align:center;padding:10px 0;background:var(--surface-muted,#f5f5f7);color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.5px">— Đã chuyển QTĐT —</td></tr>`;
+    }
+
     const { gd2, bq } = computeScores(hv);
     const start = hv.ngayBatDau;
     const hanNop = start ? addDays(addMonths(start, 6), -10) : '';
@@ -1313,7 +1342,7 @@ function renderTable() {
       hv.email ? `✉ ${escapeHTML(hv.email)}` : '',
     ].filter(Boolean).join('<br>');
 
-    return `<tr>
+    return `${separatorRow}<tr${isQTDT ? ' style="opacity:.6"' : ''}>
       <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
       <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.maHV)}</td>
       <td style="min-width:120px;cursor:pointer;font-weight:500" onclick="openDetail('${hv.id}')">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</td>
