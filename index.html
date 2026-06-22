@@ -942,7 +942,7 @@ let editingHVId = null;
 let editingGVId = null;
 let auditPage = 0;
 let hvPage = 0;
-const HV_PER_PAGE = 20;
+let HV_PER_PAGE = parseInt(localStorage.getItem('sc_hv_per_page') || '20', 10);
 let selectedHV = new Set();
 
 // =============================================
@@ -1383,7 +1383,16 @@ function renderTable() {
   }
 
   document.getElementById('hvPager').innerHTML =
-    `<span style="font-size:13px">Hiển thị ${pageStart+1}–${Math.min(pageStart+pageItems.length,filtered.length)} / ${filtered.length} học viên</span>
+    `<div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:13px">Hiển thị ${pageStart+1}–${Math.min(pageStart+pageItems.length,filtered.length)} / ${filtered.length} học viên</span>
+      <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+        Số dòng/trang:
+        <select onchange="changeHVPerPage(this.value)" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border,#e5e7eb)">
+          ${[10,20,50,100].map(n => `<option value="${n}" ${HV_PER_PAGE===n?'selected':''}>${n}</option>`).join('')}
+          <option value="all" ${HV_PER_PAGE>=999999?'selected':''}>Tất cả</option>
+        </select>
+      </label>
+    </div>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvPage=Math.max(0,hvPage-1);renderTable()" ${hvPage===0?'disabled':''}>‹ Trước</button>
       <span style="padding:5px 8px;font-size:13px">Trang ${hvPage+1} / ${totalPages}</span>
@@ -1391,6 +1400,16 @@ function renderTable() {
     </div>`;
 
   updateBulkBar();
+}
+
+// [FIX] Cho phép người dùng tự chọn số dòng/trang, lưu lựa chọn vào localStorage
+// để giữ nguyên cho lần sau (chỉ là tùy chọn hiển thị cá nhân trên máy/trình duyệt
+// đó, không phải dữ liệu nghiệp vụ nên không cần đồng bộ lên Sheet).
+function changeHVPerPage(val) {
+  HV_PER_PAGE = (val === 'all') ? 999999 : parseInt(val, 10);
+  localStorage.setItem('sc_hv_per_page', String(HV_PER_PAGE));
+  hvPage = 0;
+  renderTable();
 }
 
 function toggleSelectAll(chk) {
