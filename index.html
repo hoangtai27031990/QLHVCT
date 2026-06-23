@@ -315,7 +315,8 @@ tbody tr:hover td{background:var(--gray-50)}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:2px 6px;border-radius:6px}
 .modal-close:hover{background:var(--gray-100)}
 .modal-body{padding:22px}
-.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+#modalHV .modal-footer .btn{padding:11px 22px;font-size:15px;font-weight:600;min-width:100px;justify-content:center}
 
 /* ── FORM ── */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -1155,8 +1156,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbx1H9R2ZZgBXhuWWyYd7Rdl
 // =============================================
 // STATE
 // =============================================
-let token = localStorage.getItem('sc_token') || '';
-let currentUser = JSON.parse(localStorage.getItem('sc_user') || 'null');
+// [SECURITY FIX] Dùng sessionStorage thay localStorage cho token và thông tin user.
+// sessionStorage tự xóa khi đóng tab/trình duyệt — giảm nguy cơ đánh cắp phiên nếu bị XSS,
+// vì script độc hại không thể đọc dữ liệu từ tab/cửa sổ khác.
+let token = sessionStorage.getItem('sc_token') || '';
+let currentUser = JSON.parse(sessionStorage.getItem('sc_user') || 'null');
 let hvData = [];
 let gvData = [];
 let filterChucDanh = '';
@@ -1215,14 +1219,17 @@ async function sha256(str) {
 
 // =============================================
 // API
-// Dùng GET + URLSearchParams để tránh Apps Script
-// mất body khi browser bị redirect (lỗi CORS/POST)
+// [SECURITY FIX] Chuyển sang POST + JSON body thay vì GET + query string.
+// Payload (token, dữ liệu học viên) không còn xuất hiện trong URL,
+// server log, hay browser history. Apps Script phải dùng doPost() phía GAS.
 // =============================================
 async function api(action, data = {}) {
   const payload = JSON.stringify({ action, token, ...data });
   try {
-    const res = await fetch(API_URL + '?payload=' + encodeURIComponent(payload), {
-      method: 'GET',
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: payload,
     });
     const text = await res.text();
     let result;
@@ -1295,11 +1302,14 @@ async function doLogin() {
   btn.disabled = true;
 
   // [SECURITY] Hash mật khẩu bằng SHA-256 trước khi gửi lên server.
-  // Mật khẩu gốc không bao giờ truyền qua mạng hoặc lưu vào localStorage.
+  // Mật khẩu gốc không bao giờ truyền qua mạng hoặc lưu vào sessionStorage.
   const passwordHash = await sha256(password);
   const payload = JSON.stringify({ action: 'login', username, password: passwordHash });
-  const res = await fetch(API_URL + '?payload=' + encodeURIComponent(payload), {
-    method: 'GET',
+  // [SECURITY FIX] Dùng POST để thông tin đăng nhập không lộ trên URL hay server log
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: payload,
   }).then(r => r.json()).catch(() => ({ ok: false, msg: 'Không thể kết nối đến server' }));
 
   btn.classList.remove('loading');
@@ -1313,8 +1323,9 @@ async function doLogin() {
   token = res.token;
   currentUser = res.user;
   sessionExpiredHandled = false;
-  localStorage.setItem('sc_token', token);
-  localStorage.setItem('sc_user', JSON.stringify(currentUser));
+  // [SECURITY FIX] sessionStorage: tự xóa khi đóng tab, không chia sẻ giữa các tab
+  sessionStorage.setItem('sc_token', token);
+  sessionStorage.setItem('sc_user', JSON.stringify(currentUser));
   startApp();
 }
 
@@ -1324,8 +1335,8 @@ document.getElementById('loginPass').addEventListener('keydown', e => {
 
 function doLogout() {
   token = ''; currentUser = null;
-  localStorage.removeItem('sc_token');
-  localStorage.removeItem('sc_user');
+  sessionStorage.removeItem('sc_token');
+  sessionStorage.removeItem('sc_user');
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 }
@@ -2929,8 +2940,8 @@ function openDetail(id) {
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0">
-        <button class="btn btn-sm btn-primary" onclick="closeDetail();openEditHV('${hv.id}')">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <button class="btn btn-primary" onclick="closeDetail();openEditHV('${hv.id}')" style="padding:10px 20px;font-size:14px;font-weight:600">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Sửa
         </button>
       </div>
