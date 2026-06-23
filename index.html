@@ -526,6 +526,7 @@ tbody tr:hover td{background:var(--gray-50)}
 
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
+        <div id="dashUpdatedAt" style="font-size:12px;color:var(--text-faint);margin-bottom:10px;display:flex;align-items:center;gap:6px"></div>
         <div class="stats-grid" id="statsGrid">
           <div class="stat-card c-green">
             <div class="stat-top">
@@ -1909,6 +1910,15 @@ function isDone(h) {
 function updateDashboard() {
   const today = new Date();
   today.setHours(0,0,0,0);
+
+  // Hiển thị thời điểm dữ liệu được cập nhật/render gần nhất
+  const updatedEl = document.getElementById('dashUpdatedAt');
+  if (updatedEl) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    updatedEl.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Cập nhật lúc ${hh}:${mm}`;
+  }
 
   const total = hvData.length;
   const done  = hvData.filter(h => isDone(h)).length;
