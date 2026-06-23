@@ -1151,7 +1151,7 @@ tbody tr:hover td{background:var(--gray-50)}
 // =============================================
 // CẤU HÌNH
 // =============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzCZVN5xlKdy5JzzCWgIHnUMSeTIFkAON5SJeuWGedh7wR7BeB3apU29fk8K_l-Hf1T/exec'; // Thay bằng URL Apps Script đã deploy
+const API_URL = 'https://script.google.com/macros/s/AKfycbx1H9R2ZZgBXhuWWyYd7RdlTd08rXoHIWSS3LSpcEs4vKo_xK26dt2NSQum4ASbo1vo/exec'; // Thay bằng URL Apps Script đã deploy
 
 // =============================================
 // STATE
@@ -1250,14 +1250,14 @@ async function api(action, data = {}) {
   }
 }
 
-// Kiểm tra thông báo lỗi từ server có liên quan đến phiên đăng nhập hết hạn/không hợp lệ
+// Kiểm tra thông báo lỗi từ server có liên quan đến phiên đăng nhập hết hạn/không hợp lệ.
+// [FIX] Chỉ coi là auth error khi server trả đúng từ khóa xác thực —
+// tránh đăng xuất oan khi lỗi mạng hoặc timeout trả về message ngẫu nhiên.
 function isAuthError(msg) {
   if (!msg) return false;
   const m = String(msg).toLowerCase();
-  return m.includes('unauthorized')
-      || m.includes('hết hạn')
-      || m.includes('không hợp lệ')
-      || m.includes('token');
+  // Chỉ match chính xác các lỗi auth từ server GAS (Unauthorized, Token expired)
+  return m === 'unauthorized' || m === 'token expired';
 }
 
 // Xử lý khi phiên đăng nhập hết hạn: đăng xuất và báo cho người dùng
