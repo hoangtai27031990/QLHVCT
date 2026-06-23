@@ -837,11 +837,12 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="form-field">
               <label id="gv-pw-label">Mật khẩu mới *</label>
               <div style="position:relative">
-                <input type="password" id="gv-password" placeholder="Nhập mật khẩu" autocomplete="new-password" style="padding-right:40px">
+                <input type="password" id="gv-password" placeholder="Ít nhất 6 ký tự, có chữ HOA và ký tự đặc biệt" autocomplete="new-password" style="padding-right:40px">
                 <button type="button" onclick="togglePwVis('gv-password','gv-pw-eye1')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
                   <svg id="gv-pw-eye1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
+              <div style="font-size:11px;color:var(--text-faint);margin-top:5px">Yêu cầu: tối thiểu 6 ký tự, có ít nhất 1 chữ in hoa và 1 ký tự đặc biệt (ví dụ: !@#$%...)</div>
             </div>
             <div class="form-field">
               <label>Xác nhận mật khẩu *</label>
@@ -868,11 +869,14 @@ tbody tr:hover td{background:var(--gray-50)}
 <div class="overlay" id="modalChangePw">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <h3>Đổi mật khẩu</h3>
-      <button class="modal-close" onclick="closeModal('modalChangePw')">×</button>
+      <h3 id="modalChangePwTitle">Đổi mật khẩu</h3>
+      <button class="modal-close" id="cpCloseBtn" onclick="closeModal('modalChangePw')">×</button>
     </div>
     <div class="modal-body">
-      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">Nhập mật khẩu hiện tại để xác minh, sau đó đặt mật khẩu mới.</p>
+      <p id="cpIntro" style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">Nhập mật khẩu hiện tại để xác minh, sau đó đặt mật khẩu mới.</p>
+      <div id="cpForcedBanner" style="display:none;font-size:12.5px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:10px 12px;margin-bottom:18px">
+        Mật khẩu hiện tại của bạn do quản trị viên cấp. Vui lòng đặt mật khẩu mới trước khi tiếp tục sử dụng hệ thống.
+      </div>
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="form-field">
           <label>Mật khẩu hiện tại *</label>
@@ -886,11 +890,12 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="form-field">
           <label>Mật khẩu mới *</label>
           <div style="position:relative">
-            <input type="password" id="cp-new" placeholder="Ít nhất 6 ký tự" autocomplete="new-password" style="padding-right:40px" oninput="checkCpMatch()">
+            <input type="password" id="cp-new" placeholder="Ít nhất 6 ký tự, có HOA và ký tự đặc biệt" autocomplete="new-password" style="padding-right:40px" oninput="checkCpMatch()">
             <button type="button" onclick="togglePwVis('cp-new','cp-eye1')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
               <svg id="cp-eye1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
+          <div style="font-size:11px;color:var(--text-faint);margin-top:5px">Yêu cầu: tối thiểu 6 ký tự, có ít nhất 1 chữ in hoa và 1 ký tự đặc biệt (ví dụ: !@#$%...)</div>
         </div>
         <div class="form-field">
           <label>Xác nhận mật khẩu mới *</label>
@@ -906,7 +911,7 @@ tbody tr:hover td{background:var(--gray-50)}
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modalChangePw')">Hủy</button>
+      <button class="btn" id="cpCancelBtn" onclick="closeModal('modalChangePw')">Hủy</button>
       <button class="btn btn-primary" id="btnChangePw" onclick="doChangePw()">Đổi mật khẩu</button>
     </div>
   </div>
@@ -1081,6 +1086,20 @@ function escapeHTML(str) {
 }
 
 // =============================================
+// QUY ĐỊNH ĐỘ PHỨC TẠP MẬT KHẨU
+// Tối thiểu 6 ký tự, có ít nhất 1 chữ in hoa và 1 ký tự đặc biệt.
+// [SECURITY] Việc kiểm tra này CHỈ có thể làm ở client, vì server chỉ
+// nhận được mật khẩu đã hash (SHA-256), không thể "đọc" lại để kiểm tra
+// ký tự hoa/đặc biệt. Vì vậy bắt buộc gọi hàm này TRƯỚC khi sha256(pw).
+// =============================================
+function validatePasswordComplexity(pw) {
+  if (!pw || pw.length < 6) return 'Mật khẩu phải có ít nhất 6 ký tự';
+  if (!/[A-Z]/.test(pw)) return 'Mật khẩu phải có ít nhất 1 chữ in hoa';
+  if (!/[^A-Za-z0-9]/.test(pw)) return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt';
+  return null;
+}
+
+// =============================================
 // CRYPTO — Hash mật khẩu SHA-256 trước khi gửi lên server.
 // Mật khẩu plaintext KHÔNG bao giờ rời khỏi trình duyệt.
 // Server nhận và lưu chuỗi hash hex (64 ký tự), không phải
@@ -1222,6 +1241,11 @@ function startApp() {
   document.getElementById('userDisplayName').textContent = currentUser.ten;
   document.getElementById('topbarUserRole').textContent = currentUser.role === 'admin' ? 'Admin' : 'Giáo viên';
   document.getElementById('topbarUserAvatar').textContent = getInitials(currentUser.ten || currentUser.username);
+
+  // Mật khẩu do admin cấp/đặt lại → buộc đổi ngay, chặn dùng app cho đến khi đổi xong
+  if (currentUser.mustChangePw) {
+    openChangePw(true);
+  }
 
   // Admin-only nav
   document.querySelectorAll('.admin-only').forEach(el => {
@@ -2147,6 +2171,8 @@ async function saveGV() {
     return;
   }
   if (password.length < 6) { toast('Mật khẩu phải có ít nhất 6 ký tự', 'error'); return; }
+  const pwErr = validatePasswordComplexity(password);
+  if (pwErr) { toast(pwErr, 'error'); return; }
 
   const btn = document.getElementById('btnSaveGV');
   btn.disabled = true; btn.textContent = 'Đang lưu...';
@@ -2176,12 +2202,20 @@ async function deleteGV(id) {
 // =============================================
 // TỰ ĐỔI MẬT KHẨU (mọi tài khoản)
 // =============================================
-function openChangePw() {
+let cpForced = false;
+
+function openChangePw(forced) {
+  cpForced = !!forced;
   ['cp-old','cp-new','cp-confirm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('cp-mismatch').style.display = 'none';
   document.getElementById('cp-error').style.display = 'none';
   document.getElementById('btnChangePw').disabled = false;
   document.getElementById('btnChangePw').textContent = 'Đổi mật khẩu';
+  document.getElementById('cpForcedBanner').style.display = cpForced ? '' : 'none';
+  document.getElementById('cpIntro').style.display = cpForced ? 'none' : '';
+  document.getElementById('cpCloseBtn').style.display = cpForced ? 'none' : '';
+  document.getElementById('cpCancelBtn').style.display = cpForced ? 'none' : '';
+  document.getElementById('modalChangePwTitle').textContent = cpForced ? 'Bắt buộc đổi mật khẩu' : 'Đổi mật khẩu';
   document.getElementById('modalChangePw').classList.add('open');
 }
 
@@ -2202,7 +2236,8 @@ async function doChangePw() {
 
   if (!oldPw)    { errEl.textContent = 'Vui lòng nhập mật khẩu hiện tại'; errEl.style.display = ''; return; }
   if (!newPw)    { errEl.textContent = 'Vui lòng nhập mật khẩu mới'; errEl.style.display = ''; return; }
-  if (newPw.length < 6) { errEl.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự'; errEl.style.display = ''; return; }
+  const pwErr = validatePasswordComplexity(newPw);
+  if (pwErr) { errEl.textContent = pwErr; errEl.style.display = ''; return; }
   if (newPw !== confirm2) {
     document.getElementById('cp-mismatch').style.display = '';
     return;
@@ -2424,10 +2459,16 @@ function exportCSV() {
 // UTILS
 // =============================================
 function closeModal(id) {
+  if (id === 'modalChangePw' && cpForced) return;
   document.getElementById(id).classList.remove('open');
 }
 document.querySelectorAll('.overlay').forEach(o => {
-  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+  o.addEventListener('click', e => {
+    if (e.target === o) {
+      if (o.id === 'modalChangePw' && cpForced) return;
+      o.classList.remove('open');
+    }
+  });
 });
 
 function toast(msg, type='success') {
