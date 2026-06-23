@@ -186,10 +186,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .donut-legend-val{font-weight:700;color:var(--text);margin-left:auto;padding-left:14px}
 .cd-bars{display:flex;flex-direction:column;gap:11px}
 .cd-bar-row{display:grid;grid-template-columns:150px 1fr 38px;align-items:center;gap:10px;font-size:12px}
+.cd-bar-count{font-weight:700;color:var(--text);text-align:right}
+
+/* ── Tăng cỡ chữ riêng cho trang Dashboard ── */
+#page-dashboard .stat-label{font-size:12.5px}
+#page-dashboard .stat-val{font-size:34px}
+#page-dashboard .stat-sub{font-size:13px}
+#page-dashboard .stat-trend{font-size:12.5px}
+#page-dashboard .panel-title{font-size:16.5px}
+#page-dashboard .donut-legend{font-size:14px}
+#page-dashboard .cd-bar-row{font-size:13.5px}
+#page-dashboard .cd-bar-name{font-size:13.5px}
+#page-dashboard #dueSoonList table{font-size:13.5px}
+#page-dashboard #dueSoonList th{font-size:12px}
+#page-dashboard .badge{font-size:12px}
 .cd-bar-name{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cd-bar-track{height:8px;border-radius:5px;background:var(--gray-100);overflow:hidden}
 .cd-bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
-.cd-bar-count{font-weight:700;color:var(--text);text-align:right}
 
 /* ── PANEL ── */
 .panel{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px}
@@ -2009,8 +2022,8 @@ function renderDashboardOverview(total, done) {
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="14"
         stroke-dasharray="${doneLen} ${circumference}" stroke-dashoffset="0"
         transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
-      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="22" font-weight="700" fill="var(--text)">${pct}%</text>
-      <text x="${cx}" y="${cy+15}" text-anchor="middle" font-size="10" fill="var(--text-faint)">hoàn thành</text>
+      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="25" font-weight="700" fill="var(--text)">${pct}%</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11.5" fill="var(--text-faint)">hoàn thành</text>
     `;
   }
   const legend = document.getElementById('donutLegend');
