@@ -159,7 +159,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 
 /* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-.stat-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px 18px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s}
+.stat-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--stat-border,var(--border));padding:18px 18px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s,border-color .15s}
+.stat-card:hover{border-color:var(--stat-accent,var(--border))}
 .stat-card:hover{box-shadow:0 4px 18px rgba(15,23,42,.08);transform:translateY(-1px)}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--stat-accent,var(--green))}
 .stat-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
@@ -169,10 +170,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .stat-label{font-size:11px;color:var(--text-faint);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .stat-val{font-size:28px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:var(--text)}
 .stat-sub{font-size:11.5px;color:var(--text-faint);margin-top:8px}
-.stat-card.c-green{--stat-accent:var(--green);--stat-icon-bg:var(--green-light);--stat-icon-fg:var(--green-dark)}
-.stat-card.c-blue{--stat-accent:var(--blue);--stat-icon-bg:var(--blue-light);--stat-icon-fg:var(--blue)}
-.stat-card.c-amber{--stat-accent:var(--amber);--stat-icon-bg:var(--amber-light);--stat-icon-fg:var(--amber)}
-.stat-card.c-purple{--stat-accent:var(--purple);--stat-icon-bg:var(--purple-light);--stat-icon-fg:var(--purple)}
+.stat-card.c-green{--stat-accent:var(--green);--stat-icon-bg:var(--green-light);--stat-icon-fg:var(--green-dark);--stat-border:#BBF1DC}
+.stat-card.c-blue{--stat-accent:var(--blue);--stat-icon-bg:var(--blue-light);--stat-icon-fg:var(--blue);--stat-border:#BFDBFE}
+.stat-card.c-amber{--stat-accent:var(--amber);--stat-icon-bg:var(--amber-light);--stat-icon-fg:var(--amber);--stat-border:#FDE7B8}
+.stat-card.c-purple{--stat-accent:var(--purple);--stat-icon-bg:var(--purple-light);--stat-icon-fg:var(--purple);--stat-border:#DDD6FE}
 
 /* ── DASHBOARD OVERVIEW (donut + breakdown) ── */
 .dash-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
