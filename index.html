@@ -224,7 +224,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
    tránh người dùng tưởng vẫn bấm được vì nút trông y như bình thường */
 .btn:disabled{opacity:.6;cursor:not-allowed;pointer-events:none}
 .btn:disabled:hover{background:inherit}
-.btn-primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(5,150,105,.35)}
 .btn-primary:hover{background:var(--green-dark);border-color:var(--green-dark)}
 .btn-primary:disabled{background:var(--green);border-color:var(--green);opacity:.6}
 .btn-danger{background:#fff;border-color:var(--border-md);color:var(--red)}
@@ -238,13 +238,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .search-box input::placeholder{color:var(--text-faint)}
 .filter-row{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none}
 .filter-row::-webkit-scrollbar{display:none}
-.chip{padding:6px 13px;border-radius:var(--radius);font-size:11.5px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
+.chip{padding:7px 15px;border-radius:var(--radius);font-size:12.5px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
 .chip:hover{border-color:var(--green);color:var(--green-dark)}
 .chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
 
 /* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
 thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
 /* Column width hints — 10 cột cốt lõi */
 #hvTable th:nth-child(1){width:32px}        /* checkbox */
@@ -405,7 +405,7 @@ tbody tr:hover td{background:var(--gray-50)}
 .detail-sub{font-size:13px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .detail-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
-.detail-card-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+.detail-card-title{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--green-dark);margin-bottom:10px}
 .detail-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);font-size:14px}
 .detail-row:last-child{border-bottom:none}
 .detail-row-label{color:var(--text-muted)}
@@ -672,7 +672,7 @@ tbody tr:hover td{background:var(--gray-50)}
               </tbody>
             </table>
           </div>
-          <div id="hvPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
+          <div id="hvPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:13px;color:var(--text-muted)"></div>
         </div>
       </div>
 
@@ -751,7 +751,7 @@ tbody tr:hover td{background:var(--gray-50)}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
         Quay lại
       </button>
-      <span id="detail-breadcrumb" style="font-size:12px;color:var(--text-muted)"></span>
+      <span id="detail-breadcrumb" style="font-size:14px;color:var(--text-muted)"></span>
     </div>
     <div id="detail-content"></div>
   </div>
