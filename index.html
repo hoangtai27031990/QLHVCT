@@ -447,6 +447,10 @@ tbody tr:hover td{background:var(--gray-50)}
           <div class="topbar-user-role" id="topbarUserRole">–</div>
         </div>
       </div>
+      <button class="btn-logout" onclick="openChangePw()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Đổi mật khẩu
+      </button>
       <button class="btn-logout" onclick="doLogout()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Đăng xuất
@@ -812,30 +816,98 @@ tbody tr:hover td{background:var(--gray-50)}
     </div>
     <div class="modal-body">
       <div class="form-grid" style="grid-template-columns:1fr">
-        <div class="form-field">
+        <div class="form-field" id="gv-ten-wrap">
           <label>Họ tên *</label>
           <input type="text" id="gv-ten" placeholder="Nguyễn Văn A">
         </div>
-        <div class="form-field">
+        <div class="form-field" id="gv-username-wrap">
           <label>Tên đăng nhập *</label>
           <input type="text" id="gv-username" placeholder="nguyenvana">
         </div>
-        <div class="form-field">
-          <label>Mật khẩu *</label>
-          <input type="password" id="gv-password" placeholder="Nhập mật khẩu">
-        </div>
-        <div class="form-field">
+        <div class="form-field" id="gv-role-wrap">
           <label>Vai trò</label>
           <select id="gv-role">
             <option value="gv">Giáo viên</option>
             <option value="admin">Admin</option>
           </select>
         </div>
+        <div id="gv-pw-section">
+          <div id="gv-pw-section-label" style="font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;padding-top:4px">Mật khẩu</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-field">
+              <label id="gv-pw-label">Mật khẩu mới *</label>
+              <div style="position:relative">
+                <input type="password" id="gv-password" placeholder="Nhập mật khẩu" autocomplete="new-password" style="padding-right:40px">
+                <button type="button" onclick="togglePwVis('gv-password','gv-pw-eye1')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
+                  <svg id="gv-pw-eye1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Xác nhận mật khẩu *</label>
+              <div style="position:relative">
+                <input type="password" id="gv-password-confirm" placeholder="Nhập lại mật khẩu" autocomplete="new-password" style="padding-right:40px" oninput="checkGvPwMatch()">
+                <button type="button" onclick="togglePwVis('gv-password-confirm','gv-pw-eye2')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
+                  <svg id="gv-pw-eye2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div id="gv-pw-mismatch" style="display:none;color:var(--red);font-size:11.5px;margin-top:5px">Mật khẩu xác nhận không khớp</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalGV')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveGV()">Lưu tài khoản</button>
+      <button class="btn btn-primary" id="btnSaveGV" onclick="saveGV()">Lưu tài khoản</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TỰ ĐỔI MẬT KHẨU (mọi tài khoản) -->
+<div class="overlay" id="modalChangePw">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Đổi mật khẩu</h3>
+      <button class="modal-close" onclick="closeModal('modalChangePw')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">Nhập mật khẩu hiện tại để xác minh, sau đó đặt mật khẩu mới.</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-field">
+          <label>Mật khẩu hiện tại *</label>
+          <div style="position:relative">
+            <input type="password" id="cp-old" placeholder="Mật khẩu đang dùng" autocomplete="current-password" style="padding-right:40px">
+            <button type="button" onclick="togglePwVis('cp-old','cp-eye0')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
+              <svg id="cp-eye0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Mật khẩu mới *</label>
+          <div style="position:relative">
+            <input type="password" id="cp-new" placeholder="Ít nhất 6 ký tự" autocomplete="new-password" style="padding-right:40px" oninput="checkCpMatch()">
+            <button type="button" onclick="togglePwVis('cp-new','cp-eye1')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
+              <svg id="cp-eye1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Xác nhận mật khẩu mới *</label>
+          <div style="position:relative">
+            <input type="password" id="cp-confirm" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password" style="padding-right:40px" oninput="checkCpMatch()">
+            <button type="button" onclick="togglePwVis('cp-confirm','cp-eye2')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-faint);padding:0;display:flex;align-items:center">
+              <svg id="cp-eye2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="cp-mismatch" style="display:none;color:var(--red);font-size:11.5px;margin-top:5px">Mật khẩu xác nhận không khớp</div>
+        </div>
+        <div id="cp-error" style="display:none;color:var(--red);font-size:12.5px;padding:8px 12px;background:var(--red-light,#fff5f5);border-radius:var(--radius)"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalChangePw')">Hủy</button>
+      <button class="btn btn-primary" id="btnChangePw" onclick="doChangePw()">Đổi mật khẩu</button>
     </div>
   </div>
 </div>
@@ -2024,8 +2096,14 @@ function renderGV() {
 function openAddGV() {
   editingGVId = null;
   document.getElementById('modalGVTitle').textContent = 'Thêm tài khoản GV';
-  ['gv-ten','gv-username','gv-password'].forEach(id => document.getElementById(id).value='');
+  ['gv-ten','gv-username','gv-password','gv-password-confirm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('gv-role').value = 'gv';
+  document.getElementById('gv-pw-mismatch').style.display = 'none';
+  // Thêm mới: hiện đủ tất cả
+  ['gv-ten-wrap','gv-username-wrap','gv-role-wrap'].forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('gv-pw-section-label').textContent = 'Mật khẩu';
+  document.getElementById('gv-pw-label').textContent = 'Mật khẩu *';
+  document.getElementById('btnSaveGV').textContent = 'Tạo tài khoản';
   document.getElementById('modalGV').classList.add('open');
 }
 
@@ -2033,30 +2111,56 @@ function openEditGV(id) {
   const gv = gvData.find(g => g.id==id);
   if (!gv) return;
   editingGVId = id;
-  document.getElementById('modalGVTitle').textContent = 'Đổi mật khẩu – ' + gv.ten;
+  document.getElementById('modalGVTitle').textContent = 'Đặt lại mật khẩu';
   document.getElementById('gv-ten').value = gv.ten;
   document.getElementById('gv-username').value = gv.username;
   document.getElementById('gv-password').value = '';
+  document.getElementById('gv-password-confirm').value = '';
   document.getElementById('gv-role').value = gv.role;
+  document.getElementById('gv-pw-mismatch').style.display = 'none';
+  // Admin reset: ẩn thông tin tài khoản, chỉ hiện ô mật khẩu
+  ['gv-ten-wrap','gv-username-wrap','gv-role-wrap'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('gv-pw-section-label').textContent = 'Đặt lại mật khẩu cho: ' + gv.ten + ' (' + gv.username + ')';
+  document.getElementById('gv-pw-label').textContent = 'Mật khẩu mới *';
+  document.getElementById('btnSaveGV').textContent = 'Lưu mật khẩu';
   document.getElementById('modalGV').classList.add('open');
 }
 
+function checkGvPwMatch() {
+  const pw  = document.getElementById('gv-password').value;
+  const pw2 = document.getElementById('gv-password-confirm').value;
+  document.getElementById('gv-pw-mismatch').style.display = (pw2 && pw !== pw2) ? '' : 'none';
+}
+
 async function saveGV() {
-  const ten      = document.getElementById('gv-ten').value.trim();
-  const username = document.getElementById('gv-username').value.trim();
-  const password = document.getElementById('gv-password').value;
-  const role     = document.getElementById('gv-role').value;
-  if (!ten || !username) { toast('Vui lòng điền đầy đủ','error'); return; }
-  if (!editingGVId && !password) { toast('Cần nhập mật khẩu','error'); return; }
+  const ten       = document.getElementById('gv-ten').value.trim();
+  const username  = document.getElementById('gv-username').value.trim();
+  const password  = document.getElementById('gv-password').value;
+  const pwConfirm = document.getElementById('gv-password-confirm').value;
+  const role      = document.getElementById('gv-role').value;
+
+  if (!editingGVId && (!ten || !username)) { toast('Vui lòng điền đầy đủ họ tên và tên đăng nhập', 'error'); return; }
+  if (!password) { toast('Vui lòng nhập mật khẩu', 'error'); return; }
+  if (password !== pwConfirm) {
+    document.getElementById('gv-pw-mismatch').style.display = '';
+    toast('Mật khẩu xác nhận không khớp', 'error');
+    return;
+  }
+  if (password.length < 6) { toast('Mật khẩu phải có ít nhất 6 ký tự', 'error'); return; }
+
+  const btn = document.getElementById('btnSaveGV');
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
 
   const data = { id: editingGVId, ten, username, role };
-  // [SECURITY] Hash mật khẩu SHA-256 trước khi gửi — không bao giờ gửi plaintext
-  if (password) data.password = await sha256(password);
+  // [SECURITY] Hash SHA-256 trước khi gửi — không bao giờ gửi plaintext
+  data.password = await sha256(password);
 
   const action = editingGVId ? 'updateGV' : 'addGV';
   const res = await api(action, data);
-  if (!res.ok) { toast(res.msg,'error'); return; }
-  toast(editingGVId ? 'Đã cập nhật tài khoản' : 'Đã thêm tài khoản','success');
+  btn.disabled = false;
+  btn.textContent = editingGVId ? 'Lưu mật khẩu' : 'Tạo tài khoản';
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  toast(editingGVId ? 'Đã đặt lại mật khẩu thành công' : 'Đã tạo tài khoản', 'success');
   closeModal('modalGV');
   loadGV();
 }
@@ -2067,6 +2171,76 @@ async function deleteGV(id) {
   if (!res.ok) { toast(res.msg,'error'); return; }
   toast('Đã xóa tài khoản','success');
   loadGV();
+}
+
+// =============================================
+// TỰ ĐỔI MẬT KHẨU (mọi tài khoản)
+// =============================================
+function openChangePw() {
+  ['cp-old','cp-new','cp-confirm'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cp-mismatch').style.display = 'none';
+  document.getElementById('cp-error').style.display = 'none';
+  document.getElementById('btnChangePw').disabled = false;
+  document.getElementById('btnChangePw').textContent = 'Đổi mật khẩu';
+  document.getElementById('modalChangePw').classList.add('open');
+}
+
+function checkCpMatch() {
+  const pw  = document.getElementById('cp-new').value;
+  const pw2 = document.getElementById('cp-confirm').value;
+  document.getElementById('cp-mismatch').style.display = (pw2 && pw !== pw2) ? '' : 'none';
+}
+
+async function doChangePw() {
+  const oldPw  = document.getElementById('cp-old').value;
+  const newPw  = document.getElementById('cp-new').value;
+  const confirm2 = document.getElementById('cp-confirm').value;
+  const errEl  = document.getElementById('cp-error');
+
+  errEl.style.display = 'none';
+  document.getElementById('cp-mismatch').style.display = 'none';
+
+  if (!oldPw)    { errEl.textContent = 'Vui lòng nhập mật khẩu hiện tại'; errEl.style.display = ''; return; }
+  if (!newPw)    { errEl.textContent = 'Vui lòng nhập mật khẩu mới'; errEl.style.display = ''; return; }
+  if (newPw.length < 6) { errEl.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự'; errEl.style.display = ''; return; }
+  if (newPw !== confirm2) {
+    document.getElementById('cp-mismatch').style.display = '';
+    return;
+  }
+  if (oldPw === newPw) { errEl.textContent = 'Mật khẩu mới phải khác mật khẩu hiện tại'; errEl.style.display = ''; return; }
+
+  const btn = document.getElementById('btnChangePw');
+  btn.disabled = true; btn.textContent = 'Đang xử lý...';
+
+  // [SECURITY] Hash cả 2 phía trước khi gửi
+  const [oldHash, newHash] = await Promise.all([sha256(oldPw), sha256(newPw)]);
+  const res = await api('changePassword', { oldPassword: oldHash, newPassword: newHash });
+
+  btn.disabled = false; btn.textContent = 'Đổi mật khẩu';
+  if (!res.ok) {
+    errEl.textContent = res.msg || 'Đổi mật khẩu thất bại';
+    errEl.style.display = '';
+    return;
+  }
+  toast('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.', 'success');
+  closeModal('modalChangePw');
+  // Token cũ không còn hợp lệ sau khi đổi mật khẩu → đăng xuất
+  setTimeout(() => doLogout(), 1500);
+}
+
+// =============================================
+// HELPER: Hiện / ẩn mật khẩu
+// =============================================
+function togglePwVis(inputId, svgId) {
+  const input = document.getElementById(inputId);
+  const svg   = document.getElementById(svgId);
+  if (!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  // Đổi icon: eye-off khi đang hiện, eye khi đang ẩn
+  svg.innerHTML = isHidden
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 }
 
 // =============================================
