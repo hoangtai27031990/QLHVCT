@@ -184,6 +184,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .donut-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .donut-legend-label{color:var(--text-muted)}
 .donut-legend-val{font-weight:700;color:var(--text);margin-left:auto;padding-left:14px}
+.donut-slice{transition:opacity .15s}
+.donut-slice:hover{opacity:.75}
+.donut-legend-item:hover{opacity:.75}
 .cd-bars{display:flex;flex-direction:column;gap:11px}
 .cd-bar-row{display:grid;grid-template-columns:150px 1fr 38px;align-items:center;gap:10px;font-size:12px}
 .cd-bar-count{font-weight:700;color:var(--text);text-align:right}
@@ -200,6 +203,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 #page-dashboard #dueSoonList table{font-size:13.5px}
 #page-dashboard #dueSoonList th{font-size:12px}
 #page-dashboard .badge{font-size:12px}
+.dash-row-clickable{cursor:pointer}
+.dash-row-clickable:hover{background:var(--gray-50)}
 .cd-bar-name{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cd-bar-track{height:8px;border-radius:5px;background:var(--gray-100);overflow:hidden}
 .cd-bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
@@ -627,6 +632,11 @@ tbody tr:hover td{background:var(--gray-50)}
               Xóa
             </button>
             <button class="btn btn-sm" onclick="clearSelection()">Bỏ chọn</button>
+          </div>
+          <div id="statusFilterBar" style="display:none;align-items:center;gap:8px;background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--blue)">
+            <span id="statusFilterLabel" style="font-weight:600"></span>
+            <div style="flex:1"></div>
+            <button class="btn btn-sm" onclick="clearStatusFilter()">✕ Bỏ lọc</button>
           </div>
           <div class="filter-row" id="filterRow">
             <div class="chip on" onclick="setFilter('')">Tất cả</div>
@@ -1149,6 +1159,7 @@ let currentUser = JSON.parse(localStorage.getItem('sc_user') || 'null');
 let hvData = [];
 let gvData = [];
 let filterChucDanh = '';
+let filterStatus = ''; // '' | 'done' | 'pending' — dùng khi bấm vào lát donut từ Dashboard
 let editingHVId = null;
 let editingGVId = null;
 let auditPage = 0;
@@ -1601,6 +1612,8 @@ function getBadgeCD(cd) {
 
 function setFilter(val) {
   filterChucDanh = val;
+  filterStatus = '';
+  document.getElementById('statusFilterBar').style.display = 'none';
   hvPage = 0;
   document.querySelectorAll('#filterRow .chip').forEach(c => {
     c.classList.toggle('on', c.textContent.trim() === (val || 'Tất cả'));
@@ -1608,13 +1621,41 @@ function setFilter(val) {
   renderTable();
 }
 
+// Bấm vào lát màu trong donut ở Dashboard -> sang trang Học viên, lọc theo trạng thái hoàn thành
+function goToHVByStatus(status) {
+  filterStatus = status; // 'done' | 'pending'
+  filterChucDanh = '';
+  hvPage = 0;
+  document.querySelectorAll('#filterRow .chip').forEach(c => {
+    c.classList.toggle('on', c.textContent.trim() === 'Tất cả');
+  });
+  const bar = document.getElementById('statusFilterBar');
+  const label = document.getElementById('statusFilterLabel');
+  if (bar && label) {
+    label.textContent = status === 'done'
+      ? 'Đang lọc: Học viên đã nộp bài'
+      : 'Đang lọc: Học viên chưa nộp bài';
+    bar.style.display = 'flex';
+  }
+  renderTable();
+  const hvNav = document.querySelector('.nav-item[onclick*="hocvien"]');
+  navigate('hocvien', hvNav);
+}
+
+function clearStatusFilter() {
+  filterStatus = '';
+  document.getElementById('statusFilterBar').style.display = 'none';
+  renderTable();
+}
+
 function renderTable() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   const filtered = hvData.filter(hv => {
     const matchFilter = !filterChucDanh || hv.chucDanh === filterChucDanh;
+    const matchStatus = !filterStatus || (filterStatus === 'done' ? isDone(hv) : !isDone(hv));
     const fullName = (hv.ho + ' ' + hv.ten).toLowerCase();
     const matchSearch = !q || fullName.includes(q) || String(hv.maHV).includes(q);
-    return matchFilter && matchSearch;
+    return matchFilter && matchStatus && matchSearch;
   });
 
   // [FIX] Đưa học viên có trạng thái "Đã chuyển QTĐT" xuống cuối danh sách,
@@ -1977,7 +2018,7 @@ function updateDashboard() {
       urgencyBadge = `<span class="badge badge-pending">Còn ${h.diff} ngày</span>`;
       urgencyColor = 'color:var(--amber)';
     }
-    return `<tr>
+    return `<tr class="dash-row-clickable" onclick="openDetail('${h.id}')" title="Xem chi tiết học viên">
       <td class="td-code">${escapeHTML(h.maHV)}</td>
       <td style="min-width:120px">${escapeHTML(h.ho)} ${escapeHTML(h.ten)}</td>
       <td style="min-width:100px"><span class="badge ${badgeCD(h.chucDanh)}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(h.chucDanh)}</span></td>
@@ -2020,31 +2061,44 @@ const CD_CHART_COLORS = {
 };
 
 function renderDashboardOverview(total, done) {
-  // ── Donut: tỷ lệ hoàn thành ──
+  // ── Donut: tỷ lệ hoàn thành (2 lát có thể bấm để lọc nhanh) ──
   const pct = total ? Math.round(done/total*100) : 0;
   const r = 46, cx = 60, cy = 60;
   const circumference = 2 * Math.PI * r;
   const doneLen = circumference * (pct/100);
+  const pendingLen = circumference - doneLen;
   const svg = document.getElementById('donutSvg');
   if (svg) {
     svg.innerHTML = `
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="14"/>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="14"
+      <circle class="donut-slice" data-status="pending" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-200)" stroke-width="14"
+        stroke-dasharray="${pendingLen} ${circumference}" stroke-dashoffset="${-doneLen}"
+        transform="rotate(-90 ${cx} ${cy})" style="cursor:${total - done ? 'pointer' : 'default'}">
+        ${total - done ? '<title>Bấm để xem học viên chưa nộp bài</title>' : ''}
+      </circle>
+      <circle class="donut-slice" data-status="done" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="14"
         stroke-dasharray="${doneLen} ${circumference}" stroke-dashoffset="0"
-        transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>
-      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="25" font-weight="700" fill="var(--text)">${pct}%</text>
-      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11.5" fill="var(--text-faint)">hoàn thành</text>
+        transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" style="cursor:${done ? 'pointer' : 'default'}">
+        ${done ? '<title>Bấm để xem học viên đã nộp bài</title>' : ''}
+      </circle>
+      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="25" font-weight="700" fill="var(--text)" style="pointer-events:none">${pct}%</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11.5" fill="var(--text-faint)" style="pointer-events:none">hoàn thành</text>
     `;
+    svg.querySelectorAll('.donut-slice').forEach(slice => {
+      const status = slice.getAttribute('data-status');
+      const count = status === 'done' ? done : (total - done);
+      if (count > 0) slice.addEventListener('click', () => goToHVByStatus(status));
+    });
   }
   const legend = document.getElementById('donutLegend');
   if (legend) {
     legend.innerHTML = `
-      <div class="donut-legend-item">
+      <div class="donut-legend-item" id="legendDone" style="cursor:${done ? 'pointer' : 'default'}">
         <span class="donut-dot" style="background:var(--green)"></span>
         <span class="donut-legend-label">Đã nộp bài</span>
         <span class="donut-legend-val">${done}</span>
       </div>
-      <div class="donut-legend-item">
+      <div class="donut-legend-item" id="legendPending" style="cursor:${total - done ? 'pointer' : 'default'}">
         <span class="donut-dot" style="background:var(--gray-200)"></span>
         <span class="donut-legend-label">Chưa nộp bài</span>
         <span class="donut-legend-val">${total - done}</span>
@@ -2054,6 +2108,8 @@ function renderDashboardOverview(total, done) {
         <span class="donut-legend-val">${total}</span>
       </div>
     `;
+    if (done) legend.querySelector('#legendDone').addEventListener('click', () => goToHVByStatus('done'));
+    if (total - done) legend.querySelector('#legendPending').addEventListener('click', () => goToHVByStatus('pending'));
   }
 
   // ── Breakdown theo chức danh ──
