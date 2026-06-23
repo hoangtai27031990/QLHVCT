@@ -1632,9 +1632,15 @@ function goToHVByStatus(status) {
   const bar = document.getElementById('statusFilterBar');
   const label = document.getElementById('statusFilterLabel');
   if (bar && label) {
-    label.textContent = status === 'done'
-      ? 'Đang lọc: Học viên đã nộp bài'
-      : 'Đang lọc: Học viên chưa nộp bài';
+    label.textContent =
+      status === 'done'    ? 'Đang lọc: Học viên đã nộp bài' :
+      status === 'overdue' ? 'Đang lọc: Học viên quá hạn nộp bài' :
+      'Đang lọc: Học viên chưa nộp bài (chưa quá hạn)';
+    const c = status === 'done' ? 'var(--green)' : status === 'overdue' ? 'var(--red)' : 'var(--amber)';
+    const cLight = status === 'done' ? 'var(--green-light)' : status === 'overdue' ? 'var(--red-light)' : 'var(--amber-light)';
+    bar.style.color = c;
+    bar.style.borderColor = c;
+    bar.style.background = cLight;
     bar.style.display = 'flex';
   }
   renderTable();
@@ -1652,7 +1658,11 @@ function renderTable() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   const filtered = hvData.filter(hv => {
     const matchFilter = !filterChucDanh || hv.chucDanh === filterChucDanh;
-    const matchStatus = !filterStatus || (filterStatus === 'done' ? isDone(hv) : !isDone(hv));
+    const matchStatus = !filterStatus || (
+      filterStatus === 'done'    ? isDone(hv) :
+      filterStatus === 'overdue' ? isOverdue(hv) :
+      /* 'pending' = chưa nộp, không tính quá hạn riêng */ (!isDone(hv) && !isOverdue(hv))
+    );
     const fullName = (hv.ho + ' ' + hv.ten).toLowerCase();
     const matchSearch = !q || fullName.includes(q) || String(hv.maHV).includes(q);
     return matchFilter && matchStatus && matchSearch;
@@ -1948,6 +1958,15 @@ function isDone(h) {
   return tt === 'Đã nộp bài' || tt === 'Đã chuyển QTĐT';
 }
 
+// Học viên chưa hoàn thành và đã quá hạn nộp bài (hạn = ngày bắt đầu + 6 tháng - 10 ngày)
+function isOverdue(h) {
+  if (isDone(h) || !h.ngayBatDau) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const han = addDays(addMonths(h.ngayBatDau, 6), -10);
+  const diff = Math.ceil((parseLocalDate(han) - today) / 86400000);
+  return diff < 0;
+}
+
 function updateDashboard() {
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -1986,7 +2005,7 @@ function updateDashboard() {
   const trendEl = document.getElementById('s-done-trend');
   if (trendEl) trendEl.textContent = total ? Math.round(done/total*100)+'%' : '';
 
-  renderDashboardOverview(total, done);
+  renderDashboardOverview(total, done, overdue.length);
 
   const el = document.getElementById('dueSoonList');
 
@@ -2060,56 +2079,64 @@ const CD_CHART_COLORS = {
   '__other__':                   '#64748B',
 };
 
-function renderDashboardOverview(total, done) {
-  // ── Donut: tỷ lệ hoàn thành (2 lát có thể bấm để lọc nhanh) ──
+function renderDashboardOverview(total, done, overdueCount) {
+  // ── Donut: tỷ lệ hoàn thành (3 lát, bấm để lọc nhanh sang trang Học viên) ──
+  overdueCount = overdueCount || 0;
+  const pendingCount = Math.max(0, total - done - overdueCount);
   const pct = total ? Math.round(done/total*100) : 0;
   const r = 46, cx = 60, cy = 60;
   const circumference = 2 * Math.PI * r;
-  const doneLen = circumference * (pct/100);
-  const pendingLen = circumference - doneLen;
+  const doneLen    = circumference * (done / (total || 1));
+  const pendingLen = circumference * (pendingCount / (total || 1));
+  const overdueLen = circumference * (overdueCount / (total || 1));
+
+  const slices = [
+    { status: 'done',    count: done,         color: 'var(--green)', offset: 0,                             len: doneLen,    title: 'Bấm để xem học viên đã nộp bài' },
+    { status: 'pending', count: pendingCount,  color: 'var(--amber)', offset: -doneLen,                      len: pendingLen, title: 'Bấm để xem học viên chưa nộp bài (chưa quá hạn)' },
+    { status: 'overdue', count: overdueCount,  color: 'var(--red)',   offset: -(doneLen + pendingLen),       len: overdueLen, title: 'Bấm để xem học viên quá hạn nộp bài' },
+  ];
+
   const svg = document.getElementById('donutSvg');
   if (svg) {
+    const slicesSvg = slices.map(s => `
+      <circle class="donut-slice" data-status="${s.status}" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="14"
+        stroke-dasharray="${s.len} ${circumference}" stroke-dashoffset="${s.offset}"
+        transform="rotate(-90 ${cx} ${cy})" style="cursor:${s.count ? 'pointer' : 'default'}">
+        ${s.count ? `<title>${s.title}</title>` : ''}
+      </circle>`).join('');
     svg.innerHTML = `
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="14"/>
-      <circle class="donut-slice" data-status="pending" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-200)" stroke-width="14"
-        stroke-dasharray="${pendingLen} ${circumference}" stroke-dashoffset="${-doneLen}"
-        transform="rotate(-90 ${cx} ${cy})" style="cursor:${total - done ? 'pointer' : 'default'}">
-        ${total - done ? '<title>Bấm để xem học viên chưa nộp bài</title>' : ''}
-      </circle>
-      <circle class="donut-slice" data-status="done" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--green)" stroke-width="14"
-        stroke-dasharray="${doneLen} ${circumference}" stroke-dashoffset="0"
-        transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" style="cursor:${done ? 'pointer' : 'default'}">
-        ${done ? '<title>Bấm để xem học viên đã nộp bài</title>' : ''}
-      </circle>
+      ${slicesSvg}
       <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="25" font-weight="700" fill="var(--text)" style="pointer-events:none">${pct}%</text>
       <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11.5" fill="var(--text-faint)" style="pointer-events:none">hoàn thành</text>
     `;
     svg.querySelectorAll('.donut-slice').forEach(slice => {
       const status = slice.getAttribute('data-status');
-      const count = status === 'done' ? done : (total - done);
-      if (count > 0) slice.addEventListener('click', () => goToHVByStatus(status));
+      const s = slices.find(x => x.status === status);
+      if (s.count > 0) slice.addEventListener('click', () => goToHVByStatus(status));
     });
   }
   const legend = document.getElementById('donutLegend');
   if (legend) {
-    legend.innerHTML = `
-      <div class="donut-legend-item" id="legendDone" style="cursor:${done ? 'pointer' : 'default'}">
-        <span class="donut-dot" style="background:var(--green)"></span>
-        <span class="donut-legend-label">Đã nộp bài</span>
-        <span class="donut-legend-val">${done}</span>
-      </div>
-      <div class="donut-legend-item" id="legendPending" style="cursor:${total - done ? 'pointer' : 'default'}">
-        <span class="donut-dot" style="background:var(--gray-200)"></span>
-        <span class="donut-legend-label">Chưa nộp bài</span>
-        <span class="donut-legend-val">${total - done}</span>
-      </div>
-      <div class="donut-legend-item" style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px">
+    const legendRow = (id, color, label, count) => `
+      <div class="donut-legend-item" id="${id}" style="cursor:${count ? 'pointer' : 'default'}">
+        <span class="donut-dot" style="background:${color}"></span>
+        <span class="donut-legend-label">${label}</span>
+        <span class="donut-legend-val">${count}</span>
+      </div>`;
+    legend.innerHTML =
+      legendRow('legendDone', 'var(--green)', 'Đã nộp bài', done) +
+      legendRow('legendPending', 'var(--amber)', 'Chưa nộp (chưa quá hạn)', pendingCount) +
+      legendRow('legendOverdue', 'var(--red)', 'Quá hạn nộp bài', overdueCount) +
+      `<div class="donut-legend-item" style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px">
         <span class="donut-legend-label">Tổng số</span>
         <span class="donut-legend-val">${total}</span>
-      </div>
-    `;
-    if (done) legend.querySelector('#legendDone').addEventListener('click', () => goToHVByStatus('done'));
-    if (total - done) legend.querySelector('#legendPending').addEventListener('click', () => goToHVByStatus('pending'));
+      </div>`;
+    slices.forEach(s => {
+      const id = s.status === 'done' ? 'legendDone' : s.status === 'pending' ? 'legendPending' : 'legendOverdue';
+      const elL = legend.querySelector('#' + id);
+      if (elL && s.count > 0) elL.addEventListener('click', () => goToHVByStatus(s.status));
+    });
   }
 
   // ── Breakdown theo chức danh ──
