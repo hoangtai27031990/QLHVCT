@@ -1144,6 +1144,22 @@ tbody tr:hover td{background:var(--gray-50)}
   </div>
 </div>
 
+<!-- IDLE WARNING OVERLAY -->
+<div id="idleWarningOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:36px 40px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="width:52px;height:52px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div style="font-size:17px;font-weight:700;color:#0F172A;margin-bottom:8px">Phiên làm việc sắp hết hạn</div>
+    <div style="font-size:14px;color:#64748B;margin-bottom:6px">Bạn không hoạt động trong một thời gian.</div>
+    <div style="font-size:14px;color:#64748B;margin-bottom:24px">Hệ thống sẽ tự đăng xuất sau <strong id="idleCountdown" style="color:#DC2626">2:00</strong></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="stayLoggedIn()" style="padding:10px 28px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Tiếp tục làm việc</button>
+      <button onclick="forceIdleLogout()" style="padding:10px 20px;background:#fff;color:#DC2626;border:1.5px solid #DC2626;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Đăng xuất</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1151,7 +1167,7 @@ tbody tr:hover td{background:var(--gray-50)}
 // =============================================
 // CẤU HÌNH
 // =============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbx1H9R2ZZgBXhuWWyYd7RdlTd08rXoHIWSS3LSpcEs4vKo_xK26dt2NSQum4ASbo1vo/exec'; // Thay bằng URL Apps Script đã deploy
+const API_URL = 'https://script.google.com/macros/s/AKfycbzCZVN5xlKdy5JzzCWgIHnUMSeTIFkAON5SJeuWGedh7wR7BeB3apU29fk8K_l-Hf1T/exec';
 
 // =============================================
 // STATE
@@ -1265,9 +1281,85 @@ let sessionExpiredHandled = false;
 function handleSessionExpired() {
   if (sessionExpiredHandled) return;
   sessionExpiredHandled = true;
+  stopIdleTimer();
   doLogout();
   toast('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại', 'error');
 }
+
+// =============================================
+// IDLE TIMEOUT
+// Tự động đăng xuất sau 30 phút không hoạt động.
+// Cảnh báo trước 2 phút với đếm ngược, người dùng
+// có thể bấm "Tiếp tục" để gia hạn thêm 30 phút.
+// =============================================
+const IDLE_TIMEOUT_MS  = 30 * 60 * 1000;
+const IDLE_WARN_MS     =  2 * 60 * 1000;
+let idleTimer          = null;
+let idleWarnTimer      = null;
+let idleCountdownTimer = null;
+let idleWarnShown      = false;
+
+function resetIdleTimer() {
+  if (!token || !currentUser) return;
+  clearTimeout(idleTimer);
+  clearTimeout(idleWarnTimer);
+  if (idleWarnShown) hideIdleWarning();
+  idleWarnTimer = setTimeout(showIdleWarning, IDLE_TIMEOUT_MS - IDLE_WARN_MS);
+  idleTimer     = setTimeout(forceIdleLogout, IDLE_TIMEOUT_MS);
+}
+
+function stopIdleTimer() {
+  clearTimeout(idleTimer);
+  clearTimeout(idleWarnTimer);
+  clearInterval(idleCountdownTimer);
+  idleTimer = idleWarnTimer = idleCountdownTimer = null;
+}
+
+function showIdleWarning() {
+  idleWarnShown = true;
+  let secondsLeft = IDLE_WARN_MS / 1000;
+  const overlay = document.getElementById('idleWarningOverlay');
+  const countEl = document.getElementById('idleCountdown');
+  if (!overlay) return;
+  countEl.textContent = formatIdleCountdown(secondsLeft);
+  overlay.style.display = 'flex';
+  idleCountdownTimer = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) { clearInterval(idleCountdownTimer); return; }
+    countEl.textContent = formatIdleCountdown(secondsLeft);
+  }, 1000);
+}
+
+function hideIdleWarning() {
+  idleWarnShown = false;
+  clearInterval(idleCountdownTimer);
+  const overlay = document.getElementById('idleWarningOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function formatIdleCountdown(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return (m > 0 ? m + ' phút ' : '') + sec + ' giây';
+}
+
+function stayLoggedIn() {
+  resetIdleTimer();
+}
+
+function forceIdleLogout() {
+  hideIdleWarning();
+  stopIdleTimer();
+  doLogout();
+  const errText = document.getElementById('loginErrText');
+  const errIcon = document.getElementById('loginErrIcon');
+  if (errText) errText.textContent = 'Phiên làm việc đã hết hạn do không hoạt động trong 30 phút';
+  if (errIcon) errIcon.style.display = '';
+}
+
+['mousemove','mousedown','click','keydown','scroll','touchstart','touchmove'].forEach(evt => {
+  document.addEventListener(evt, () => { if (token) resetIdleTimer(); }, { passive: true });
+});
 
 // =============================================
 // AUTH
@@ -1334,6 +1426,7 @@ document.getElementById('loginPass').addEventListener('keydown', e => {
 });
 
 function doLogout() {
+  stopIdleTimer();
   token = ''; currentUser = null;
   sessionStorage.removeItem('sc_token');
   sessionStorage.removeItem('sc_user');
@@ -1364,6 +1457,7 @@ function startApp() {
   loadHV();
   const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
   navigate('dashboard', dashNav);
+  resetIdleTimer();
 }
 
 function getInitials(name) {
