@@ -1328,12 +1328,13 @@ async function api(action, data = {}) {
 
 // Kiểm tra thông báo lỗi từ server có liên quan đến phiên đăng nhập hết hạn/không hợp lệ.
 // [FIX] Chỉ coi là auth error khi server trả đúng từ khóa xác thực —
-// tránh đăng xuất oan khi lỗi mạng hoặc timeout trả về message ngẫu nhiên.
+// tránh đăng xuất oan khi lỗi mạng, GAS timeout, hoặc lỗi hệ thống khác.
 function isAuthError(msg) {
   if (!msg) return false;
-  const m = String(msg).toLowerCase();
-  // Chỉ match chính xác các lỗi auth từ server GAS (Unauthorized, Token expired)
+  const m = String(msg).toLowerCase().trim();
+  // Chỉ match CHÍNH XÁC 2 lỗi auth thật sự từ server GAS
   return m === 'unauthorized' || m === 'token expired';
+  // Không match 'lỗi xác thực', 'lỗi kết nối', hay bất kỳ lỗi hệ thống nào khác
 }
 
 // Xử lý khi phiên đăng nhập hết hạn: đăng xuất và báo cho người dùng
