@@ -2447,12 +2447,12 @@ async function saveHV() {
       hvData.push({ ...data, id: res.id });
     }
 
-    // Ghi audit log
+    // Ghi audit log (fire-and-forget, không block UI)
     if (editingHVId && oldHv) {
       const changes = buildChanges(oldHv, data);
-      if (changes.length) await auditLog('edit', data, changes);
+      if (changes.length) auditLog('edit', data, changes);
     } else {
-      await auditLog('add', data);
+      auditLog('add', data);
     }
 
     toast(editingHVId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
@@ -2505,7 +2505,7 @@ async function confirmDeleteHV() {
   const hv = hvData.find(h => h.id == pendingDeleteHVId);
   const res = await api('deleteHV', { id: pendingDeleteHVId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
-  if (hv) await auditLog('delete', hv);
+  if (hv) auditLog('delete', hv); // fire-and-forget
 
   // Xóa khỏi hvData cục bộ thay vì tải lại toàn bộ danh sách
   hvData = hvData.filter(h => h.id != pendingDeleteHVId);
@@ -2923,17 +2923,13 @@ async function auditLog(action, hv, changes = null) {
   const entry = {
     ts: Date.now(),
     user: currentUser?.ten || currentUser?.username || '?',
-    action, // 'add' | 'edit' | 'delete'
+    action,
     maHV: hv.maHV || '',
     name: ((hv.ho || '') + ' ' + (hv.ten || '')).trim(),
     changes
   };
-  try {
-    const res = await api('addAuditLog', { entry });
-    if (!res.ok) console.error('[auditLog] lưu thất bại:', res.msg);
-  } catch (e) {
-    console.error('[auditLog] lỗi kết nối:', e);
-  }
+  // [PERF] Fire-and-forget: không await, không block UI
+  api('addAuditLog', { entry }).catch(e => console.warn('[auditLog]', e));
 }
 
 async function getAuditLogs() {
@@ -3053,15 +3049,11 @@ async function activityLog(action, user, detail = '') {
     username: user?.username || user?.ten || '?',
     ten: user?.ten || user?.username || '?',
     role: user?.role || '',
-    action, // 'login' | 'logout' | 'changepw'
+    action,
     detail,
   };
-  try {
-    const res = await api('addActivityLog', { entry });
-    if (!res.ok) console.warn('[activityLog] lưu thất bại:', res.msg);
-  } catch (e) {
-    console.warn('[activityLog] lỗi kết nối:', e);
-  }
+  // [PERF] Fire-and-forget: không await, không block UI
+  api('addActivityLog', { entry }).catch(e => console.warn('[activityLog]', e));
 }
 
 async function getActivityLogs() {
