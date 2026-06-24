@@ -393,10 +393,20 @@ tbody tr:hover td{background:var(--gray-50)}
 .audit-action-add{background:var(--green-light);color:var(--green-dark)}
 .audit-action-edit{background:var(--blue-light);color:var(--blue)}
 .audit-action-delete{background:var(--red-light);color:var(--red)}
+.audit-action-login{background:#EEF2FF;color:#4338CA}
+.audit-action-logout{background:var(--gray-100);color:var(--gray-700)}
+.audit-action-changepw{background:var(--amber-light);color:var(--amber)}
 .audit-diff{font-size:11px;line-height:1.6}
 .audit-diff-field{color:var(--text-faint);font-weight:600;margin-right:4px}
 .audit-diff-old{color:var(--red);text-decoration:line-through;margin-right:4px}
 .audit-diff-new{color:var(--green)}
+
+/* ── AUDIT TABS ── */
+.audit-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px}
+.audit-tab{padding:9px 20px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .12s;display:flex;align-items:center;gap:7px}
+.audit-tab:hover{color:var(--text)}
+.audit-tab.active{color:var(--green-dark);border-bottom-color:var(--green)}
+.audit-tab svg{width:14px;height:14px}
 
 /* ── DETAIL VIEW ── */
 .detail-hero{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:16px;display:flex;align-items:flex-start;gap:20px}
@@ -524,7 +534,7 @@ tbody tr:hover td{background:var(--gray-50)}
       </div>
       <div class="nav-item admin-only" onclick="navigate('auditlog',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Lịch sử sửa
+        Nhật ký & Log
       </div>
     </nav>
 
@@ -710,34 +720,79 @@ tbody tr:hover td{background:var(--gray-50)}
     <!-- AUDIT LOG (admin only, ẩn/hiện qua navigate) -->
     <div id="page-auditlog-wrap" style="display:none;flex:1;padding:20px;overflow-y:auto">
       <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Lịch sử chỉnh sửa</span>
-          <div class="toolbar">
-            <div class="search-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="auditPage=0;renderAuditLog()">
-            </div>
-            <button class="btn" onclick="clearAuditLog()" style="color:var(--red)">Xóa log cũ</button>
+        <!-- Tabs -->
+        <div class="audit-tabs">
+          <div class="audit-tab active" id="audittab-edit" onclick="switchAuditTab('edit')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Lịch sử chỉnh sửa
+          </div>
+          <div class="audit-tab" id="audittab-activity" onclick="switchAuditTab('activity')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Nhật ký hoạt động
           </div>
         </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="min-width:130px">Thời gian</th>
-                <th style="min-width:100px">Người sửa</th>
-                <th style="min-width:80px">Hành động</th>
-                <th style="min-width:80px">Mã HV</th>
-                <th style="min-width:130px">Học viên</th>
-                <th>Nội dung thay đổi</th>
-              </tr>
-            </thead>
-            <tbody id="auditBody">
-              <tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>
-            </tbody>
-          </table>
+
+        <!-- Tab: Lịch sử chỉnh sửa -->
+        <div id="audit-panel-edit">
+          <div class="panel-header" style="margin-bottom:12px">
+            <span class="panel-title" style="font-size:13px;color:var(--text-muted)">Ghi lại các thao tác thêm/sửa/xóa học viên</span>
+            <div class="toolbar">
+              <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="auditPage=0;renderAuditLog()">
+              </div>
+              <button class="btn" onclick="clearAuditLog()" style="color:var(--red)">Xóa log cũ</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width:130px">Thời gian</th>
+                  <th style="min-width:100px">Người sửa</th>
+                  <th style="min-width:80px">Hành động</th>
+                  <th style="min-width:80px">Mã HV</th>
+                  <th style="min-width:130px">Học viên</th>
+                  <th>Nội dung thay đổi</th>
+                </tr>
+              </thead>
+              <tbody id="auditBody">
+                <tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="auditPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
         </div>
-        <div id="auditPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
+
+        <!-- Tab: Nhật ký hoạt động -->
+        <div id="audit-panel-activity" style="display:none">
+          <div class="panel-header" style="margin-bottom:12px">
+            <span class="panel-title" style="font-size:13px;color:var(--text-muted)">Ghi lại đăng nhập, đăng xuất, đổi mật khẩu</span>
+            <div class="toolbar">
+              <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="activitySearch" placeholder="Tìm tên tài khoản..." oninput="activityPage=0;renderActivityLog()">
+              </div>
+              <button class="btn" onclick="clearActivityLog()" style="color:var(--red)">Xóa log cũ</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width:140px">Thời gian</th>
+                  <th style="min-width:120px">Tài khoản</th>
+                  <th style="min-width:90px">Hành động</th>
+                  <th>Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody id="activityBody">
+                <tr><td colspan="4" class="empty">Chưa có dữ liệu</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="activityPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:12px;color:var(--text-muted)"></div>
+        </div>
       </div>
     </div>
 
@@ -1418,6 +1473,8 @@ async function doLogin() {
   // [SECURITY FIX] sessionStorage: tự xóa khi đóng tab, không chia sẻ giữa các tab
   sessionStorage.setItem('sc_token', token);
   sessionStorage.setItem('sc_user', JSON.stringify(currentUser));
+  // Ghi nhật ký đăng nhập
+  activityLog('login', currentUser, 'Đăng nhập thành công');
   startApp();
 }
 
@@ -1427,6 +1484,8 @@ document.getElementById('loginPass').addEventListener('keydown', e => {
 
 function doLogout() {
   stopIdleTimer();
+  // Ghi nhật ký đăng xuất (trước khi xóa currentUser)
+  if (currentUser) activityLog('logout', currentUser, 'Đăng xuất');
   token = ''; currentUser = null;
   sessionStorage.removeItem('sc_token');
   sessionStorage.removeItem('sc_user');
@@ -1485,8 +1544,8 @@ function navigate(page, el) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     mainEl.style.display = 'none';
     auditWrap.style.display = 'block';
-    auditPage = 0;
-    renderAuditLog();
+    // Reset về tab lịch sử sửa mặc định
+    switchAuditTab('edit');
     return;
   }
 
@@ -2623,6 +2682,8 @@ async function doChangePw() {
     return;
   }
   toast('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.', 'success');
+  // Ghi nhật ký đổi mật khẩu (trước khi logout)
+  activityLog('changepw', currentUser, 'Đổi mật khẩu thành công');
   closeModal('modalChangePw');
   // Token cũ không còn hợp lệ sau khi đổi mật khẩu → đăng xuất
   setTimeout(() => doLogout(), 1500);
@@ -2974,8 +3035,117 @@ async function renderAuditLog() {
 }
 
 // =============================================
-// DETAIL VIEW HỌC VIÊN
+// ACTIVITY LOG (đăng nhập / đăng xuất / đổi mật khẩu)
 // =============================================
+const ACTIVITY_PER_PAGE = 30;
+let activityPage = 0;
+let currentAuditTab = 'edit'; // 'edit' | 'activity'
+
+async function activityLog(action, user, detail = '') {
+  const entry = {
+    ts: Date.now(),
+    username: user?.username || user?.ten || '?',
+    ten: user?.ten || user?.username || '?',
+    role: user?.role || '',
+    action, // 'login' | 'logout' | 'changepw'
+    detail,
+  };
+  try {
+    const res = await api('addActivityLog', { entry });
+    if (!res.ok) console.warn('[activityLog] lưu thất bại:', res.msg);
+  } catch (e) {
+    console.warn('[activityLog] lỗi kết nối:', e);
+  }
+}
+
+async function getActivityLogs() {
+  try {
+    const res = await api('getActivityLog');
+    if (!res.ok) {
+      toast(res.msg || 'Không tải được nhật ký hoạt động', 'error');
+      return [];
+    }
+    return res.logs || [];
+  } catch (e) {
+    toast('Lỗi kết nối khi tải nhật ký hoạt động', 'error');
+    return [];
+  }
+}
+
+async function clearActivityLog() {
+  if (!confirm('Xóa toàn bộ nhật ký hoạt động trên Google Sheet?')) return;
+  const res = await api('clearActivityLog');
+  if (!res.ok) { toast(res.msg || 'Xóa thất bại', 'error'); return; }
+  await renderActivityLog();
+  toast('Đã xóa nhật ký', 'success');
+}
+
+async function renderActivityLog() {
+  const q = (document.getElementById('activitySearch')?.value || '').toLowerCase();
+  const allLogs = await getActivityLogs();
+  let logs = allLogs.filter(l => {
+    if (!q) return true;
+    return (l.username||'').toLowerCase().includes(q)
+        || (l.ten||'').toLowerCase().includes(q);
+  });
+
+  const total = logs.length;
+  const start = activityPage * ACTIVITY_PER_PAGE;
+  const page  = logs.slice(start, start + ACTIVITY_PER_PAGE);
+
+  const actionBadge = a => {
+    if (a === 'login')    return `<span class="badge audit-action-login">Đăng nhập</span>`;
+    if (a === 'logout')   return `<span class="badge audit-action-logout">Đăng xuất</span>`;
+    if (a === 'changepw') return `<span class="badge audit-action-changepw">Đổi mật khẩu</span>`;
+    return `<span class="badge badge-new">${escapeHTML(a)}</span>`;
+  };
+
+  const tbody = document.getElementById('activityBody');
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Không có dữ liệu</td></tr>';
+    document.getElementById('activityPager').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(l => {
+    const dt = new Date(l.ts);
+    const timeStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const roleLabel = l.role === 'admin'
+      ? `<span class="badge badge-admin" style="font-size:10px">Admin</span>`
+      : `<span class="badge badge-gv" style="font-size:10px">GV</span>`;
+    return `<tr>
+      <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${timeStr}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:12px;font-weight:600">${escapeHTML(l.ten||l.username)}</span>
+          ${roleLabel}
+        </div>
+        <div style="font-size:11px;color:var(--text-faint)">${escapeHTML(l.username)}</div>
+      </td>
+      <td>${actionBadge(l.action)}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${escapeHTML(l.detail||'')}</td>
+    </tr>`;
+  }).join('');
+
+  const totalPages = Math.ceil(total / ACTIVITY_PER_PAGE);
+  document.getElementById('activityPager').innerHTML =
+    `<span>${total} bản ghi</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="activityPage=Math.max(0,activityPage-1);renderActivityLog()" ${activityPage===0?'disabled':''}>‹ Trước</button>
+      <span style="padding:5px 8px;font-size:11px">Trang ${activityPage+1}/${totalPages||1}</span>
+      <button class="btn btn-sm" onclick="activityPage++;renderActivityLog()" ${activityPage>=totalPages-1?'disabled':''}>Sau ›</button>
+    </div>`;
+}
+
+function switchAuditTab(tab) {
+  currentAuditTab = tab;
+  document.getElementById('audittab-edit').classList.toggle('active', tab === 'edit');
+  document.getElementById('audittab-activity').classList.toggle('active', tab === 'activity');
+  document.getElementById('audit-panel-edit').style.display = tab === 'edit' ? '' : 'none';
+  document.getElementById('audit-panel-activity').style.display = tab === 'activity' ? '' : 'none';
+  if (tab === 'activity') { activityPage = 0; renderActivityLog(); }
+  else { auditPage = 0; renderAuditLog(); }
+}
 function openDetail(id) {
   const hv = hvData.find(h => h.id == id);
   if (!hv) return;
