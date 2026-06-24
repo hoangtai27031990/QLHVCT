@@ -1923,7 +1923,7 @@ function renderTable() {
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
       <td class="td-muted" style="font-size:12px">${escapeHTML(hv.nguoiHD) || '–'}</td>
-      <td style="${hanNopStyle}${overdue}">${calIcon}${fmtDate(hanNop)}</td>
+      <td style="font-size:12px;${hanNopStyle}${overdue}">${calIcon}${fmtDate(hanNop)}</td>
       <td>
         <div class="td-detai-wrap">
           ${escapeHTML(hv.tenDeTai) || '<span style="color:var(--text-faint)">–</span>'}
