@@ -2,6 +2,9 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản lý học viên cấp trung – Saigon Co.op</title>
 <style>
@@ -35,7 +38,7 @@
   --accent: var(--green);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;font-size:14px;color:var(--text);background:var(--gray-50);min-height:100vh;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14.5px;color:var(--text);background:var(--gray-50);min-height:100vh;-webkit-font-smoothing:antialiased}
 
 /* ── LOGIN ── */
 #loginScreen{display:flex;min-height:100vh}
@@ -233,19 +236,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;fo
 .btn-icon{width:30px;height:30px;padding:0;justify-content:center}
 
 /* ── SEARCH & FILTER ── */
-.search-box{display:flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:12.5px;color:var(--text-muted);background:#fff;width:210px}
-.search-box input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text);width:100%}
+.search-box{display:flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:13px;color:var(--text-muted);background:#fff;width:210px}
+.search-box input{border:none;background:none;outline:none;font-size:13px;color:var(--text);width:100%}
 .search-box input::placeholder{color:var(--text-faint)}
 .filter-row{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none}
 .filter-row::-webkit-scrollbar{display:none}
-.chip{padding:7px 15px;border-radius:var(--radius);font-size:12.5px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
+.chip{padding:7px 15px;border-radius:var(--radius);font-size:13px;font-weight:500;border:1px solid var(--border-md);cursor:pointer;color:var(--text-muted);background:#fff;transition:all .12s}
 .chip:hover{border-color:var(--green);color:var(--green-dark)}
 .chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
 
 /* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--gray-50);position:sticky;top:0;text-transform:uppercase}
 /* Column width hints — 10 cột cốt lõi */
 #hvTable th:nth-child(1){width:32px}        /* checkbox */
 #hvTable th:nth-child(2){min-width:60px}    /* Mã HV */
@@ -272,7 +275,7 @@ thead th{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-
 .td-detai-wrap:hover .detai-tooltip{display:block}
 
 /* Score badge có nền màu */
-.score-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600;min-width:44px}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:5px;font-size:13px;font-weight:600;min-width:44px}
 .score-ok{background:#DCFCE7;color:#166534}
 .score-warn{background:#FEF9C3;color:#854D0E}
 .score-danger{background:#FEE2E2;color:#991B1B}
@@ -280,14 +283,14 @@ tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--gray-50)}
 .td-muted{color:var(--text-muted)!important}
-.td-code{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text)}
+.td-code{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--text)}
 .td-score{font-weight:700;color:var(--green)}
 .td-score.warn{color:var(--amber)}
 .td-score.danger{color:var(--red)}
 .td-actions{display:flex;gap:4px}
 
 /* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;white-space:normal;word-break:keep-all;text-align:center;line-height:1.4}
 .badge-gd-group{background:var(--blue-light);color:var(--blue)}
 .badge-ktt-group{background:var(--purple-light);color:var(--purple)}
 .badge-neutral{background:var(--gray-100);color:var(--text-muted)}
@@ -1919,7 +1922,7 @@ function renderTable() {
       <td style="min-width:120px;cursor:pointer;font-weight:500" onclick="openDetail('${hv.id}')">${escapeHTML(hv.ho)} ${escapeHTML(hv.ten)}</td>
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
-      <td class="td-muted" style="font-size:11px">${escapeHTML(hv.nguoiHD) || '–'}</td>
+      <td class="td-muted" style="font-size:12px">${escapeHTML(hv.nguoiHD) || '–'}</td>
       <td style="${hanNopStyle}${overdue}">${calIcon}${fmtDate(hanNop)}</td>
       <td>
         <div class="td-detai-wrap">
