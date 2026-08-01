@@ -1299,7 +1299,7 @@ async function sha256(str) {
 // Payload (token, dữ liệu học viên) không còn xuất hiện trong URL,
 // server log, hay browser history. Apps Script phải dùng doPost() phía GAS.
 // =============================================
-async function api(action, data = {}) {
+async function api(action, data = {}, _retried = false) {
   const payload = JSON.stringify({ action, token, ...data });
   try {
     const res = await fetch(API_URL, {
@@ -1313,15 +1313,33 @@ async function api(action, data = {}) {
       result = JSON.parse(text);
     } catch(pe) {
       console.error('[api] parse error, raw response:', text);
+      // [FIX ỔN ĐỊNH] Lỗi parse cũng có thể do phản hồi bị cắt giữa chừng
+      // (mạng chập chờn) — thử lại 1 lần trước khi báo lỗi hẳn.
+      if (!_retried) {
+        await new Promise(r => setTimeout(r, 700));
+        return api(action, data, true);
+      }
       return { ok: false, msg: 'Lỗi parse response từ server' };
     }
-    // Token hết hạn / không hợp lệ -> tự đăng xuất và báo cho người dùng
+    // Token hết hạn / không hợp lệ THẬT SỰ -> tự đăng xuất và báo cho người dùng
     if (!result.ok && action !== 'login' && isAuthError(result.msg)) {
       handleSessionExpired();
       return result;
     }
+    // [FIX ỔN ĐỊNH] Nếu lỗi KHÔNG PHẢI do hết phiên (ví dụ server báo
+    // "Hệ thống tạm thời gián đoạn" do Sheets nghẽn/quota tức thời),
+    // tự động thử lại 1 lần trước khi trả lỗi cho người dùng thấy.
+    if (!result.ok && action !== 'login' && !isAuthError(result.msg) && !_retried) {
+      await new Promise(r => setTimeout(r, 700));
+      return api(action, data, true);
+    }
     return result;
   } catch (e) {
+    // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại) cũng thử lại 1 lần
+    if (!_retried) {
+      await new Promise(r => setTimeout(r, 700));
+      return api(action, data, true);
+    }
     return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
   }
 }
