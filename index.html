@@ -740,14 +740,17 @@ tbody tr:hover td{background:var(--gray-50)}
                   <th>Ngày nhận việc</th>
                   <th>Hạn ĐG GĐ1</th>
                   <th>Trạng thái GĐ1</th>
+                  <th>Kết quả GĐ1</th>
                   <th>Hạn ĐG GĐ2/Cuối</th>
                   <th>Trạng thái GĐ2/Cuối</th>
+                  <th>Kết quả GĐ2</th>
+                  <th>Theo dõi</th>
                   <th>Ghi chú</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="hvvpBody">
-                <tr><td colspan="11" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1083,6 +1086,10 @@ tbody tr:hover td{background:var(--gray-50)}
           <input type="text" id="fvp-ngayDGGD1" readonly placeholder="Tự tính">
           <span class="calc-note">Hạn GĐ1 − 3 ngày</span>
         </div>
+        <div class="form-field">
+          <label>Kết quả đánh giá GĐ1</label>
+          <input type="number" id="fvp-diemGD1" step="0.1" min="0" max="10" placeholder="0 – 10">
+        </div>
 
         <div class="form-section-title">Giai đoạn 2 / Cuối</div>
         <div class="form-field">
@@ -1094,6 +1101,21 @@ tbody tr:hover td{background:var(--gray-50)}
           <label>Ngày đánh giá gợi ý – GĐ2/Cuối</label>
           <input type="text" id="fvp-ngayDGGD2" readonly placeholder="Tự tính">
           <span class="calc-note">Hạn GĐ2/Cuối − 12 ngày</span>
+        </div>
+        <div class="form-field">
+          <label>Kết quả đánh giá GĐ2/Cuối</label>
+          <input type="number" id="fvp-diemGD2" step="0.1" min="0" max="10" placeholder="0 – 10">
+        </div>
+
+        <div class="form-section-title">Theo dõi</div>
+        <div class="form-field form-full">
+          <label>Trạng thái theo dõi</label>
+          <select id="fvp-trangThai">
+            <option value="Đang theo dõi">Đang theo dõi</option>
+            <option value="Hoàn tất">Hoàn tất</option>
+            <option value="Ngưng theo dõi">Ngưng theo dõi</option>
+          </select>
+          <span class="calc-note">Chọn "Hoàn tất" hoặc "Ngưng theo dõi" để kết thúc theo dõi hạn đánh giá cho học viên này.</span>
         </div>
 
         <div class="form-section-title">Ghi chú</div>
@@ -2782,6 +2804,13 @@ function timChucDanhVP(ten) {
   return DANH_MUC_VP.find(c => c.ten === ten) || null;
 }
 
+// [MỚI] Trạng thái theo dõi của HV Văn phòng — khi ở 1 trong 2 trạng thái
+// "kết thúc" thì không còn tính hạn/trạng thái GĐ1-GĐ2 nữa (giống backend).
+const HVVP_TT_DANG_THEO_DOI = 'Đang theo dõi';
+const HVVP_TT_HOAN_TAT      = 'Hoàn tất';
+const HVVP_TT_NGUNG         = 'Ngưng theo dõi';
+const HVVP_TT_KET_THUC = [HVVP_TT_HOAN_TAT, HVVP_TT_NGUNG];
+
 // Tính các mốc ngày + trạng thái cho 1 HV VP — công thức y hệt file Excel:
 //  Số giai đoạn   = (tổng ngày == 38) ? 1 : 2
 //  Hạn GĐ1        = ngày nhận việc + 30 - 1        (chỉ khi có 2 giai đoạn)
@@ -2789,6 +2818,7 @@ function timChucDanhVP(ten) {
 //  Hạn GĐ2/Cuối   = ngày nhận việc + tổng ngày - 1
 //  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 12
 //  Trạng thái     = so hôm nay với Ngày ĐG: qua hạn / còn ≤3 ngày = sắp đến hạn / còn lại chưa tới hạn
+//  Nếu hv.trangThai là "Hoàn tất"/"Ngưng theo dõi" -> không tính trạng thái GĐ1/GĐ2 nữa.
 function computeVPStatus(hv) {
   const cd = timChucDanhVP(hv.chucDanh);
   const out = {
@@ -2798,8 +2828,10 @@ function computeVPStatus(hv) {
   };
   if (!cd || !hv.ngayNhanViec) return out;
 
+  const daKetThucTheoDoi = HVVP_TT_KET_THUC.includes(hv.trangThai);
+
   const trangThaiTu = (ngayDG) => {
-    if (!ngayDG) return '';
+    if (!ngayDG || daKetThucTheoDoi) return '';
     const d = parseLocalDate(ngayDG);
     const t = parseLocalDate(new Date().toISOString().slice(0,10));
     const diff = Math.round((d - t) / (1000 * 60 * 60 * 24));
@@ -2827,8 +2859,15 @@ function vpStatusBadgeClass(trangThai) {
   return 'badge-vp-none';
 }
 
+// Badge cho trạng thái THEO DÕI (khác với trạng thái hạn GĐ1/GĐ2 ở trên)
+function vpTheoDoiBadgeClass(trangThai) {
+  if (trangThai === HVVP_TT_HOAN_TAT) return 'badge-vp-ontime';
+  if (trangThai === HVVP_TT_NGUNG) return 'badge-vp-none';
+  return 'badge-vp-soon';
+}
+
 async function loadHVVP() {
-  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="11" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
   const res = await api('getHVVP');
   if (!res.ok) { toast(res.msg, 'error'); return; }
   hvvpData = res.data;
@@ -2848,10 +2887,13 @@ function renderVPTable() {
     );
   }
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(hv => `
+  tbody.innerHTML = rows.map(hv => {
+    const trangThai = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
+    const daKetThuc = HVVP_TT_KET_THUC.includes(trangThai);
+    return `
     <tr>
       <td style="font-family:monospace;font-size:12px" class="td-code">${escapeHTML(hv.maHV || '–')}</td>
       <td>${escapeHTML(hv.hoTen)}</td>
@@ -2861,27 +2903,55 @@ function renderVPTable() {
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.hanGD1 ? fmtDate(hv.hanGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.trangThaiGD1 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD1)}">${hv.trangThaiGD1}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.hanGD2 ? fmtDate(hv.hanGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.trangThaiGD2 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD2)}">${hv.trangThaiGD2}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-sm" onclick="openEditHVVP('${hv.id}')" title="Sửa">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
+        ${!daKetThuc ? `
+        <button class="btn btn-sm" onclick="quickSetHVVPTrangThai('${hv.id}','${HVVP_TT_HOAN_TAT}')" title="Hoàn tất theo dõi">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+        <button class="btn btn-sm" onclick="quickSetHVVPTrangThai('${hv.id}','${HVVP_TT_NGUNG}')" title="Ngưng theo dõi">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>` : `
+        <button class="btn btn-sm" onclick="quickSetHVVPTrangThai('${hv.id}','${HVVP_TT_DANG_THEO_DOI}')" title="Mở lại theo dõi">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>`}
         ${currentUser.role === 'admin' ? `
         <button class="btn btn-sm btn-danger" onclick="deleteHVVP('${hv.id}')" title="Xóa">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>` : ''}
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
+}
+
+// [MỚI] Đổi nhanh trạng thái theo dõi ngay trên bảng, không cần mở form sửa.
+async function quickSetHVVPTrangThai(id, trangThai) {
+  const res = await api('setHVVPTrangThai', { id, trangThai });
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  const hv = hvvpData.find(h => h.id == id);
+  if (hv) hv.trangThai = trangThai;
+  const label = trangThai === HVVP_TT_HOAN_TAT ? 'Đã đánh dấu hoàn tất'
+    : trangThai === HVVP_TT_NGUNG ? 'Đã ngưng theo dõi học viên'
+    : 'Đã mở lại theo dõi học viên';
+  toast(label, 'success');
+  renderVPTable();
 }
 
 // Đổ dữ liệu tự tính vào form (gọi khi chọn chức danh / nhập ngày nhận việc)
 function calcVPDates() {
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
-  const calc = computeVPStatus({ chucDanh, ngayNhanViec });
+  const trangThai = document.getElementById('fvp-trangThai') ? document.getElementById('fvp-trangThai').value : '';
+  const calc = computeVPStatus({ chucDanh, ngayNhanViec, trangThai });
   document.getElementById('fvp-maChucDanh').value   = calc.maChucDanh || '';
   document.getElementById('fvp-tongSoNgayDT').value = calc.tongSoNgayDT || '';
   document.getElementById('fvp-soGiaiDoan').value   = calc.soGiaiDoan || '';
@@ -2893,9 +2963,10 @@ function calcVPDates() {
 
 function clearHVVPForm() {
   ['fvp-maHV','fvp-hoTen','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
-   'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-ghiChu'
+   'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-diemGD1','fvp-diemGD2','fvp-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fvp-chucDanh').value = '';
+  document.getElementById('fvp-trangThai').value = HVVP_TT_DANG_THEO_DOI;
 }
 
 // =============================================
@@ -3136,6 +3207,9 @@ function openEditHVVP(id) {
   document.getElementById('fvp-hoTen').value = hv.hoTen || '';
   document.getElementById('fvp-chucDanh').value = hv.chucDanh || '';
   document.getElementById('fvp-ngayNhanViec').value = hv.ngayNhanViec || '';
+  document.getElementById('fvp-diemGD1').value = hv.diemGD1 || '';
+  document.getElementById('fvp-diemGD2').value = hv.diemGD2 || '';
+  document.getElementById('fvp-trangThai').value = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
   document.getElementById('fvp-ghiChu').value = hv.ghiChu || '';
   calcVPDates();
   clearAllValidation();
@@ -3150,6 +3224,9 @@ async function saveHVVP() {
   const hoTen = document.getElementById('fvp-hoTen').value.trim();
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
+  const diemGD1 = document.getElementById('fvp-diemGD1').value.trim();
+  const diemGD2 = document.getElementById('fvp-diemGD2').value.trim();
+  const trangThai = document.getElementById('fvp-trangThai').value || HVVP_TT_DANG_THEO_DOI;
   const ghiChu = document.getElementById('fvp-ghiChu').value.trim();
 
   let hasErr = false;
@@ -3160,7 +3237,7 @@ async function saveHVVP() {
   if (hasErr) return;
 
   btn.disabled = true;
-  const payload = { maHV, hoTen, chucDanh, ngayNhanViec, ghiChu };
+  const payload = { maHV, hoTen, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
   const res = editingHVVPId
     ? await api('updateHVVP', { id: editingHVVPId, ...payload })
     : await api('addHVVP', payload);
