@@ -706,10 +706,25 @@ tbody tr:hover td{background:var(--gray-50)}
           <div class="panel-header">
             <span class="panel-title">Danh sách HV Văn phòng siêu thị</span>
             <div class="toolbar">
-              <div class="search-box">
+              <div class="search-box" style="width:230px">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="searchInputVP" placeholder="Tìm mã HV, họ tên, chức danh..." oninput="renderVPTable()">
+                <input type="text" id="searchInputVP" placeholder="Tìm mã HV, họ tên, chức danh..." oninput="hvvpPage=0;renderVPTable()">
               </div>
+              <select id="filterVPChucDanh" onchange="hvvpPage=0;renderVPTable()" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border-md);color:var(--text)">
+                <option value="">Tất cả chức danh</option>
+              </select>
+              <select id="filterVPTrangThai" onchange="hvvpPage=0;renderVPTable()" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border-md);color:var(--text)">
+                <option value="">Tất cả trạng thái theo dõi</option>
+                <option value="Đang theo dõi">Đang theo dõi</option>
+                <option value="Hoàn tất">Hoàn tất</option>
+                <option value="Ngưng theo dõi">Ngưng theo dõi</option>
+              </select>
+              <select id="filterVPHan" onchange="hvvpPage=0;renderVPTable()" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border-md);color:var(--text)">
+                <option value="">Tất cả hạn đánh giá</option>
+                <option value="Đã qua hạn">Đã qua hạn</option>
+                <option value="Sắp đến hạn">Sắp đến hạn</option>
+                <option value="Chưa tới hạn">Chưa tới hạn</option>
+              </select>
               <button class="btn" onclick="downloadVPTemplate()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Tải mẫu Excel
@@ -724,9 +739,6 @@ tbody tr:hover td{background:var(--gray-50)}
                 Thêm học viên
               </button>
             </div>
-          </div>
-          <div style="font-size:12px;color:var(--text-faint);margin-bottom:10px">
-            Hướng dẫn: chọn <b>Chức danh</b> và nhập <b>Ngày nhận việc</b> — hệ thống tự tính mã chức danh, tổng số ngày đào tạo, hạn và ngày đánh giá gợi ý cho từng giai đoạn (giống công thức trong file Excel theo dõi).
           </div>
           <div class="tbl-wrap">
             <table id="hvvpTable">
@@ -754,6 +766,7 @@ tbody tr:hover td{background:var(--gray-50)}
               </tbody>
             </table>
           </div>
+          <div id="hvvpPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:13px;color:var(--text-muted)"></div>
         </div>
       </div>
 
@@ -2786,6 +2799,8 @@ const DANH_MUC_VP = [
 let hvvpData = [];
 let editingHVVPId = null;
 let pendingDeleteHVVPId = null;
+let hvvpPage = 0;
+let HVVP_PER_PAGE = parseInt(localStorage.getItem('sc_hvvp_per_page') || '10', 10);
 
 // Đổ dropdown chức danh vào form (gọi 1 lần khi app khởi động)
 function populateVPChucDanhSelect() {
@@ -2798,6 +2813,18 @@ function populateVPChucDanhSelect() {
     sel.appendChild(opt);
   });
   sel.dataset.filled = '1';
+
+  // Đổ luôn dropdown lọc chức danh ở bảng danh sách (nếu có)
+  const filterSel = document.getElementById('filterVPChucDanh');
+  if (filterSel && !filterSel.dataset.filled) {
+    DANH_MUC_VP.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.ten;
+      opt.textContent = c.ten;
+      filterSel.appendChild(opt);
+    });
+    filterSel.dataset.filled = '1';
+  }
 }
 
 function timChucDanhVP(ten) {
@@ -2873,6 +2900,7 @@ function vpTheoDoiBadgeClass(trangThai) {
 
 async function loadHVVP() {
   document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  populateVPChucDanhSelect();
   const res = await api('getHVVP');
   if (!res.ok) { toast(res.msg, 'error'); return; }
   hvvpData = res.data;
@@ -2881,21 +2909,44 @@ async function loadHVVP() {
 
 function renderVPTable() {
   const kw = (document.getElementById('searchInputVP')?.value || '').toLowerCase().trim();
+  const filChucDanh = document.getElementById('filterVPChucDanh')?.value || '';
+  const filTrangThai = document.getElementById('filterVPTrangThai')?.value || '';
+  const filHan = document.getElementById('filterVPHan')?.value || '';
   const tbody = document.getElementById('hvvpBody');
   let rows = hvvpData.map(hv => ({ ...hv, ...computeVPStatus(hv) }));
+
   if (kw) {
     rows = rows.filter(hv =>
       (hv.maHV || '').toLowerCase().includes(kw) ||
       (hv.hoTen || '').toLowerCase().includes(kw) ||
       (hv.chucDanh || '').toLowerCase().includes(kw) ||
-      (hv.maChucDanh || '').toLowerCase().includes(kw)
+      (hv.maChucDanh || '').toLowerCase().includes(kw) ||
+      (hv.ghiChu || '').toLowerCase().includes(kw)
     );
   }
+  if (filChucDanh) {
+    rows = rows.filter(hv => hv.chucDanh === filChucDanh);
+  }
+  if (filTrangThai) {
+    rows = rows.filter(hv => (hv.trangThai || HVVP_TT_DANG_THEO_DOI) === filTrangThai);
+  }
+  if (filHan) {
+    rows = rows.filter(hv => hv.trangThaiGD1 === filHan || hv.trangThaiGD2 === filHan);
+  }
+
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
+    document.getElementById('hvvpPager').innerHTML = '';
     return;
   }
-  tbody.innerHTML = rows.map(hv => {
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / HVVP_PER_PAGE));
+  if (hvvpPage >= totalPages) hvvpPage = totalPages - 1;
+  if (hvvpPage < 0) hvvpPage = 0;
+  const pageStart = hvvpPage * HVVP_PER_PAGE;
+  const pageItems = rows.slice(pageStart, pageStart + HVVP_PER_PAGE);
+
+  tbody.innerHTML = pageItems.map(hv => {
     const trangThai = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
     const daKetThuc = HVVP_TT_KET_THUC.includes(trangThai);
     return `
@@ -2936,6 +2987,32 @@ function renderVPTable() {
     </tr>
   `;
   }).join('');
+
+  document.getElementById('hvvpPager').innerHTML =
+    `<div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:13px">Hiển thị ${pageStart+1}–${Math.min(pageStart+pageItems.length,rows.length)} / ${rows.length} học viên</span>
+      <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+        Số dòng/trang:
+        <select onchange="changeHVVPPerPage(this.value)" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border,#e5e7eb)">
+          ${[10,20,50,100].map(n => `<option value="${n}" ${HVVP_PER_PAGE===n?'selected':''}>${n}</option>`).join('')}
+          <option value="all" ${HVVP_PER_PAGE>=999999?'selected':''}>Tất cả</option>
+        </select>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvvpPage=Math.max(0,hvvpPage-1);renderVPTable()" ${hvvpPage===0?'disabled':''}>‹ Trước</button>
+      <span style="padding:5px 8px;font-size:13px">Trang ${hvvpPage+1} / ${totalPages}</span>
+      <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvvpPage++;renderVPTable()" ${hvvpPage>=totalPages-1?'disabled':''}>Sau ›</button>
+    </div>`;
+}
+
+// [FIX] Cho phép người dùng tự chọn số dòng/trang cho bảng HV Văn phòng,
+// lưu lựa chọn vào localStorage để giữ nguyên cho lần sau.
+function changeHVVPPerPage(val) {
+  HVVP_PER_PAGE = (val === 'all') ? 999999 : parseInt(val, 10);
+  localStorage.setItem('sc_hvvp_per_page', String(HVVP_PER_PAGE));
+  hvvpPage = 0;
+  renderVPTable();
 }
 
 // [MỚI] Đổi nhanh trạng thái theo dõi ngay trên bảng, không cần mở form sửa.
