@@ -310,6 +310,10 @@ tbody tr:hover td{background:var(--gray-50)}
 .badge-new{background:var(--gray-100);color:var(--text-muted)}
 .badge-admin{background:var(--amber-light);color:var(--amber)}
 .badge-gv{background:var(--blue-light);color:var(--blue)}
+.badge-vp-overdue{background:var(--red-light);color:var(--red)}
+.badge-vp-soon{background:var(--amber-light);color:var(--amber)}
+.badge-vp-ontime{background:var(--green-light);color:var(--green-dark)}
+.badge-vp-none{background:var(--gray-100);color:var(--text-faint)}
 
 /* ── MODAL ── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;align-items:center;justify-content:center;padding:20px}
@@ -533,6 +537,10 @@ tbody tr:hover td{background:var(--gray-50)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Học viên
       </div>
+      <div class="nav-item" onclick="navigate('hvvp',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+        HV Văn phòng
+      </div>
       <div class="nav-item admin-only" onclick="navigate('giaovien',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Tài khoản GV
@@ -689,6 +697,50 @@ tbody tr:hover td{background:var(--gray-50)}
             </table>
           </div>
           <div id="hvPager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;font-size:13px;color:var(--text-muted)"></div>
+        </div>
+      </div>
+
+      <!-- HV VĂN PHÒNG SIÊU THỊ -->
+      <div class="page" id="page-hvvp">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Danh sách HV Văn phòng siêu thị</span>
+            <div class="toolbar">
+              <div class="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="searchInputVP" placeholder="Tìm họ tên, chức danh..." oninput="renderVPTable()">
+              </div>
+              <button class="btn btn-primary" onclick="openAddHVVP()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Thêm học viên
+              </button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-faint);margin-bottom:10px">
+            Hướng dẫn: chọn <b>Chức danh</b> và nhập <b>Ngày nhận việc</b> — hệ thống tự tính mã chức danh, tổng số ngày đào tạo, hạn và ngày đánh giá gợi ý cho từng giai đoạn (giống công thức trong file Excel theo dõi).
+          </div>
+          <div class="tbl-wrap">
+            <table id="hvvpTable">
+              <thead>
+                <tr>
+                  <th>Họ và tên</th>
+                  <th>Chức danh</th>
+                  <th>Mã CD</th>
+                  <th>Tổng ngày ĐT</th>
+                  <th>Ngày nhận việc</th>
+                  <th>Hạn ĐG GĐ1</th>
+                  <th>Trạng thái GĐ1</th>
+                  <th>Hạn ĐG GĐ2/Cuối</th>
+                  <th>Trạng thái GĐ2/Cuối</th>
+                  <th>Ghi chú</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hvvpBody">
+                <tr><td colspan="11" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -961,6 +1013,101 @@ tbody tr:hover td{background:var(--gray-50)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalHV')">Hủy</button>
       <button class="btn btn-primary" id="btnSaveHV" onclick="saveHV()">Lưu học viên</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: HV VĂN PHÒNG -->
+<div class="overlay" id="modalHVVP">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalHVVPTitle">Thêm học viên Văn phòng</h3>
+      <button class="modal-close" onclick="closeModal('modalHVVP')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Thông tin học viên</div>
+        <div class="form-field">
+          <label>Họ và tên *</label>
+          <input type="text" id="fvp-hoTen" placeholder="Họ và tên học viên" onblur="validateField('fvp-hoTen')" oninput="clearFieldError('fvp-hoTen')">
+          <span class="field-err-msg" id="fvp-hoTen-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập họ và tên</span></span>
+        </div>
+        <div class="form-field">
+          <label>Chức danh *</label>
+          <select id="fvp-chucDanh" onchange="calcVPDates();validateField('fvp-chucDanh')">
+            <option value="">-- Chọn chức danh --</option>
+          </select>
+          <span class="field-err-msg" id="fvp-chucDanh-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn chức danh</span></span>
+        </div>
+        <div class="form-field">
+          <label>Mã chức danh</label>
+          <input type="text" id="fvp-maChucDanh" readonly placeholder="Tự tính">
+        </div>
+        <div class="form-field">
+          <label>Tổng số ngày ĐT</label>
+          <input type="text" id="fvp-tongSoNgayDT" readonly placeholder="Tự tính">
+        </div>
+        <div class="form-field">
+          <label>Ngày nhận việc *</label>
+          <input type="date" id="fvp-ngayNhanViec" oninput="calcVPDates();validateField('fvp-ngayNhanViec')">
+          <span class="field-err-msg" id="fvp-ngayNhanViec-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn ngày nhận việc</span></span>
+        </div>
+        <div class="form-field">
+          <label>Số giai đoạn</label>
+          <input type="text" id="fvp-soGiaiDoan" readonly placeholder="Tự tính">
+        </div>
+
+        <div class="form-section-title">Giai đoạn 1 (chỉ áp dụng khi có 2 giai đoạn)</div>
+        <div class="form-field">
+          <label>Hạn hết hạn – GĐ1</label>
+          <input type="text" id="fvp-hanGD1" readonly placeholder="Tự tính">
+          <span class="calc-note">Ngày nhận việc + 30 − 1</span>
+        </div>
+        <div class="form-field">
+          <label>Ngày đánh giá gợi ý – GĐ1</label>
+          <input type="text" id="fvp-ngayDGGD1" readonly placeholder="Tự tính">
+          <span class="calc-note">Hạn GĐ1 − 3 ngày</span>
+        </div>
+
+        <div class="form-section-title">Giai đoạn 2 / Cuối</div>
+        <div class="form-field">
+          <label>Hạn hết hạn – GĐ2/Cuối</label>
+          <input type="text" id="fvp-hanGD2" readonly placeholder="Tự tính">
+          <span class="calc-note">Ngày nhận việc + Tổng số ngày − 1</span>
+        </div>
+        <div class="form-field">
+          <label>Ngày đánh giá gợi ý – GĐ2/Cuối</label>
+          <input type="text" id="fvp-ngayDGGD2" readonly placeholder="Tự tính">
+          <span class="calc-note">Hạn GĐ2/Cuối − 12 ngày</span>
+        </div>
+
+        <div class="form-section-title">Ghi chú</div>
+        <div class="form-field form-full">
+          <label>Ghi chú</label>
+          <textarea id="fvp-ghiChu" placeholder="Ghi chú thêm..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalHVVP')">Hủy</button>
+      <button class="btn btn-primary" id="btnSaveHVVP" onclick="saveHVVP()">Lưu học viên</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: XÓA HV VĂN PHÒNG -->
+<div class="overlay" id="modalDeleteHVVP">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header" style="border-bottom-color:var(--red);background:var(--red-light)">
+      <h3>Xóa học viên Văn phòng</h3>
+      <button class="modal-close" onclick="closeModal('modalDeleteHVVP')">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px 20px">
+      <p style="font-size:13.5px;color:var(--text)">Bạn có chắc muốn xóa học viên <b id="deleteHVVPName"></b> khỏi danh sách? Hành động này không thể hoàn tác.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalDeleteHVVP')">Hủy</button>
+      <button class="btn btn-danger" onclick="confirmDeleteHVVP()">Xóa</button>
     </div>
   </div>
 </div>
@@ -1580,6 +1727,7 @@ function navigate(page, el) {
 
   if (page === 'giaovien' && currentUser.role === 'admin') loadGV();
   if (page === 'dashboard') updateDashboard();
+  if (page === 'hvvp') loadHVVP();
 }
 
 // =============================================
@@ -2534,6 +2682,234 @@ async function confirmDeleteHV() {
   pendingDeleteHVId = null;
   renderTable();
   updateDashboard();
+}
+
+// =============================================
+// HV VĂN PHÒNG SIÊU THỊ
+// =============================================
+// Danh mục chức danh + tổng số ngày ĐT — PHẢI KHỚP với DANH_MUC_CHUC_DANH_VP
+// bên Apps Script (code.gs). Cố định trong code theo yêu cầu.
+const DANH_MUC_VP = [
+  { ten: 'Nhân viên Tổ chức hành chánh',              ma: 'ST-TCHC-NV',    soNgay: 68 },
+  { ten: 'Nhân viên Tổ chức hành chánh – Thủ quỹ',    ma: 'ST-TCHC-TQ-NV', soNgay: 68 },
+  { ten: 'Nhân viên Hành chánh – Thủ quỹ',            ma: 'ST-HC-TQ-NV',   soNgay: 53 },
+  { ten: 'Nhân viên Hành chánh',                      ma: 'ST-HC-NV',      soNgay: 38 },
+  { ten: 'Nhân viên Tạp vụ',                          ma: 'ST-TVU-NV',     soNgay: 38 },
+  { ten: 'Nhân viên Khu cho thuê',                    ma: 'ST-KCT-NV',     soNgay: 38 },
+  { ten: 'Nhân viên Thủ quỹ',                         ma: 'ST-TQ-NV',      soNgay: 38 },
+  { ten: 'Nhân viên QA',                              ma: 'ST-QA-NV',      soNgay: 68 },
+  { ten: 'Nhân viên QA – Thủ quỹ',                    ma: 'ST-QA-TQ-NV',   soNgay: 68 },
+  { ten: 'Nhóm trưởng Bảo trì',                       ma: 'ST-BT-NT',      soNgay: 68 },
+  { ten: 'Nhân viên Bảo trì',                         ma: 'ST-BT-NV',      soNgay: 68 },
+  { ten: 'Nhóm trưởng Vi tính',                       ma: 'ST-VT-NT',      soNgay: 68 },
+  { ten: 'Nhân viên Vi tính',                         ma: 'ST-VT-NV',      soNgay: 68 },
+  { ten: 'Nhóm trưởng Kỹ thuật',                      ma: 'ST-KTH-NT',     soNgay: 68 },
+  { ten: 'Nhân viên Kỹ thuật',                        ma: 'ST-KTH-NV',     soNgay: 68 },
+];
+let hvvpData = [];
+let editingHVVPId = null;
+let pendingDeleteHVVPId = null;
+
+// Đổ dropdown chức danh vào form (gọi 1 lần khi app khởi động)
+function populateVPChucDanhSelect() {
+  const sel = document.getElementById('fvp-chucDanh');
+  if (!sel || sel.dataset.filled) return;
+  DANH_MUC_VP.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.ten;
+    opt.textContent = `${c.ten} (${c.soNgay} ngày)`;
+    sel.appendChild(opt);
+  });
+  sel.dataset.filled = '1';
+}
+
+function timChucDanhVP(ten) {
+  return DANH_MUC_VP.find(c => c.ten === ten) || null;
+}
+
+// Tính các mốc ngày + trạng thái cho 1 HV VP — công thức y hệt file Excel:
+//  Số giai đoạn   = (tổng ngày == 38) ? 1 : 2
+//  Hạn GĐ1        = ngày nhận việc + 30 - 1        (chỉ khi có 2 giai đoạn)
+//  Ngày ĐG GĐ1    = Hạn GĐ1 - 3
+//  Hạn GĐ2/Cuối   = ngày nhận việc + tổng ngày - 1
+//  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 12
+//  Trạng thái     = so hôm nay với Ngày ĐG: qua hạn / còn ≤3 ngày = sắp đến hạn / còn lại chưa tới hạn
+function computeVPStatus(hv) {
+  const cd = timChucDanhVP(hv.chucDanh);
+  const out = {
+    maChucDanh: cd ? cd.ma : '', tongSoNgayDT: cd ? cd.soNgay : '', soGiaiDoan: cd ? (cd.soNgay === 38 ? 1 : 2) : '',
+    hanGD1: '', ngayDGGD1: '', trangThaiGD1: '',
+    hanGD2: '', ngayDGGD2: '', trangThaiGD2: ''
+  };
+  if (!cd || !hv.ngayNhanViec) return out;
+
+  const trangThaiTu = (ngayDG) => {
+    if (!ngayDG) return '';
+    const d = parseLocalDate(ngayDG);
+    const t = parseLocalDate(new Date().toISOString().slice(0,10));
+    const diff = Math.round((d - t) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return 'Đã qua hạn';
+    if (diff <= 3) return 'Sắp đến hạn';
+    return 'Chưa tới hạn';
+  };
+
+  if (cd.soNgay !== 38) {
+    out.hanGD1 = addDays(hv.ngayNhanViec, 29);
+    out.ngayDGGD1 = addDays(out.hanGD1, -3);
+    out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1);
+  }
+  out.hanGD2 = addDays(hv.ngayNhanViec, cd.soNgay - 1);
+  out.ngayDGGD2 = addDays(out.hanGD2, -12);
+  out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2);
+
+  return out;
+}
+
+function vpStatusBadgeClass(trangThai) {
+  if (trangThai === 'Đã qua hạn') return 'badge-vp-overdue';
+  if (trangThai === 'Sắp đến hạn') return 'badge-vp-soon';
+  if (trangThai === 'Chưa tới hạn') return 'badge-vp-ontime';
+  return 'badge-vp-none';
+}
+
+async function loadHVVP() {
+  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="11" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  const res = await api('getHVVP');
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  hvvpData = res.data;
+  renderVPTable();
+}
+
+function renderVPTable() {
+  const kw = (document.getElementById('searchInputVP')?.value || '').toLowerCase().trim();
+  const tbody = document.getElementById('hvvpBody');
+  let rows = hvvpData.map(hv => ({ ...hv, ...computeVPStatus(hv) }));
+  if (kw) {
+    rows = rows.filter(hv =>
+      (hv.hoTen || '').toLowerCase().includes(kw) ||
+      (hv.chucDanh || '').toLowerCase().includes(kw) ||
+      (hv.maChucDanh || '').toLowerCase().includes(kw)
+    );
+  }
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(hv => `
+    <tr>
+      <td>${escapeHTML(hv.hoTen)}</td>
+      <td>${escapeHTML(hv.chucDanh)}</td>
+      <td style="font-family:monospace;font-size:12px">${escapeHTML(hv.maChucDanh)}</td>
+      <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
+      <td>${fmtDate(hv.ngayNhanViec)}</td>
+      <td>${hv.hanGD1 ? fmtDate(hv.hanGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.trangThaiGD1 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD1)}">${hv.trangThaiGD1}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.hanGD2 ? fmtDate(hv.hanGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.trangThaiGD2 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD2)}">${hv.trangThaiGD2}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="openEditHVVP('${hv.id}')" title="Sửa">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        ${currentUser.role === 'admin' ? `
+        <button class="btn btn-sm btn-danger" onclick="deleteHVVP('${hv.id}')" title="Xóa">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Đổ dữ liệu tự tính vào form (gọi khi chọn chức danh / nhập ngày nhận việc)
+function calcVPDates() {
+  const chucDanh = document.getElementById('fvp-chucDanh').value;
+  const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
+  const calc = computeVPStatus({ chucDanh, ngayNhanViec });
+  document.getElementById('fvp-maChucDanh').value   = calc.maChucDanh || '';
+  document.getElementById('fvp-tongSoNgayDT').value = calc.tongSoNgayDT || '';
+  document.getElementById('fvp-soGiaiDoan').value   = calc.soGiaiDoan || '';
+  document.getElementById('fvp-hanGD1').value       = calc.hanGD1 ? fmtDate(calc.hanGD1) : '';
+  document.getElementById('fvp-ngayDGGD1').value    = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
+  document.getElementById('fvp-hanGD2').value       = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
+  document.getElementById('fvp-ngayDGGD2').value    = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
+}
+
+function clearHVVPForm() {
+  ['fvp-hoTen','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
+   'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-ghiChu'
+  ].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fvp-chucDanh').value = '';
+}
+
+function openAddHVVP() {
+  populateVPChucDanhSelect();
+  editingHVVPId = null;
+  document.getElementById('modalHVVPTitle').textContent = 'Thêm học viên Văn phòng';
+  clearHVVPForm();
+  clearAllValidation();
+  document.getElementById('modalHVVP').classList.add('open');
+}
+
+function openEditHVVP(id) {
+  populateVPChucDanhSelect();
+  const hv = hvvpData.find(h => h.id == id);
+  if (!hv) return;
+  editingHVVPId = id;
+  document.getElementById('modalHVVPTitle').textContent = 'Sửa học viên Văn phòng';
+  document.getElementById('fvp-hoTen').value = hv.hoTen || '';
+  document.getElementById('fvp-chucDanh').value = hv.chucDanh || '';
+  document.getElementById('fvp-ngayNhanViec').value = hv.ngayNhanViec || '';
+  document.getElementById('fvp-ghiChu').value = hv.ghiChu || '';
+  calcVPDates();
+  clearAllValidation();
+  document.getElementById('modalHVVP').classList.add('open');
+}
+
+async function saveHVVP() {
+  const btn = document.getElementById('btnSaveHVVP');
+  if (btn.disabled) return;
+
+  const hoTen = document.getElementById('fvp-hoTen').value.trim();
+  const chucDanh = document.getElementById('fvp-chucDanh').value;
+  const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
+  const ghiChu = document.getElementById('fvp-ghiChu').value.trim();
+
+  let hasErr = false;
+  if (!hoTen) { validateField('fvp-hoTen'); hasErr = true; }
+  if (!chucDanh) { validateField('fvp-chucDanh'); hasErr = true; }
+  if (!ngayNhanViec) { validateField('fvp-ngayNhanViec'); hasErr = true; }
+  if (hasErr) return;
+
+  btn.disabled = true;
+  const payload = { hoTen, chucDanh, ngayNhanViec, ghiChu };
+  const res = editingHVVPId
+    ? await api('updateHVVP', { id: editingHVVPId, ...payload })
+    : await api('addHVVP', payload);
+  btn.disabled = false;
+
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  toast(editingHVVPId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
+  closeModal('modalHVVP');
+  loadHVVP();
+}
+
+function deleteHVVP(id) {
+  const hv = hvvpData.find(h => h.id == id);
+  if (!hv) return;
+  pendingDeleteHVVPId = id;
+  document.getElementById('deleteHVVPName').textContent = hv.hoTen || id;
+  document.getElementById('modalDeleteHVVP').classList.add('open');
+}
+
+async function confirmDeleteHVVP() {
+  if (!pendingDeleteHVVPId) return;
+  const res = await api('deleteHVVP', { id: pendingDeleteHVVPId });
+  if (!res.ok) { toast(res.msg, 'error'); return; }
+  hvvpData = hvvpData.filter(h => h.id != pendingDeleteHVVPId);
+  toast('Đã xóa học viên', 'success');
+  closeModal('modalDeleteHVVP');
+  pendingDeleteHVVPId = null;
+  renderVPTable();
 }
 
 // =============================================
