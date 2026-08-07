@@ -1173,8 +1173,8 @@ tbody tr:hover td{background:var(--gray-50)}
               <th>STT</th>
               <th>Mã HV</th>
               <th>Họ tên</th>
-              <th>Mã chức danh</th>
-              <th>Chức danh</th>
+              <th>Chức danh (Excel)</th>
+              <th>Chức danh (khớp)</th>
               <th>Ngày nhận việc</th>
               <th>Dự án</th>
               <th>Lỗi</th>
@@ -3134,7 +3134,7 @@ async function downloadVPTemplate() {
     ws.columns = [
       { header: 'Mã HV', key: 'maHV', width: 16 },
       { header: 'Họ tên', key: 'hoTen', width: 26 },
-      { header: 'Mã chức danh', key: 'maCD', width: 18 },
+      { header: 'Tên chức danh', key: 'tenCD', width: 32 },
       { header: 'Ngày nhận việc', key: 'ngayNhanViec', width: 18 },
       { header: 'Dự án', key: 'duAn', width: 26 }
     ];
@@ -3142,31 +3142,34 @@ async function downloadVPTemplate() {
     ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } };
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-    // Chú thích hướng dẫn ngay trên tiêu đề cột Mã chức danh
-    ws.getCell('C1').note = 'Bấm vào từng ô ở cột này rồi chọn 1 mã chức danh từ danh sách sổ xuống.\nXem đầy đủ Mã ↔ Tên chức danh ở sheet "DanhMucChucDanh".';
+    // Chú thích hướng dẫn ngay trên tiêu đề cột Tên chức danh
+    // [CẬP NHẬT] Đổi sổ xuống sang chọn theo TÊN chức danh (thay vì Mã) cho
+    // người dùng dễ chọn/dễ đọc hơn — không cần tra bảng Mã ↔ Tên nữa.
+    ws.getCell('C1').note = 'Bấm vào từng ô ở cột này rồi chọn 1 chức danh từ danh sách sổ xuống.';
     ws.getCell('D1').note = 'Nhập theo định dạng yyyy-mm-dd (ví dụ 2025-01-15).';
 
     // Dữ liệu mẫu
     const sample = [
-      { maHV: 'HV001', hoTen: 'Nguyễn Văn A', maCD: 'ST-HC-NV', ngayNhanViec: '2025-01-15', duAn: '' },
-      { maHV: 'HV002', hoTen: 'Trần Thị B', maCD: 'ST-QA-NV', ngayNhanViec: '2025-01-20', duAn: 'Dự án ABC' },
-      { maHV: 'HV003', hoTen: 'Lê Văn C', maCD: 'ST-BT-NV', ngayNhanViec: '2025-02-01', duAn: '' }
+      { maHV: 'HV001', hoTen: 'Nguyễn Văn A', tenCD: 'Nhân viên Hành chánh', ngayNhanViec: '2025-01-15', duAn: '' },
+      { maHV: 'HV002', hoTen: 'Trần Thị B', tenCD: 'Nhân viên QA', ngayNhanViec: '2025-01-20', duAn: 'Dự án ABC' },
+      { maHV: 'HV003', hoTen: 'Lê Văn C', tenCD: 'Nhân viên Bảo trì', ngayNhanViec: '2025-02-01', duAn: '' }
     ];
     sample.forEach(r => ws.addRow(r));
 
-    // Sổ xuống (Data Validation) cho cột Mã chức danh (cột C), áp dụng cho 500
-    // dòng đầu — đủ dư cho hầu hết đợt nhập liệu, người dùng có thể copy công
-    // thức xuống thêm nếu cần nhiều hơn.
+    // Sổ xuống (Data Validation) cho cột Tên chức danh (cột C), tham chiếu tới
+    // cột B (Tên chức danh) của sheet "DanhMucChucDanh" — áp dụng cho 500 dòng
+    // đầu, đủ dư cho hầu hết đợt nhập liệu, người dùng có thể copy công thức
+    // xuống thêm nếu cần nhiều hơn.
     const lastDMRow = DANH_MUC_VP.length + 1;
     for (let r = 2; r <= 500; r++) {
       ws.getCell(`C${r}`).dataValidation = {
         type: 'list',
         allowBlank: false,
-        formulae: [`DanhMucChucDanh!$A$2:$A$${lastDMRow}`],
+        formulae: [`DanhMucChucDanh!$B$2:$B$${lastDMRow}`],
         showErrorMessage: true,
         errorStyle: 'stop',
-        errorTitle: 'Mã chức danh không hợp lệ',
-        error: 'Vui lòng chọn 1 mã chức danh từ danh sách sổ xuống (xem thêm sheet "DanhMucChucDanh").'
+        errorTitle: 'Chức danh không hợp lệ',
+        error: 'Vui lòng chọn 1 chức danh từ danh sách sổ xuống (xem thêm sheet "DanhMucChucDanh").'
       };
     }
     ws.getColumn(4).numFmt = '@'; // giữ định dạng text cho ngày nhập tay dạng yyyy-mm-dd
@@ -3239,16 +3242,17 @@ async function importExcelVP(event) {
       }
 
       // [FIX] So khớp tên cột không phân biệt hoa/thường, có dấu/không dấu —
-      // để nhận cả file mẫu mới ("Mã chức danh") và file mẫu cũ ("Mã CD"), cũng
-      // như chấp nhận "Tên HV"/"Tên học viên" thay vì bắt buộc đúng "Họ tên".
+      // để nhận cả file mẫu mới ("Tên chức danh") lẫn file mẫu cũ ("Mã chức
+      // danh"/"Mã CD"), cũng như chấp nhận "Tên HV"/"Tên học viên" thay vì
+      // bắt buộc đúng "Họ tên".
       const maHVIdx  = headers.findIndex(h => h.includes('ma') && (h.includes('hv') || h.includes('hoc vien')));
       const hoTenIdx = headers.findIndex(h => (h.includes('ho') && h.includes('ten')) || (h.includes('ten') && (h.includes('hv') || h.includes('hoc vien'))));
-      const macdIdx  = headers.findIndex(h => h.includes('ma') && (h.includes('cd') || h.includes('chuc danh')));
+      const cdIdx    = headers.findIndex(h => h.includes('chuc danh') || (h.includes('ma') && h.includes('cd')));
       const ngayIdx  = headers.findIndex(h => h.includes('ngay') && h.includes('nhan'));
       const duAnIdx  = headers.findIndex(h => h.includes('du an'));
 
-      if (maHVIdx === -1 || hoTenIdx === -1 || macdIdx === -1 || ngayIdx === -1) {
-        toast('File Excel thiếu cột bắt buộc: Mã HV, Tên HV/Họ tên, Mã chức danh, Ngày nhận việc', 'error');
+      if (maHVIdx === -1 || hoTenIdx === -1 || cdIdx === -1 || ngayIdx === -1) {
+        toast('File Excel thiếu cột bắt buộc: Mã HV, Tên HV/Họ tên, Tên chức danh, Ngày nhận việc', 'error');
         return;
       }
 
@@ -3261,21 +3265,21 @@ async function importExcelVP(event) {
         const row = rows[i];
         const maHV = (row[maHVIdx] || '').toString().trim();
         const hoTen = (row[hoTenIdx] || '').toString().trim();
-        const maCD = (row[macdIdx] || '').toString().trim();
+        const cdInput = (row[cdIdx] || '').toString().trim();
         const duAn = duAnIdx !== -1 ? (row[duAnIdx] || '').toString().trim() : '';
         const ngayNhanViec = row[ngayIdx] ? formatExcelDate(row[ngayIdx]) : '';
 
         let rowError = '';
         if (!maHV) rowError = 'Mã HV trống';
         else if (!hoTen) rowError = 'Họ tên trống';
-        else if (!maCD) rowError = 'Mã chức danh trống';
+        else if (!cdInput) rowError = 'Chức danh trống';
         else if (!ngayNhanViec) rowError = 'Ngày nhận việc không hợp lệ';
         else if (hvvpData.some(hv => hv.maHV === maHV)) rowError = 'Mã HV đã tồn tại';
         else if (pendingImportVPData.some(item => item.maHV === maHV && !item.error)) rowError = 'Mã HV bị trùng trong file';
 
-        // [FIX] Tra chức danh theo Mã chức danh (đúng theo cột dropdown trong
-        // file mẫu). Vẫn hỗ trợ trường hợp người dùng gõ trực tiếp Tên chức
-        // danh đầy đủ thay vì chọn Mã, để tương thích ngược với file cũ.
+        // [CẬP NHẬT] Sổ xuống trong file mẫu nay chọn theo TÊN chức danh, nên
+        // tra theo Tên trước. Vẫn hỗ trợ tra theo Mã chức danh (timChucDanhVPByMa)
+        // để tương thích ngược với các file mẫu cũ hơn còn dùng Mã.
         let chucDanh = '';
         let tongSoNgayDT = '';
         let soGiaiDoan = '';
@@ -3285,7 +3289,7 @@ async function importExcelVP(event) {
         let ngayDGGD2 = '';
 
         if (!rowError) {
-          const config = timChucDanhVPByMa(maCD) || timChucDanhVP(maCD);
+          const config = timChucDanhVP(cdInput) || timChucDanhVPByMa(cdInput);
           if (config) {
             chucDanh = config.ten;
             tongSoNgayDT = config.soNgay;
@@ -3297,7 +3301,7 @@ async function importExcelVP(event) {
             ngayDGGD1 = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
             ngayDGGD2 = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
           } else {
-            rowError = `Mã chức danh không tồn tại: ${maCD}`;
+            rowError = `Chức danh không hợp lệ: ${cdInput}`;
           }
         }
 
@@ -3305,7 +3309,7 @@ async function importExcelVP(event) {
           row: i,
           maHV,
           hoTen,
-          maCD,
+          maCD: cdInput,
           chucDanh,
           ngayNhanViec,
           duAn,
