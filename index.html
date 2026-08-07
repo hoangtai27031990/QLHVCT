@@ -445,6 +445,7 @@ tbody tr:hover td{background:var(--gray-50)}
 .tl-badge{display:inline-flex;margin-top:4px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -1172,9 +1173,10 @@ tbody tr:hover td{background:var(--gray-50)}
               <th>STT</th>
               <th>Mã HV</th>
               <th>Họ tên</th>
-              <th>Mã CD</th>
+              <th>Mã chức danh</th>
               <th>Chức danh</th>
               <th>Ngày nhận việc</th>
+              <th>Dự án</th>
               <th>Lỗi</th>
             </tr>
           </thead>
@@ -2840,6 +2842,23 @@ function timChucDanhVP(ten) {
   return DANH_MUC_VP.find(c => c.ten === ten) || null;
 }
 
+// [MỚI] Tra chức danh theo Mã chức danh (dùng khi import Excel — file mẫu cho
+// người dùng chọn Mã chức danh qua dropdown chứ không phải gõ tên đầy đủ).
+function timChucDanhVPByMa(ma) {
+  return DANH_MUC_VP.find(c => c.ma === ma) || null;
+}
+
+// Bỏ dấu tiếng Việt + hạ thường, dùng để so khớp tên cột trong file Excel
+// import một cách khoan dung hơn (không phân biệt hoa/thường, có dấu/không dấu).
+function normalizeVN_(s) {
+  return (s === null || s === undefined ? '' : String(s))
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .trim();
+}
+
 // [MỚI] Trạng thái theo dõi của HV Văn phòng — khi ở 1 trong 2 trạng thái
 // "kết thúc" thì không còn tính hạn/trạng thái GĐ1-GĐ2 nữa (giống backend).
 const HVVP_TT_DANG_THEO_DOI = 'Đang theo dõi';
@@ -3087,23 +3106,84 @@ function clearHVVPForm() {
 // IMPORT/EXPORT EXCEL - HỌC VIÊN VP
 // =============================================
 
-function downloadVPTemplate() {
-  const data = [
-    ['Mã HV', 'Họ tên', 'Mã CD', 'Ngày nhận việc'],
-    ['HV001', 'Nguyễn Văn A', 'QL-BH-001', '2025-01-15'],
-    ['HV002', 'Trần Thị B', 'NV-KT-001', '2025-01-20'],
-    ['HV003', 'Lê Văn C', 'QL-NS-001', '2025-02-01']
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [
-    { wch: 15 },  // Mã HV
-    { wch: 25 },  // Họ tên
-    { wch: 15 },  // Mã CD
-    { wch: 18 }   // Ngày nhận việc
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'HV Văn Phòng');
-  XLSX.writeFile(wb, 'mau_import_hv_vanphong.xlsx');
+// [CẬP NHẬT] Dùng ExcelJS (thay vì SheetJS) để tạo file mẫu, vì SheetJS bản
+// miễn phí KHÔNG ghi được Data Validation (sổ xuống) vào file .xlsx — chỉ đọc
+// được. ExcelJS hỗ trợ đầy đủ, cho phép cột "Mã chức danh" có sổ xuống thật
+// trong Excel, tham chiếu tới sheet "DanhMucChucDanh" (cũng dùng để người
+// dùng tra cứu Mã ↔ Tên chức danh khi nhập liệu).
+async function downloadVPTemplate() {
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Hệ thống quản lý học viên';
+    wb.created = new Date();
+
+    // ── Sheet tham chiếu: Danh mục chức danh (nguồn cho dropdown) ──
+    const wsDM = wb.addWorksheet('DanhMucChucDanh');
+    wsDM.columns = [
+      { header: 'Mã chức danh', key: 'ma', width: 18 },
+      { header: 'Tên chức danh', key: 'ten', width: 42 },
+      { header: 'Tổng số ngày ĐT', key: 'soNgay', width: 16 }
+    ];
+    DANH_MUC_VP.forEach(c => wsDM.addRow({ ma: c.ma, ten: c.ten, soNgay: c.soNgay }));
+    wsDM.getRow(1).font = { bold: true };
+    wsDM.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+    wsDM.getRow(1).eachCell(c => c.border = { bottom: { style: 'thin', color: { argb: 'FFBFDBFE' } } });
+
+    // ── Sheet nhập liệu chính: HV Văn Phòng ──
+    const ws = wb.addWorksheet('HV Văn Phòng');
+    ws.columns = [
+      { header: 'Mã HV', key: 'maHV', width: 16 },
+      { header: 'Họ tên', key: 'hoTen', width: 26 },
+      { header: 'Mã chức danh', key: 'maCD', width: 18 },
+      { header: 'Ngày nhận việc', key: 'ngayNhanViec', width: 18 },
+      { header: 'Dự án', key: 'duAn', width: 26 }
+    ];
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } };
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+    // Chú thích hướng dẫn ngay trên tiêu đề cột Mã chức danh
+    ws.getCell('C1').note = 'Bấm vào từng ô ở cột này rồi chọn 1 mã chức danh từ danh sách sổ xuống.\nXem đầy đủ Mã ↔ Tên chức danh ở sheet "DanhMucChucDanh".';
+    ws.getCell('D1').note = 'Nhập theo định dạng yyyy-mm-dd (ví dụ 2025-01-15).';
+
+    // Dữ liệu mẫu
+    const sample = [
+      { maHV: 'HV001', hoTen: 'Nguyễn Văn A', maCD: 'ST-HC-NV', ngayNhanViec: '2025-01-15', duAn: '' },
+      { maHV: 'HV002', hoTen: 'Trần Thị B', maCD: 'ST-QA-NV', ngayNhanViec: '2025-01-20', duAn: 'Dự án ABC' },
+      { maHV: 'HV003', hoTen: 'Lê Văn C', maCD: 'ST-BT-NV', ngayNhanViec: '2025-02-01', duAn: '' }
+    ];
+    sample.forEach(r => ws.addRow(r));
+
+    // Sổ xuống (Data Validation) cho cột Mã chức danh (cột C), áp dụng cho 500
+    // dòng đầu — đủ dư cho hầu hết đợt nhập liệu, người dùng có thể copy công
+    // thức xuống thêm nếu cần nhiều hơn.
+    const lastDMRow = DANH_MUC_VP.length + 1;
+    for (let r = 2; r <= 500; r++) {
+      ws.getCell(`C${r}`).dataValidation = {
+        type: 'list',
+        allowBlank: false,
+        formulae: [`DanhMucChucDanh!$A$2:$A$${lastDMRow}`],
+        showErrorMessage: true,
+        errorStyle: 'stop',
+        errorTitle: 'Mã chức danh không hợp lệ',
+        error: 'Vui lòng chọn 1 mã chức danh từ danh sách sổ xuống (xem thêm sheet "DanhMucChucDanh").'
+      };
+    }
+    ws.getColumn(4).numFmt = '@'; // giữ định dạng text cho ngày nhập tay dạng yyyy-mm-dd
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mau_import_hv_vanphong.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast(`Lỗi tạo file mẫu: ${err.message}`, 'error');
+  }
 }
 
 let pendingImportVPData = [];
@@ -3125,14 +3205,17 @@ async function importExcelVP(event) {
         return;
       }
 
-      const headers = rows[0].map(h => (h || '').toLowerCase().trim());
-      const maHVIdx = headers.findIndex(h => h.includes('mã') && h.includes('hv'));
-      const hoTenIdx = headers.findIndex(h => h.includes('họ') || h.includes('tên'));
-      const macdIdx = headers.findIndex(h => h.includes('mã') && h.includes('cd'));
-      const ngayIdx = headers.findIndex(h => h.includes('ngày') || h.includes('nhận'));
+      // [FIX] So khớp tên cột không phân biệt hoa/thường, có dấu/không dấu —
+      // để nhận cả file mẫu mới ("Mã chức danh") và file mẫu cũ ("Mã CD").
+      const headers = rows[0].map(normalizeVN_);
+      const maHVIdx  = headers.findIndex(h => h.includes('ma') && h.includes('hv'));
+      const hoTenIdx = headers.findIndex(h => h.includes('ho') && h.includes('ten'));
+      const macdIdx  = headers.findIndex(h => h.includes('ma') && (h.includes('cd') || h.includes('chuc danh')));
+      const ngayIdx  = headers.findIndex(h => h.includes('ngay') && h.includes('nhan'));
+      const duAnIdx  = headers.findIndex(h => h.includes('du an'));
 
       if (maHVIdx === -1 || hoTenIdx === -1 || macdIdx === -1 || ngayIdx === -1) {
-        toast('File Excel thiếu cột bắt buộc: Mã HV, Họ tên, Mã CD, Ngày nhận việc', 'error');
+        toast('File Excel thiếu cột bắt buộc: Mã HV, Họ tên, Mã chức danh, Ngày nhận việc', 'error');
         return;
       }
 
@@ -3146,16 +3229,20 @@ async function importExcelVP(event) {
         const maHV = (row[maHVIdx] || '').toString().trim();
         const hoTen = (row[hoTenIdx] || '').toString().trim();
         const maCD = (row[macdIdx] || '').toString().trim();
+        const duAn = duAnIdx !== -1 ? (row[duAnIdx] || '').toString().trim() : '';
         const ngayNhanViec = row[ngayIdx] ? formatExcelDate(row[ngayIdx]) : '';
 
         let rowError = '';
         if (!maHV) rowError = 'Mã HV trống';
         else if (!hoTen) rowError = 'Họ tên trống';
-        else if (!maCD) rowError = 'Mã CD trống';
+        else if (!maCD) rowError = 'Mã chức danh trống';
         else if (!ngayNhanViec) rowError = 'Ngày nhận việc không hợp lệ';
         else if (hvvpData.some(hv => hv.maHV === maHV)) rowError = 'Mã HV đã tồn tại';
+        else if (pendingImportVPData.some(item => item.maHV === maHV && !item.error)) rowError = 'Mã HV bị trùng trong file';
 
-        // Tìm chức danh từ mã CD
+        // [FIX] Tra chức danh theo Mã chức danh (đúng theo cột dropdown trong
+        // file mẫu). Vẫn hỗ trợ trường hợp người dùng gõ trực tiếp Tên chức
+        // danh đầy đủ thay vì chọn Mã, để tương thích ngược với file cũ.
         let chucDanh = '';
         let tongSoNgayDT = '';
         let soGiaiDoan = '';
@@ -3165,22 +3252,19 @@ async function importExcelVP(event) {
         let ngayDGGD2 = '';
 
         if (!rowError) {
-          const vpConfig = getVPConfig();
-          const config = vpConfig.find(c => c.maChucdanh === maCD);
+          const config = timChucDanhVPByMa(maCD) || timChucDanhVP(maCD);
           if (config) {
-            chucDanh = config.tenChucDanh;
-            tongSoNgayDT = config.tongSoNgayDT;
-            soGiaiDoan = config.soGiaiDoan;
+            chucDanh = config.ten;
+            tongSoNgayDT = config.soNgay;
+            soGiaiDoan = config.soNgay === 38 ? 1 : 2;
 
-            if (ngayNhanViec) {
-              const calc = computeVPStatus({ chucDanh, ngayNhanViec });
-              hanGD1 = calc.hanGD1 ? fmtDate(calc.hanGD1) : '';
-              hanGD2 = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
-              ngayDGGD1 = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
-              ngayDGGD2 = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
-            }
+            const calc = computeVPStatus({ chucDanh, ngayNhanViec });
+            hanGD1 = calc.hanGD1 ? fmtDate(calc.hanGD1) : '';
+            hanGD2 = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
+            ngayDGGD1 = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
+            ngayDGGD2 = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
           } else {
-            rowError = `Mã CD không tồn tại: ${maCD}`;
+            rowError = `Mã chức danh không tồn tại: ${maCD}`;
           }
         }
 
@@ -3191,6 +3275,7 @@ async function importExcelVP(event) {
           maCD,
           chucDanh,
           ngayNhanViec,
+          duAn,
           tongSoNgayDT,
           soGiaiDoan,
           hanGD1,
@@ -3217,6 +3302,7 @@ async function importExcelVP(event) {
           <td class="td-code">${escapeHTML(item.maCD)}</td>
           <td>${escapeHTML(item.chucDanh || '–')}</td>
           <td>${item.ngayNhanViec || '–'}</td>
+          <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
           <td style="color:var(--red);font-weight:600">${item.error ? `❌ ${item.error}` : '✅'}</td>
         </tr>
       `).join('');
@@ -3262,6 +3348,7 @@ async function confirmImportVP() {
         hoTen: item.hoTen,
         chucDanh: item.chucDanh,
         ngayNhanViec: item.ngayNhanViec,
+        duAn: item.duAn || '',
         ghiChu: `[Import từ Excel ngày ${new Date().toLocaleDateString('vi-VN')}]`
       };
 
