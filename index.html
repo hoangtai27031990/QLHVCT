@@ -402,6 +402,8 @@ tbody tr:hover td{background:var(--gray-50)}
 .audit-action-add{background:var(--green-light);color:var(--green-dark)}
 .audit-action-edit{background:var(--blue-light);color:var(--blue)}
 .audit-action-delete{background:var(--red-light);color:var(--red)}
+.audit-action-status{background:var(--amber-light);color:var(--amber)}
+.audit-source-tag{font-size:10px;font-weight:700;letter-spacing:.03em;padding:1px 6px;border-radius:10px;background:var(--gray-100);color:var(--text-muted);margin-left:6px;white-space:nowrap}
 .audit-action-login{background:#EEF2FF;color:#4338CA}
 .audit-action-logout{background:var(--gray-100);color:var(--gray-700)}
 .audit-action-changepw{background:var(--amber-light);color:var(--amber)}
@@ -824,6 +826,11 @@ tbody tr:hover td{background:var(--gray-50)}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="auditPage=0;renderAuditLog()">
               </div>
+              <select id="auditFilterSource" onchange="auditPage=0;renderAuditLog()" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border-md);color:var(--text)">
+                <option value="">Tất cả đối tượng</option>
+                <option value="hv">HV thực tập</option>
+                <option value="hvvp">HV Văn phòng</option>
+              </select>
               <button class="btn" onclick="clearAuditLog()" style="color:var(--red)">Xóa log cũ</button>
             </div>
           </div>
@@ -3017,10 +3024,16 @@ function changeHVVPPerPage(val) {
 
 // [MỚI] Đổi nhanh trạng thái theo dõi ngay trên bảng, không cần mở form sửa.
 async function quickSetHVVPTrangThai(id, trangThai) {
+  const hv = hvvpData.find(h => h.id == id);
+  const trangThaiCu = hv ? (hv.trangThai || HVVP_TT_DANG_THEO_DOI) : '';
   const res = await api('setHVVPTrangThai', { id, trangThai });
   if (!res.ok) { toast(res.msg, 'error'); return; }
-  const hv = hvvpData.find(h => h.id == id);
-  if (hv) hv.trangThai = trangThai;
+  if (hv) {
+    hv.trangThai = trangThai;
+    if (trangThaiCu !== trangThai) {
+      auditLogVP('vp_status', hv, [{ field: 'Trạng thái theo dõi', old: trangThaiCu, new: trangThai }]);
+    }
+  }
   const label = trangThai === HVVP_TT_HOAN_TAT ? 'Đã đánh dấu hoàn tất'
     : trangThai === HVVP_TT_NGUNG ? 'Đã ngưng theo dõi học viên'
     : 'Đã mở lại theo dõi học viên';
@@ -3318,6 +3331,8 @@ async function saveHVVP() {
   if (!ngayNhanViec) { validateField('fvp-ngayNhanViec'); hasErr = true; }
   if (hasErr) return;
 
+  const oldHv = editingHVVPId ? hvvpData.find(h => h.id == editingHVVPId) : null;
+
   btn.disabled = true;
   const payload = { maHV, hoTen, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
   const res = editingHVVPId
@@ -3326,6 +3341,15 @@ async function saveHVVP() {
   btn.disabled = false;
 
   if (!res.ok) { toast(res.msg, 'error'); return; }
+
+  // Ghi audit log (fire-and-forget, không block UI)
+  if (editingHVVPId && oldHv) {
+    const changes = buildChangesVP(oldHv, payload);
+    if (changes.length) auditLogVP('vp_edit', payload, changes);
+  } else {
+    auditLogVP('vp_add', payload);
+  }
+
   toast(editingHVVPId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
   closeModal('modalHVVP');
   loadHVVP();
@@ -3341,8 +3365,10 @@ function deleteHVVP(id) {
 
 async function confirmDeleteHVVP() {
   if (!pendingDeleteHVVPId) return;
+  const hv = hvvpData.find(h => h.id == pendingDeleteHVVPId);
   const res = await api('deleteHVVP', { id: pendingDeleteHVVPId });
   if (!res.ok) { toast(res.msg, 'error'); return; }
+  if (hv) auditLogVP('vp_delete', hv); // fire-and-forget
   hvvpData = hvvpData.filter(h => h.id != pendingDeleteHVVPId);
   toast('Đã xóa học viên', 'success');
   closeModal('modalDeleteHVVP');
@@ -3803,10 +3829,48 @@ function buildChanges(oldHv, newData) {
   return changes;
 }
 
+// =============================================
+// AUDIT LOG — HV VĂN PHÒNG SIÊU THỊ
+// Dùng chung sheet/API AuditLog với HV thực tập (addAuditLog/getAuditLog),
+// chỉ khác action ('vp_add'/'vp_edit'/'vp_delete'/'vp_status') để phân biệt
+// khi hiển thị ở tab "Lịch sử chỉnh sửa".
+// =============================================
+const FIELD_LABELS_VP = {
+  maHV: 'Mã HV', hoTen: 'Họ tên', chucDanh: 'Chức danh', ngayNhanViec: 'Ngày nhận việc',
+  diemGD1: 'Điểm GĐ1', diemGD2: 'Điểm GĐ2', trangThai: 'Trạng thái theo dõi', ghiChu: 'Ghi chú'
+};
+
+function buildChangesVP(oldHv, newData) {
+  const changes = [];
+  Object.keys(FIELD_LABELS_VP).forEach(f => {
+    const ov = (oldHv[f] || '').toString().trim();
+    const nv = (newData[f] || '').toString().trim();
+    if (ov !== nv) changes.push({ field: FIELD_LABELS_VP[f] || f, old: ov, new: nv });
+  });
+  return changes;
+}
+
+async function auditLogVP(action, hv, changes = null) {
+  const entry = {
+    ts: Date.now(),
+    user: currentUser?.ten || currentUser?.username || '?',
+    action, // 'vp_add' | 'vp_edit' | 'vp_delete' | 'vp_status'
+    maHV: hv.maHV || hv.maChucDanh || '',
+    name: hv.hoTen || '',
+    changes
+  };
+  // [PERF] Fire-and-forget: không await, không block UI
+  api('addAuditLog', { entry }).catch(e => console.warn('[auditLogVP]', e));
+}
+
 async function renderAuditLog() {
   const q = (document.getElementById('auditSearch')?.value || '').toLowerCase();
+  const src = document.getElementById('auditFilterSource')?.value || '';
   const allLogs = await getAuditLogs();
+  const isVP = a => (a || '').startsWith('vp_');
   let logs = allLogs.filter(l => {
+    if (src === 'hv' && isVP(l.action)) return false;
+    if (src === 'hvvp' && !isVP(l.action)) return false;
     if (!q) return true;
     return (l.maHV||'').toLowerCase().includes(q)
         || (l.name||'').toLowerCase().includes(q)
@@ -3818,9 +3882,13 @@ async function renderAuditLog() {
   const page  = logs.slice(start, start + AUDIT_PER_PAGE);
 
   const actionBadge = a => {
-    const cls = a==='add' ? 'audit-action-add' : a==='edit' ? 'audit-action-edit' : 'audit-action-delete';
-    const lbl = a==='add' ? 'Thêm mới' : a==='edit' ? 'Chỉnh sửa' : 'Xóa';
-    return `<span class="badge ${cls}">${lbl}</span>`;
+    const base = isVP(a) ? a.slice(3) : a; // bỏ tiền tố 'vp_' để dùng chung style
+    const cls = base==='add' ? 'audit-action-add' : base==='edit' ? 'audit-action-edit'
+      : base==='status' ? 'audit-action-status' : 'audit-action-delete';
+    const lbl = base==='add' ? 'Thêm mới' : base==='edit' ? 'Chỉnh sửa'
+      : base==='status' ? 'Đổi trạng thái' : 'Xóa';
+    const sourceTag = isVP(a) ? '<span class="audit-source-tag">HV VP</span>' : '';
+    return `<span class="badge ${cls}">${lbl}</span>${sourceTag}`;
   };
 
   const tbody = document.getElementById('auditBody');
@@ -3833,6 +3901,7 @@ async function renderAuditLog() {
   tbody.innerHTML = page.map(l => {
     const dt = new Date(l.ts);
     const timeStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+    const baseAction = isVP(l.action) ? l.action.slice(3) : l.action;
     let diffHtml = '–';
     if (l.changes && l.changes.length) {
       diffHtml = `<div class="audit-diff">`
@@ -3843,15 +3912,15 @@ async function renderAuditLog() {
           ).join('')
         + (l.changes.length > 4 ? `<div style="color:var(--text-faint)">+${l.changes.length-4} trường khác</div>` : '')
         + '</div>';
-    } else if (l.action === 'delete') {
+    } else if (baseAction === 'delete') {
       diffHtml = '<span style="color:var(--red);font-size:12px">Đã xóa khỏi hệ thống</span>';
-    } else if (l.action === 'add') {
-      diffHtml = '<span style="color:var(--green);font-size:12px">Thêm hồ sơ mới</span>';
+    } else if (baseAction === 'add') {
+      diffHtml = `<span style="color:var(--green);font-size:12px">Thêm hồ sơ mới${isVP(l.action) ? ' (HV Văn phòng)' : ''}</span>`;
     }
     return `<tr>
       <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${timeStr}</td>
       <td style="font-size:12px">${escapeHTML(l.user)}</td>
-      <td>${actionBadge(l.action)}</td>
+      <td style="white-space:nowrap">${actionBadge(l.action)}</td>
       <td class="td-code">${escapeHTML(l.maHV)}</td>
       <td style="font-size:12px">${escapeHTML(l.name)}</td>
       <td>${diffHtml}</td>
