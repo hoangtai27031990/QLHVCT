@@ -2830,8 +2830,13 @@ function computeVPStatus(hv) {
 
   const daKetThucTheoDoi = HVVP_TT_KET_THUC.includes(hv.trangThai);
 
-  const trangThaiTu = (ngayDG) => {
-    if (!ngayDG || daKetThucTheoDoi) return '';
+  // [MỚI] Nếu giai đoạn đã được nhập điểm (diemGD1/diemGD2) thì coi như đã
+  // đánh giá xong giai đoạn đó — không còn tính/hiển thị "Đã qua hạn" hay
+  // "Sắp đến hạn" cho giai đoạn này nữa, dù ngày hiện tại đã vượt qua hạn.
+  const coDiem = (v) => v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v));
+
+  const trangThaiTu = (ngayDG, diem) => {
+    if (!ngayDG || daKetThucTheoDoi || coDiem(diem)) return '';
     const d = parseLocalDate(ngayDG);
     const t = parseLocalDate(new Date().toISOString().slice(0,10));
     const diff = Math.round((d - t) / (1000 * 60 * 60 * 24));
@@ -2843,11 +2848,11 @@ function computeVPStatus(hv) {
   if (cd.soNgay !== 38) {
     out.hanGD1 = addDays(hv.ngayNhanViec, 29);
     out.ngayDGGD1 = addDays(out.hanGD1, -3);
-    out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1);
+    out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1, hv.diemGD1);
   }
   out.hanGD2 = addDays(hv.ngayNhanViec, cd.soNgay - 1);
   out.ngayDGGD2 = addDays(out.hanGD2, -12);
-  out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2);
+  out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2, hv.diemGD2);
 
   return out;
 }
@@ -4034,17 +4039,24 @@ function openDetailVP(id) {
   const tlItems = [
     { label: 'Nhận việc', date: hv.ngayNhanViec, state: hv.ngayNhanViec ? 'done' : 'upcoming' }
   ];
+  const coDiemGD1 = hv.diemGD1 !== '' && hv.diemGD1 !== null && hv.diemGD1 !== undefined && !isNaN(parseFloat(hv.diemGD1));
+  const coDiemGD2 = hv.diemGD2 !== '' && hv.diemGD2 !== null && hv.diemGD2 !== undefined && !isNaN(parseFloat(hv.diemGD2));
+
   if (hv.hanGD1) {
     tlItems.push({
-      label: 'Hạn đánh giá GĐ1', date: hv.hanGD1, badge: hv.trangThaiGD1,
-      state: hv.trangThaiGD1 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD1 === 'Sắp đến hạn' ? 'warn'
+      label: 'Hạn đánh giá GĐ1', date: hv.hanGD1,
+      badge: coDiemGD1 ? 'Đã đánh giá' : hv.trangThaiGD1,
+      state: coDiemGD1 ? 'done'
+        : hv.trangThaiGD1 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD1 === 'Sắp đến hạn' ? 'warn'
         : (parseLocalDate(hv.hanGD1) <= today ? 'done' : 'upcoming')
     });
   }
   if (hv.hanGD2) {
     tlItems.push({
-      label: hv.soGiaiDoan === 1 ? 'Hạn đánh giá' : 'Hạn đánh giá GĐ2/Cuối', date: hv.hanGD2, badge: hv.trangThaiGD2,
-      state: hv.trangThaiGD2 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD2 === 'Sắp đến hạn' ? 'warn'
+      label: hv.soGiaiDoan === 1 ? 'Hạn đánh giá' : 'Hạn đánh giá GĐ2/Cuối', date: hv.hanGD2,
+      badge: coDiemGD2 ? 'Đã đánh giá' : hv.trangThaiGD2,
+      state: coDiemGD2 ? 'done'
+        : hv.trangThaiGD2 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD2 === 'Sắp đến hạn' ? 'warn'
         : (parseLocalDate(hv.hanGD2) <= today ? 'done' : 'upcoming')
     });
   }
@@ -4098,7 +4110,7 @@ function openDetailVP(id) {
             <div class="tl-dot ${item.state}"></div>
             <div class="tl-label">${item.label}</div>
             <div class="tl-date">${item.date ? fmtDate(item.date) : 'Chưa xác định'}</div>
-            ${item.badge ? `<div class="tl-badge"><span class="badge ${vpStatusBadgeClass(item.badge)}">${item.badge}</span></div>` : ''}
+            ${item.badge ? `<div class="tl-badge"><span class="badge ${item.badge === 'Đã đánh giá' ? 'badge-vp-ontime' : vpStatusBadgeClass(item.badge)}">${item.badge}</span></div>` : ''}
           </div>`).join('')}
         ${daKetThuc ? '' : ''}
       </div>
