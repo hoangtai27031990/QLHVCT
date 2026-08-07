@@ -2895,10 +2895,10 @@ function renderVPTable() {
     const daKetThuc = HVVP_TT_KET_THUC.includes(trangThai);
     return `
     <tr>
-      <td style="font-family:monospace;font-size:12px" class="td-code">${escapeHTML(hv.maHV || '–')}</td>
-      <td>${escapeHTML(hv.hoTen)}</td>
-      <td>${escapeHTML(hv.chucDanh)}</td>
-      <td style="font-family:monospace;font-size:12px">${escapeHTML(hv.maChucDanh)}</td>
+      <td style="font-family:monospace;font-size:12px;cursor:pointer" class="td-code" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maHV || '–')}</td>
+      <td style="cursor:pointer;font-weight:500" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.hoTen)}</td>
+      <td style="cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.chucDanh)}</td>
+      <td style="font-family:monospace;font-size:12px;cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maChucDanh)}</td>
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.hanGD1 ? fmtDate(hv.hanGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
@@ -4005,6 +4005,107 @@ function openDetail(id) {
 function closeDetail() {
   document.getElementById('detailOverlay').style.display = 'none';
   document.documentElement.style.overflow = '';
+}
+
+// [MỚI] Xem chi tiết 1 học viên Văn phòng — tái sử dụng cùng overlay với HV thực tập.
+function openDetailVP(id) {
+  const hvRaw = hvvpData.find(h => h.id == id);
+  if (!hvRaw) return;
+  const hv = { ...hvRaw, ...computeVPStatus(hvRaw) };
+
+  const trangThai = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
+  const daKetThuc = HVVP_TT_KET_THUC.includes(trangThai);
+  const initials = ((hv.hoTen || '').trim().split(/\s+/).pop() || '')[0] || 'V';
+
+  const infoRow = (label, val) =>
+    `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val">${escapeHTML(val)||'–'}</span></div>`;
+
+  const scoreRow = (label, val) => {
+    const n = parseFloat(val);
+    if (val === '' || val === null || val === undefined || isNaN(n)) {
+      return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="color:var(--text-faint)">–</span></div>`;
+    }
+    const cls = n < 5 ? 'color:var(--red)' : n < 7 ? 'color:var(--amber)' : 'color:var(--green)';
+    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px">${n.toFixed(2)}</span></div>`;
+  };
+
+  const today = parseLocalDate(new Date().toISOString().slice(0,10));
+
+  const tlItems = [
+    { label: 'Nhận việc', date: hv.ngayNhanViec, state: hv.ngayNhanViec ? 'done' : 'upcoming' }
+  ];
+  if (hv.hanGD1) {
+    tlItems.push({
+      label: 'Hạn đánh giá GĐ1', date: hv.hanGD1, badge: hv.trangThaiGD1,
+      state: hv.trangThaiGD1 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD1 === 'Sắp đến hạn' ? 'warn'
+        : (parseLocalDate(hv.hanGD1) <= today ? 'done' : 'upcoming')
+    });
+  }
+  if (hv.hanGD2) {
+    tlItems.push({
+      label: hv.soGiaiDoan === 1 ? 'Hạn đánh giá' : 'Hạn đánh giá GĐ2/Cuối', date: hv.hanGD2, badge: hv.trangThaiGD2,
+      state: hv.trangThaiGD2 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD2 === 'Sắp đến hạn' ? 'warn'
+        : (parseLocalDate(hv.hanGD2) <= today ? 'done' : 'upcoming')
+    });
+  }
+
+  document.getElementById('detail-breadcrumb').textContent = `${hv.maHV || hv.maChucDanh || ''} · ${hv.hoTen}`;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-avatar">${escapeHTML(initials.toUpperCase())}</div>
+      <div class="detail-meta">
+        <div class="detail-name">${escapeHTML(hv.hoTen)}</div>
+        <div class="detail-sub">
+          ${hv.maHV ? `<span><b>Mã HV:</b> ${escapeHTML(hv.maHV)}</span>` : ''}
+          ${hv.chucDanh ? `<span class="badge ${getBadgeCD(hv.chucDanh)}">${escapeHTML(hv.chucDanh)}</span>` : ''}
+          <span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-primary" onclick="closeDetail();openEditHVVP('${hv.id}')" style="padding:10px 20px;font-size:14px;font-weight:600">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Sửa
+        </button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-title">Thông tin chức danh</div>
+        ${infoRow('Mã chức danh', hv.maChucDanh)}
+        ${infoRow('Tổng số ngày ĐT', hv.tongSoNgayDT !== '' && hv.tongSoNgayDT != null ? String(hv.tongSoNgayDT) : '')}
+        ${infoRow('Số giai đoạn', hv.soGiaiDoan !== '' && hv.soGiaiDoan != null ? String(hv.soGiaiDoan) : '')}
+        ${infoRow('Ngày nhận việc', hv.ngayNhanViec ? fmtDate(hv.ngayNhanViec) : '')}
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-title">Điểm số</div>
+        ${scoreRow('Điểm GĐ1', hv.diemGD1)}
+        ${scoreRow(hv.soGiaiDoan === 1 ? 'Điểm đánh giá' : 'Điểm GĐ2', hv.diemGD2)}
+      </div>
+    </div>
+
+    <div class="detail-card" style="margin-bottom:12px">
+      <div class="detail-card-title">Ghi chú</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;margin:0">${hv.ghiChu ? escapeHTML(hv.ghiChu) : '<span style="color:var(--text-faint)">Không có ghi chú</span>'}</p>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-title" style="margin-bottom:16px">Timeline đánh giá</div>
+      <div class="timeline">
+        ${tlItems.map(item => `
+          <div class="tl-item">
+            <div class="tl-dot ${item.state}"></div>
+            <div class="tl-label">${item.label}</div>
+            <div class="tl-date">${item.date ? fmtDate(item.date) : 'Chưa xác định'}</div>
+            ${item.badge ? `<div class="tl-badge"><span class="badge ${vpStatusBadgeClass(item.badge)}">${item.badge}</span></div>` : ''}
+          </div>`).join('')}
+        ${daKetThuc ? '' : ''}
+      </div>
+    </div>`;
+
+  document.getElementById('detailOverlay').style.display = 'block';
+  document.documentElement.style.overflow = 'hidden';
 }
 </script>
 </body>
