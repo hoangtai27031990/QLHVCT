@@ -749,14 +749,12 @@ tbody tr:hover td{background:var(--gray-50)}
                   <th>Mã HV</th>
                   <th>Họ và tên</th>
                   <th>Chức danh</th>
-                  <th>Mã CD</th>
+                  <th>Dự án</th>
                   <th>Tổng ngày ĐT</th>
                   <th>Ngày nhận việc</th>
                   <th>Hạn ĐG GĐ1</th>
-                  <th>Trạng thái GĐ1</th>
                   <th>Kết quả GĐ1</th>
                   <th>Hạn ĐG GĐ2/Cuối</th>
-                  <th>Trạng thái GĐ2/Cuối</th>
                   <th>Kết quả GĐ2</th>
                   <th>Theo dõi</th>
                   <th>Ghi chú</th>
@@ -764,7 +762,7 @@ tbody tr:hover td{background:var(--gray-50)}
                 </tr>
               </thead>
               <tbody id="hvvpBody">
-                <tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1076,6 +1074,10 @@ tbody tr:hover td{background:var(--gray-50)}
             <option value="">-- Chọn chức danh --</option>
           </select>
           <span class="field-err-msg" id="fvp-chucDanh-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn chức danh</span></span>
+        </div>
+        <div class="form-field">
+          <label>Dự án</label>
+          <input type="text" id="fvp-duAn" placeholder="Tên dự án (nếu có)" oninput="clearFieldError('fvp-duAn')">
         </div>
         <div class="form-field">
           <label>Mã chức danh</label>
@@ -2898,6 +2900,24 @@ function vpStatusBadgeClass(trangThai) {
   return 'badge-vp-none';
 }
 
+// [TỐI ƯU DIỆN TÍCH] Cột "Trạng thái GĐ1"/"Trạng thái GĐ2/Cuối" đã bị ẩn khỏi bảng
+// để đỡ chật; thay vào đó hiển thị 1 dấu chấm màu ngay trước ngày hạn đánh giá,
+// vẫn giữ nguyên đầy đủ thông tin trạng thái (qua hạn/sắp đến hạn/chưa tới hạn)
+// nhưng gọn hơn nhiều. Trạng thái đầy đủ vẫn xem được qua tooltip hoặc màn hình chi tiết.
+function vpHanDotColor_(trangThai) {
+  if (trangThai === 'Đã qua hạn') return 'var(--red)';
+  if (trangThai === 'Sắp đến hạn') return 'var(--amber)';
+  if (trangThai === 'Chưa tới hạn') return 'var(--green-dark)';
+  return 'var(--text-faint)';
+}
+function vpHanCellHtml(hanDate, trangThai) {
+  const color = vpHanDotColor_(trangThai);
+  const dot = trangThai
+    ? `<span title="${escapeHTML(trangThai)}" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle"></span>`
+    : '';
+  return `${dot}<span style="vertical-align:middle">${fmtDate(hanDate)}</span>`;
+}
+
 // Badge cho trạng thái THEO DÕI (khác với trạng thái hạn GĐ1/GĐ2 ở trên)
 function vpTheoDoiBadgeClass(trangThai) {
   if (trangThai === HVVP_TT_HOAN_TAT) return 'badge-vp-ontime';
@@ -2906,7 +2926,7 @@ function vpTheoDoiBadgeClass(trangThai) {
 }
 
 async function loadHVVP() {
-  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="15" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
   populateVPChucDanhSelect();
   const res = await api('getHVVP');
   if (!res.ok) { toast(res.msg, 'error'); return; }
@@ -2928,6 +2948,7 @@ function renderVPTable() {
       (hv.hoTen || '').toLowerCase().includes(kw) ||
       (hv.chucDanh || '').toLowerCase().includes(kw) ||
       (hv.maChucDanh || '').toLowerCase().includes(kw) ||
+      (hv.duAn || '').toLowerCase().includes(kw) ||
       (hv.ghiChu || '').toLowerCase().includes(kw)
     );
   }
@@ -2942,7 +2963,7 @@ function renderVPTable() {
   }
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
     document.getElementById('hvvpPager').innerHTML = '';
     return;
   }
@@ -2961,14 +2982,12 @@ function renderVPTable() {
       <td style="font-family:monospace;font-size:12px;cursor:pointer" class="td-code" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maHV || '–')}</td>
       <td style="cursor:pointer;font-weight:500" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.hoTen)}</td>
       <td style="cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.chucDanh)}</td>
-      <td style="font-family:monospace;font-size:12px;cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maChucDanh)}</td>
+      <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.duAn || '')}">${hv.duAn ? escapeHTML(hv.duAn) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
-      <td>${hv.hanGD1 ? fmtDate(hv.hanGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.trangThaiGD1 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD1)}">${hv.trangThaiGD1}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.hanGD1 ? vpHanCellHtml(hv.hanGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.hanGD2 ? fmtDate(hv.hanGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.trangThaiGD2 ? `<span class="badge ${vpStatusBadgeClass(hv.trangThaiGD2)}">${hv.trangThaiGD2}</span>` : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.hanGD2 ? vpHanCellHtml(hv.hanGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
@@ -3057,7 +3076,7 @@ function calcVPDates() {
 }
 
 function clearHVVPForm() {
-  ['fvp-maHV','fvp-hoTen','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
+  ['fvp-maHV','fvp-hoTen','fvp-duAn','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
    'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-diemGD1','fvp-diemGD2','fvp-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fvp-chucDanh').value = '';
@@ -3300,6 +3319,7 @@ function openEditHVVP(id) {
   document.getElementById('modalHVVPTitle').textContent = 'Sửa học viên Văn phòng';
   document.getElementById('fvp-maHV').value = hv.maHV || '';
   document.getElementById('fvp-hoTen').value = hv.hoTen || '';
+  document.getElementById('fvp-duAn').value = hv.duAn || '';
   document.getElementById('fvp-chucDanh').value = hv.chucDanh || '';
   document.getElementById('fvp-ngayNhanViec').value = hv.ngayNhanViec || '';
   document.getElementById('fvp-diemGD1').value = hv.diemGD1 || '';
@@ -3317,6 +3337,7 @@ async function saveHVVP() {
 
   const maHV = document.getElementById('fvp-maHV').value.trim();
   const hoTen = document.getElementById('fvp-hoTen').value.trim();
+  const duAn = document.getElementById('fvp-duAn').value.trim();
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
   const diemGD1 = document.getElementById('fvp-diemGD1').value.trim();
@@ -3334,7 +3355,7 @@ async function saveHVVP() {
   const oldHv = editingHVVPId ? hvvpData.find(h => h.id == editingHVVPId) : null;
 
   btn.disabled = true;
-  const payload = { maHV, hoTen, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
+  const payload = { maHV, hoTen, duAn, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
   const res = editingHVVPId
     ? await api('updateHVVP', { id: editingHVVPId, ...payload })
     : await api('addHVVP', payload);
@@ -3836,7 +3857,7 @@ function buildChanges(oldHv, newData) {
 // khi hiển thị ở tab "Lịch sử chỉnh sửa".
 // =============================================
 const FIELD_LABELS_VP = {
-  maHV: 'Mã HV', hoTen: 'Họ tên', chucDanh: 'Chức danh', ngayNhanViec: 'Ngày nhận việc',
+  maHV: 'Mã HV', hoTen: 'Họ tên', duAn: 'Dự án', chucDanh: 'Chức danh', ngayNhanViec: 'Ngày nhận việc',
   diemGD1: 'Điểm GĐ1', diemGD2: 'Điểm GĐ2', trangThai: 'Trạng thái theo dõi', ghiChu: 'Ghi chú'
 };
 
@@ -4215,6 +4236,7 @@ function openDetailVP(id) {
         <div class="detail-name">${escapeHTML(hv.hoTen)}</div>
         <div class="detail-sub">
           ${hv.maHV ? `<span><b>Mã HV:</b> ${escapeHTML(hv.maHV)}</span>` : ''}
+          ${hv.duAn ? `<span><b>Dự án:</b> ${escapeHTML(hv.duAn)}</span>` : ''}
           ${hv.chucDanh ? `<span class="badge ${getBadgeCD(hv.chucDanh)}">${escapeHTML(hv.chucDanh)}</span>` : ''}
           <span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span>
         </div>
@@ -4230,6 +4252,7 @@ function openDetailVP(id) {
     <div class="detail-grid">
       <div class="detail-card">
         <div class="detail-card-title">Thông tin chức danh</div>
+        ${infoRow('Dự án', hv.duAn)}
         ${infoRow('Mã chức danh', hv.maChucDanh)}
         ${infoRow('Tổng số ngày ĐT', hv.tongSoNgayDT !== '' && hv.tongSoNgayDT != null ? String(hv.tongSoNgayDT) : '')}
         ${infoRow('Số giai đoạn', hv.soGiaiDoan !== '' && hv.soGiaiDoan != null ? String(hv.soGiaiDoan) : '')}
