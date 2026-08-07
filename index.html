@@ -708,8 +708,17 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="toolbar">
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="searchInputVP" placeholder="Tìm họ tên, chức danh..." oninput="renderVPTable()">
+                <input type="text" id="searchInputVP" placeholder="Tìm mã HV, họ tên, chức danh..." oninput="renderVPTable()">
               </div>
+              <button class="btn" onclick="downloadVPTemplate()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Tải mẫu Excel
+              </button>
+              <button class="btn" onclick="document.getElementById('importFileVP').click()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Nhập Excel
+              </button>
+              <input type="file" id="importFileVP" accept=".xlsx,.xls" style="display:none" onchange="importExcelVP(event)">
               <button class="btn btn-primary" onclick="openAddHVVP()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Thêm học viên
@@ -723,6 +732,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <table id="hvvpTable">
               <thead>
                 <tr>
+                  <th>Mã HV</th>
                   <th>Họ và tên</th>
                   <th>Chức danh</th>
                   <th>Mã CD</th>
@@ -1028,6 +1038,11 @@ tbody tr:hover td{background:var(--gray-50)}
       <div class="form-grid">
         <div class="form-section-title">Thông tin học viên</div>
         <div class="form-field">
+          <label>Mã HV</label>
+          <input type="text" id="fvp-maHV" placeholder="Mã học viên" oninput="clearFieldError('fvp-maHV')">
+          <span class="field-err-msg" id="fvp-maHV-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập mã học viên</span></span>
+        </div>
+        <div class="form-field">
           <label>Họ và tên *</label>
           <input type="text" id="fvp-hoTen" placeholder="Họ và tên học viên" onblur="validateField('fvp-hoTen')" oninput="clearFieldError('fvp-hoTen')">
           <span class="field-err-msg" id="fvp-hoTen-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng nhập họ và tên</span></span>
@@ -1091,6 +1106,46 @@ tbody tr:hover td{background:var(--gray-50)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modalHVVP')">Hủy</button>
       <button class="btn btn-primary" id="btnSaveHVVP" onclick="saveHVVP()">Lưu học viên</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PREVIEW IMPORT EXCEL HV VP -->
+<div class="overlay" id="modalImportVPPreview">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h3>Xem Trước Dữ Liệu Import</h3>
+      <button class="modal-close" onclick="closeModal('modalImportVPPreview')">×</button>
+    </div>
+    <div class="modal-body" style="max-height:500px;overflow-y:auto">
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text-muted)">
+        <span id="importVPStats"></span>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:12px">
+        <table id="importVPPreviewTable">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Mã HV</th>
+              <th>Họ tên</th>
+              <th>Mã CD</th>
+              <th>Chức danh</th>
+              <th>Ngày nhận việc</th>
+              <th>Lỗi</th>
+            </tr>
+          </thead>
+          <tbody id="importVPPreviewBody">
+          </tbody>
+        </table>
+      </div>
+      <div id="importVPErrors" style="display:none;background:var(--red-light);border:1px solid var(--red);border-radius:var(--radius);padding:12px;margin-bottom:12px;color:var(--red);font-size:12px">
+        <div style="font-weight:600;margin-bottom:8px">⚠️ Lỗi phát hiện:</div>
+        <div id="importVPErrorsList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalImportVPPreview')">Hủy</button>
+      <button class="btn btn-primary" id="btnConfirmImportVP" onclick="confirmImportVP()">Import</button>
     </div>
   </div>
 </div>
@@ -2786,17 +2841,19 @@ function renderVPTable() {
   let rows = hvvpData.map(hv => ({ ...hv, ...computeVPStatus(hv) }));
   if (kw) {
     rows = rows.filter(hv =>
+      (hv.maHV || '').toLowerCase().includes(kw) ||
       (hv.hoTen || '').toLowerCase().includes(kw) ||
       (hv.chucDanh || '').toLowerCase().includes(kw) ||
       (hv.maChucDanh || '').toLowerCase().includes(kw)
     );
   }
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text-faint);padding:24px">Chưa có học viên nào</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(hv => `
     <tr>
+      <td style="font-family:monospace;font-size:12px" class="td-code">${escapeHTML(hv.maHV || '–')}</td>
       <td>${escapeHTML(hv.hoTen)}</td>
       <td>${escapeHTML(hv.chucDanh)}</td>
       <td style="font-family:monospace;font-size:12px">${escapeHTML(hv.maChucDanh)}</td>
@@ -2835,10 +2892,229 @@ function calcVPDates() {
 }
 
 function clearHVVPForm() {
-  ['fvp-hoTen','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
+  ['fvp-maHV','fvp-hoTen','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
    'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fvp-chucDanh').value = '';
+}
+
+// =============================================
+// IMPORT/EXPORT EXCEL - HỌC VIÊN VP
+// =============================================
+
+function downloadVPTemplate() {
+  const data = [
+    ['Mã HV', 'Họ tên', 'Mã CD', 'Ngày nhận việc'],
+    ['HV001', 'Nguyễn Văn A', 'QL-BH-001', '2025-01-15'],
+    ['HV002', 'Trần Thị B', 'NV-KT-001', '2025-01-20'],
+    ['HV003', 'Lê Văn C', 'QL-NS-001', '2025-02-01']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [
+    { wch: 15 },  // Mã HV
+    { wch: 25 },  // Họ tên
+    { wch: 15 },  // Mã CD
+    { wch: 18 }   // Ngày nhận việc
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'HV Văn Phòng');
+  XLSX.writeFile(wb, 'mau_import_hv_vanphong.xlsx');
+}
+
+let pendingImportVPData = [];
+
+async function importExcelVP(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const ws = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      if (!rows.length || rows.length < 2) {
+        toast('File Excel trống hoặc không có dữ liệu', 'error');
+        return;
+      }
+
+      const headers = rows[0].map(h => (h || '').toLowerCase().trim());
+      const maHVIdx = headers.findIndex(h => h.includes('mã') && h.includes('hv'));
+      const hoTenIdx = headers.findIndex(h => h.includes('họ') || h.includes('tên'));
+      const macdIdx = headers.findIndex(h => h.includes('mã') && h.includes('cd'));
+      const ngayIdx = headers.findIndex(h => h.includes('ngày') || h.includes('nhận'));
+
+      if (maHVIdx === -1 || hoTenIdx === -1 || macdIdx === -1 || ngayIdx === -1) {
+        toast('File Excel thiếu cột bắt buộc: Mã HV, Họ tên, Mã CD, Ngày nhận việc', 'error');
+        return;
+      }
+
+      // Parse dữ liệu
+      pendingImportVPData = [];
+      const errors = [];
+      const validRows = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const maHV = (row[maHVIdx] || '').toString().trim();
+        const hoTen = (row[hoTenIdx] || '').toString().trim();
+        const maCD = (row[macdIdx] || '').toString().trim();
+        const ngayNhanViec = row[ngayIdx] ? formatExcelDate(row[ngayIdx]) : '';
+
+        let rowError = '';
+        if (!maHV) rowError = 'Mã HV trống';
+        else if (!hoTen) rowError = 'Họ tên trống';
+        else if (!maCD) rowError = 'Mã CD trống';
+        else if (!ngayNhanViec) rowError = 'Ngày nhận việc không hợp lệ';
+        else if (hvvpData.some(hv => hv.maHV === maHV)) rowError = 'Mã HV đã tồn tại';
+
+        // Tìm chức danh từ mã CD
+        let chucDanh = '';
+        let tongSoNgayDT = '';
+        let soGiaiDoan = '';
+        let hanGD1 = '';
+        let hanGD2 = '';
+        let ngayDGGD1 = '';
+        let ngayDGGD2 = '';
+
+        if (!rowError) {
+          const vpConfig = getVPConfig();
+          const config = vpConfig.find(c => c.maChucdanh === maCD);
+          if (config) {
+            chucDanh = config.tenChucDanh;
+            tongSoNgayDT = config.tongSoNgayDT;
+            soGiaiDoan = config.soGiaiDoan;
+
+            if (ngayNhanViec) {
+              const calc = computeVPStatus({ chucDanh, ngayNhanViec });
+              hanGD1 = calc.hanGD1 ? fmtDate(calc.hanGD1) : '';
+              hanGD2 = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
+              ngayDGGD1 = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
+              ngayDGGD2 = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
+            }
+          } else {
+            rowError = `Mã CD không tồn tại: ${maCD}`;
+          }
+        }
+
+        pendingImportVPData.push({
+          row: i,
+          maHV,
+          hoTen,
+          maCD,
+          chucDanh,
+          ngayNhanViec,
+          tongSoNgayDT,
+          soGiaiDoan,
+          hanGD1,
+          hanGD2,
+          ngayDGGD1,
+          ngayDGGD2,
+          error: rowError
+        });
+
+        if (!rowError) {
+          validRows.push(pendingImportVPData[pendingImportVPData.length - 1]);
+        } else {
+          errors.push(`Dòng ${i}: ${rowError}`);
+        }
+      }
+
+      // Hiển thị preview
+      const tbody = document.getElementById('importVPPreviewBody');
+      tbody.innerHTML = pendingImportVPData.map((item, idx) => `
+        <tr style="background:${item.error ? 'var(--red-light)' : 'transparent'}">
+          <td style="text-align:center;font-size:12px">${item.row}</td>
+          <td class="td-code">${escapeHTML(item.maHV)}</td>
+          <td>${escapeHTML(item.hoTen)}</td>
+          <td class="td-code">${escapeHTML(item.maCD)}</td>
+          <td>${escapeHTML(item.chucDanh || '–')}</td>
+          <td>${item.ngayNhanViec || '–'}</td>
+          <td style="color:var(--red);font-weight:600">${item.error ? `❌ ${item.error}` : '✅'}</td>
+        </tr>
+      `).join('');
+
+      const statsEl = document.getElementById('importVPStats');
+      statsEl.textContent = `Tổng: ${pendingImportVPData.length} dòng | Hợp lệ: ${validRows.length} | Lỗi: ${errors.length}`;
+
+      const errorsDiv = document.getElementById('importVPErrors');
+      const errorsList = document.getElementById('importVPErrorsList');
+      if (errors.length > 0) {
+        errorsDiv.style.display = 'block';
+        errorsList.innerHTML = errors.map(e => `<div>• ${e}</div>`).join('');
+      } else {
+        errorsDiv.style.display = 'none';
+      }
+
+      const btnConfirm = document.getElementById('btnConfirmImportVP');
+      btnConfirm.disabled = validRows.length === 0;
+
+      document.getElementById('modalImportVPPreview').classList.add('open');
+    } catch (err) {
+      toast(`Lỗi đọc file Excel: ${err.message}`, 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value = '';
+}
+
+async function confirmImportVP() {
+  const validData = pendingImportVPData.filter(item => !item.error);
+  if (!validData.length) {
+    toast('Không có dữ liệu hợp lệ để import', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnConfirmImportVP');
+  btn.disabled = true;
+
+  try {
+    for (const item of validData) {
+      const payload = {
+        maHV: item.maHV,
+        hoTen: item.hoTen,
+        chucDanh: item.chucDanh,
+        ngayNhanViec: item.ngayNhanViec,
+        ghiChu: `[Import từ Excel ngày ${new Date().toLocaleDateString('vi-VN')}]`
+      };
+
+      const res = await api('addHVVP', payload);
+      if (!res.ok) {
+        toast(`Lỗi import: ${res.msg}`, 'error');
+        return;
+      }
+    }
+
+    toast(`Đã import thành công ${validData.length} học viên`, 'success');
+    closeModal('modalImportVPPreview');
+    loadHVVP();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function formatExcelDate(excelDate) {
+  if (!excelDate) return '';
+  
+  if (typeof excelDate === 'number') {
+    // Excel serial number
+    const date = new Date((excelDate - 25569) * 86400 * 1000);
+    return date.toISOString().split('T')[0];
+  } else if (typeof excelDate === 'string') {
+    // Chuỗi ngày
+    const parsed = new Date(excelDate);
+    if (!isNaN(parsed)) {
+      return parsed.toISOString().split('T')[0];
+    }
+    // Thử format dd/mm/yyyy
+    const parts = excelDate.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return '';
 }
 
 function openAddHVVP() {
@@ -2856,6 +3132,7 @@ function openEditHVVP(id) {
   if (!hv) return;
   editingHVVPId = id;
   document.getElementById('modalHVVPTitle').textContent = 'Sửa học viên Văn phòng';
+  document.getElementById('fvp-maHV').value = hv.maHV || '';
   document.getElementById('fvp-hoTen').value = hv.hoTen || '';
   document.getElementById('fvp-chucDanh').value = hv.chucDanh || '';
   document.getElementById('fvp-ngayNhanViec').value = hv.ngayNhanViec || '';
@@ -2869,19 +3146,21 @@ async function saveHVVP() {
   const btn = document.getElementById('btnSaveHVVP');
   if (btn.disabled) return;
 
+  const maHV = document.getElementById('fvp-maHV').value.trim();
   const hoTen = document.getElementById('fvp-hoTen').value.trim();
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
   const ghiChu = document.getElementById('fvp-ghiChu').value.trim();
 
   let hasErr = false;
+  if (!maHV) { validateField('fvp-maHV'); hasErr = true; }
   if (!hoTen) { validateField('fvp-hoTen'); hasErr = true; }
   if (!chucDanh) { validateField('fvp-chucDanh'); hasErr = true; }
   if (!ngayNhanViec) { validateField('fvp-ngayNhanViec'); hasErr = true; }
   if (hasErr) return;
 
   btn.disabled = true;
-  const payload = { hoTen, chucDanh, ngayNhanViec, ghiChu };
+  const payload = { maHV, hoTen, chucDanh, ngayNhanViec, ghiChu };
   const res = editingHVVPId
     ? await api('updateHVVP', { id: editingHVVPId, ...payload })
     : await api('addHVVP', payload);
