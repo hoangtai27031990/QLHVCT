@@ -3693,6 +3693,13 @@ async function doChangePw() {
   toast('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.', 'success');
   // Ghi nhật ký đổi mật khẩu (trước khi logout)
   activityLog('changepw', currentUser, 'Đổi mật khẩu thành công');
+  // [FIX] Đổi mật khẩu THÀNH CÔNG rồi thì phải cho phép đóng modal dù đang ở
+  // chế độ bắt buộc (cpForced) — trước đây cpForced vẫn giữ nguyên true nên
+  // closeModal() bên dưới bị chặn (closeModal cố tình không cho đóng modal
+  // bắt buộc để user không né việc đổi mật khẩu). Hệ quả: sau khi đăng xuất,
+  // modal đổi mật khẩu vẫn hiển thị đè lên màn hình đăng nhập, người dùng phải
+  // F5 mới thoát ra được. Reset cpForced=false TRƯỚC khi đóng để tránh việc này.
+  cpForced = false;
   closeModal('modalChangePw');
   // Token cũ không còn hợp lệ sau khi đổi mật khẩu → đăng xuất
   setTimeout(() => doLogout(), 1500);
