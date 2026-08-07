@@ -3197,8 +3197,41 @@ async function importExcelVP(event) {
     try {
       const data = e.target.result;
       const workbook = XLSX.read(data, { type: 'binary' });
-      const ws = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // [FIX QUAN TRỌNG] File mẫu (downloadVPTemplate) tạo sheet "DanhMucChucDanh"
+      // (tra cứu Mã↔Tên chức danh) TRƯỚC, rồi mới tạo sheet dữ liệu "HV Văn Phòng"
+      // SAU — nên sheet dữ liệu KHÔNG PHẢI là sheet đầu tiên trong file.
+      // Trước đây code luôn đọc workbook.SheetNames[0] (= sheet tra cứu, không hề
+      // có cột Mã HV/Họ tên/Ngày nhận việc) -> LUÔN báo lỗi "thiếu cột bắt buộc"
+      // dù người dùng điền dữ liệu đúng 100%. Nay dò qua tất cả các sheet, ưu
+      // tiên sheet có tên gợi ý "HV Văn Phòng"/"văn phòng", nếu không có thì lấy
+      // sheet đầu tiên MÀ THỰC SỰ có đủ cột bắt buộc (bỏ qua sheet tra cứu).
+      const normalizedSheetNames = workbook.SheetNames.map(normalizeVN_);
+      let sheetIdx = normalizedSheetNames.findIndex(n => n.includes('van phong') || n.includes('hv van phong'));
+
+      const readSheetHeaders = (idx) => {
+        const s = workbook.Sheets[workbook.SheetNames[idx]];
+        const r = XLSX.utils.sheet_to_json(s, { header: 1, defval: '' });
+        return { sheetRows: r, headers: (r[0] || []).map(normalizeVN_) };
+      };
+
+      const hasRequiredCols = (headers) => {
+        const hasMaHV = headers.some(h => h.includes('ma') && (h.includes('hv') || h.includes('hoc vien')));
+        const hasNgay = headers.some(h => h.includes('ngay') && h.includes('nhan'));
+        return hasMaHV && hasNgay;
+      };
+
+      if (sheetIdx === -1) {
+        // Không tìm được theo tên sheet -> quét từng sheet, chọn sheet đầu tiên
+        // có đủ cột bắt buộc (Mã HV + Ngày nhận việc).
+        for (let i = 0; i < workbook.SheetNames.length; i++) {
+          const { headers } = readSheetHeaders(i);
+          if (hasRequiredCols(headers)) { sheetIdx = i; break; }
+        }
+      }
+      if (sheetIdx === -1) sheetIdx = 0; // fallback cuối cùng (giữ hành vi cũ nếu không dò được)
+
+      const { sheetRows: rows, headers } = readSheetHeaders(sheetIdx);
 
       if (!rows.length || rows.length < 2) {
         toast('File Excel trống hoặc không có dữ liệu', 'error');
@@ -3206,16 +3239,16 @@ async function importExcelVP(event) {
       }
 
       // [FIX] So khớp tên cột không phân biệt hoa/thường, có dấu/không dấu —
-      // để nhận cả file mẫu mới ("Mã chức danh") và file mẫu cũ ("Mã CD").
-      const headers = rows[0].map(normalizeVN_);
-      const maHVIdx  = headers.findIndex(h => h.includes('ma') && h.includes('hv'));
-      const hoTenIdx = headers.findIndex(h => h.includes('ho') && h.includes('ten'));
+      // để nhận cả file mẫu mới ("Mã chức danh") và file mẫu cũ ("Mã CD"), cũng
+      // như chấp nhận "Tên HV"/"Tên học viên" thay vì bắt buộc đúng "Họ tên".
+      const maHVIdx  = headers.findIndex(h => h.includes('ma') && (h.includes('hv') || h.includes('hoc vien')));
+      const hoTenIdx = headers.findIndex(h => (h.includes('ho') && h.includes('ten')) || (h.includes('ten') && (h.includes('hv') || h.includes('hoc vien'))));
       const macdIdx  = headers.findIndex(h => h.includes('ma') && (h.includes('cd') || h.includes('chuc danh')));
       const ngayIdx  = headers.findIndex(h => h.includes('ngay') && h.includes('nhan'));
       const duAnIdx  = headers.findIndex(h => h.includes('du an'));
 
       if (maHVIdx === -1 || hoTenIdx === -1 || macdIdx === -1 || ngayIdx === -1) {
-        toast('File Excel thiếu cột bắt buộc: Mã HV, Họ tên, Mã chức danh, Ngày nhận việc', 'error');
+        toast('File Excel thiếu cột bắt buộc: Mã HV, Tên HV/Họ tên, Mã chức danh, Ngày nhận việc', 'error');
         return;
       }
 
