@@ -156,12 +156,15 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .nav-item.active{color:var(--green-dark);background:var(--green-light);font-weight:600}
 .nav-item svg{width:16px;height:16px;flex-shrink:0}
 
-.main{flex:1;padding:24px;overflow-y:auto;background:var(--gray-50)}
+.main{flex:1;padding:24px;overflow-y:auto;background:var(--gray-50);scroll-behavior:smooth}
 .page{display:none}
 .page.active{display:block}
 
 /* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.th-sortable{cursor:pointer;user-select:none;white-space:nowrap}
+.th-sortable:hover{color:var(--text)}
+.sort-arrow{display:inline-block;width:11px;font-size:10px;color:var(--blue);font-weight:700}
 .stat-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--stat-border,var(--border));padding:18px 18px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s,border-color .15s}
 .stat-card:hover{border-color:var(--stat-accent,var(--border))}
 .stat-card:hover{box-shadow:0 4px 18px rgba(15,23,42,.08);transform:translateY(-1px)}
@@ -573,10 +576,22 @@ tbody tr:hover td{background:var(--gray-50)}
 
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
-        <div id="dashUpdatedAt" style="font-size:12px;color:var(--text-faint);margin-bottom:10px;display:flex;align-items:center;gap:6px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <div id="dashUpdatedAt" style="font-size:12px;color:var(--text-faint);display:flex;align-items:center;gap:6px"></div>
+          <div style="display:flex;gap:8px">
+            <a href="#dash-section-captrung" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Quản lý cấp trung
+            </a>
+            <a href="#dash-section-vp" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+              Văn phòng siêu thị
+            </a>
+          </div>
+        </div>
 
         <!-- ═══ KHỐI: HỌC VIÊN QUẢN LÝ CẤP TRUNG (dashboard cũ) ═══ -->
-        <div class="dash-section-divider" style="margin-bottom:16px">
+        <div class="dash-section-divider" id="dash-section-captrung" style="margin-bottom:16px;scroll-margin-top:16px">
           <span class="dash-section-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </span>
@@ -646,12 +661,13 @@ tbody tr:hover td{background:var(--gray-50)}
              [MỚI] Tách biệt hoàn toàn với khối HV Thực tập cấp trung ở trên —
              số liệu, biểu đồ, danh sách cảnh báo đều tính riêng trên hvvpData,
              không gộp chung với hvData để tránh gây hiểu nhầm cho người dùng. -->
-        <div class="dash-section-divider">
+        <div class="dash-section-divider" id="dash-section-vp" style="scroll-margin-top:16px">
           <span class="dash-section-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
           </span>
           <span class="dash-section-title">Học viên Văn phòng siêu thị</span>
           <span class="dash-section-line"></span>
+          <span id="dashUpdatedAtVP" style="font-size:12px;color:var(--text-faint);display:flex;align-items:center;gap:5px;white-space:nowrap"></span>
         </div>
 
         <div class="stats-grid" id="statsGridVP">
@@ -774,16 +790,16 @@ tbody tr:hover td{background:var(--gray-50)}
               <thead>
                 <tr>
                   <th style="width:32px"><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)"></th>
-                  <th>Mã HV</th>
-                  <th>Họ tên</th>
-                  <th>Chức danh</th>
-                  <th>Đơn vị TT</th>
-                  <th>Người HD</th>
-                  <th>Hạn nộp bài</th>
+                  <th class="th-sortable" onclick="sortHVBy('maHV')">Mã HV<span class="sort-arrow" id="hvArrow-maHV"></span></th>
+                  <th class="th-sortable" onclick="sortHVBy('hoTen')">Họ tên<span class="sort-arrow" id="hvArrow-hoTen"></span></th>
+                  <th class="th-sortable" onclick="sortHVBy('chucDanh')">Chức danh<span class="sort-arrow" id="hvArrow-chucDanh"></span></th>
+                  <th class="th-sortable" onclick="sortHVBy('donVi')">Đơn vị TT<span class="sort-arrow" id="hvArrow-donVi"></span></th>
+                  <th class="th-sortable" onclick="sortHVBy('nguoiHD')">Người HD<span class="sort-arrow" id="hvArrow-nguoiHD"></span></th>
+                  <th class="th-sortable" onclick="sortHVBy('hanNop')">Hạn nộp bài<span class="sort-arrow" id="hvArrow-hanNop"></span></th>
                   <th>Đề tài</th>
-                  <th>Điểm GĐ2</th>
+                  <th class="th-sortable" onclick="sortHVBy('diemGD2')">Điểm GĐ2<span class="sort-arrow" id="hvArrow-diemGD2"></span></th>
                   <th>BQ chung</th>
-                  <th>Trạng thái</th>
+                  <th class="th-sortable" onclick="sortHVBy('trangThai')">Trạng thái<span class="sort-arrow" id="hvArrow-trangThai"></span></th>
                   <th></th>
                 </tr>
               </thead>
@@ -840,17 +856,17 @@ tbody tr:hover td{background:var(--gray-50)}
             <table id="hvvpTable">
               <thead>
                 <tr>
-                  <th>Mã HV</th>
-                  <th>Họ và tên</th>
-                  <th>Chức danh</th>
+                  <th class="th-sortable" onclick="sortVPBy('maHV')">Mã HV<span class="sort-arrow" id="vpArrow-maHV"></span></th>
+                  <th class="th-sortable" onclick="sortVPBy('hoTen')">Họ và tên<span class="sort-arrow" id="vpArrow-hoTen"></span></th>
+                  <th class="th-sortable" onclick="sortVPBy('chucDanh')">Chức danh<span class="sort-arrow" id="vpArrow-chucDanh"></span></th>
                   <th>Dự án</th>
                   <th>Tổng ngày ĐT</th>
-                  <th>Ngày nhận việc</th>
-                  <th>Gợi ý ĐG 1</th>
+                  <th class="th-sortable" onclick="sortVPBy('ngayNhanViec')">Ngày nhận việc<span class="sort-arrow" id="vpArrow-ngayNhanViec"></span></th>
+                  <th class="th-sortable" onclick="sortVPBy('ngayDGGD1')">Gợi ý ĐG 1<span class="sort-arrow" id="vpArrow-ngayDGGD1"></span></th>
                   <th>Kết quả GĐ1</th>
-                  <th>Gợi ý ĐG 2</th>
+                  <th class="th-sortable" onclick="sortVPBy('ngayDGGD2')">Gợi ý ĐG 2<span class="sort-arrow" id="vpArrow-ngayDGGD2"></span></th>
                   <th>Kết quả GĐ2</th>
-                  <th>Theo dõi</th>
+                  <th class="th-sortable" onclick="sortVPBy('trangThai')">Theo dõi<span class="sort-arrow" id="vpArrow-trangThai"></span></th>
                   <th>Ghi chú</th>
                   <th></th>
                 </tr>
@@ -1588,6 +1604,7 @@ let auditPage = 0;
 let hvPage = 0;
 let HV_PER_PAGE = parseInt(localStorage.getItem('sc_hv_per_page') || '20', 10);
 let selectedHV = new Set();
+let hvSortState = { col: null, dir: 1 }; // [MỚI] Sắp xếp thủ công theo cột (bấm tiêu đề bảng HV Thực tập)
 
 // =============================================
 // SECURITY HELPERS
@@ -2189,6 +2206,50 @@ function clearStatusFilter() {
   renderTable();
 }
 
+// [MỚI] Sắp xếp thủ công bảng HV Thực tập — bấm vào tiêu đề cột để sắp xếp,
+// bấm lại để đảo chiều tăng/giảm. Không phá vỡ quy tắc "Đã chuyển QTĐT luôn
+// xuống cuối" — sort thủ công chỉ áp dụng trong phạm vi từng nhóm.
+function sortHVBy(col) {
+  if (hvSortState.col === col) hvSortState.dir *= -1;
+  else { hvSortState.col = col; hvSortState.dir = 1; }
+  hvPage = 0;
+  renderTable();
+}
+function getHVSortValue(hv, col) {
+  switch (col) {
+    case 'maHV': return String(hv.maHV || '');
+    case 'hoTen': return `${hv.ho || ''} ${hv.ten || ''}`.trim().toLowerCase();
+    case 'chucDanh': return hv.chucDanh || '';
+    case 'donVi': return hv.donVi || '';
+    case 'nguoiHD': return hv.nguoiHD || '';
+    case 'hanNop': {
+      if (!hv.ngayBatDau) return null;
+      const h = addDays(addMonths(hv.ngayBatDau, 6), -10);
+      return h ? parseLocalDate(h).getTime() : null;
+    }
+    case 'diemGD2': {
+      const { gd2 } = computeScores(hv);
+      return gd2 == null ? null : gd2;
+    }
+    case 'trangThai': return hv.trangThai || '';
+    default: return '';
+  }
+}
+function compareSortValues(a, b, dir) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;  // giá trị trống luôn xếp cuối, bất kể chiều sắp xếp
+  if (b == null) return -1;
+  if (typeof a === 'number' && typeof b === 'number') return (a - b) * dir;
+  return String(a).localeCompare(String(b), 'vi') * dir;
+}
+function updateHVSortArrows() {
+  ['maHV','hoTen','chucDanh','donVi','nguoiHD','hanNop','diemGD2','trangThai'].forEach(c => {
+    const el = document.getElementById('hvArrow-' + c);
+    if (!el) return;
+    el.textContent = hvSortState.col === c ? (hvSortState.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+
 function renderTable() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   const filtered = hvData.filter(hv => {
@@ -2215,6 +2276,11 @@ function renderTable() {
     const aQTDT = a.trangThai === 'Đã chuyển QTĐT' ? 1 : 0;
     const bQTDT = b.trangThai === 'Đã chuyển QTĐT' ? 1 : 0;
     if (aQTDT !== bQTDT) return aQTDT - bQTDT;
+    // [MỚI] Nếu người dùng đã bấm sắp xếp theo cột, ưu tiên áp dụng trong
+    // phạm vi từng nhóm (nhóm QTĐT vẫn luôn ở dưới cùng).
+    if (hvSortState.col) {
+      return compareSortValues(getHVSortValue(a, hvSortState.col), getHVSortValue(b, hvSortState.col), hvSortState.dir);
+    }
     if (aQTDT === 1) return 0; // nhóm QTĐT giữ thứ tự gốc
     const da = getHanNopDays(a);
     const db = getHanNopDays(b);
@@ -2223,6 +2289,7 @@ function renderTable() {
     if (db === null) return -1;
     return da - db;
   });
+  updateHVSortArrows();
 
   const tbody = document.getElementById('hvBody');
   if (filtered.length === 0) {
@@ -2756,6 +2823,15 @@ function goToVPByHan(han) {
 }
 
 function updateDashboardVP() {
+  // Hiển thị thời điểm khối VP được cập nhật/render gần nhất (giống khối cấp trung)
+  const updatedElVP = document.getElementById('dashUpdatedAtVP');
+  if (updatedElVP) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    updatedElVP.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Cập nhật lúc ${hh}:${mm}`;
+  }
+
   const total = hvvpData.length;
   const trangThaiCua = hv => hv.trangThai || HVVP_TT_DANG_THEO_DOI;
   const dangTheoDoi = hvvpData.filter(hv => !HVVP_TT_KET_THUC.includes(trangThaiCua(hv))).length;
@@ -3115,6 +3191,7 @@ let editingHVVPId = null;
 let pendingDeleteHVVPId = null;
 let hvvpPage = 0;
 let HVVP_PER_PAGE = parseInt(localStorage.getItem('sc_hvvp_per_page') || '10', 10);
+let vpSortState = { col: null, dir: 1 }; // [MỚI] Sắp xếp thủ công theo cột (bấm tiêu đề bảng HV Văn phòng)
 
 // Đổ dropdown chức danh vào form (gọi 1 lần khi app khởi động)
 function populateVPChucDanhSelect() {
@@ -3259,6 +3336,35 @@ async function loadHVVP() {
   updateDashboardVP();
 }
 
+// [MỚI] Sắp xếp thủ công bảng HV Văn phòng — bấm vào tiêu đề cột để sắp xếp,
+// bấm lại để đảo chiều tăng/giảm. Không phá vỡ quy tắc "Hoàn tất/Ngưng theo
+// dõi luôn xuống cuối" — sort thủ công chỉ áp dụng trong phạm vi từng nhóm.
+function sortVPBy(col) {
+  if (vpSortState.col === col) vpSortState.dir *= -1;
+  else { vpSortState.col = col; vpSortState.dir = 1; }
+  hvvpPage = 0;
+  renderVPTable();
+}
+function getVPSortValue(hv, col) {
+  switch (col) {
+    case 'maHV': return String(hv.maHV || '');
+    case 'hoTen': return (hv.hoTen || '').trim().toLowerCase();
+    case 'chucDanh': return hv.chucDanh || '';
+    case 'ngayNhanViec': return hv.ngayNhanViec ? parseLocalDate(hv.ngayNhanViec).getTime() : null;
+    case 'ngayDGGD1': return hv.ngayDGGD1 ? parseLocalDate(hv.ngayDGGD1).getTime() : null;
+    case 'ngayDGGD2': return hv.ngayDGGD2 ? parseLocalDate(hv.ngayDGGD2).getTime() : null;
+    case 'trangThai': return hv.trangThai || HVVP_TT_DANG_THEO_DOI;
+    default: return '';
+  }
+}
+function updateVPSortArrows() {
+  ['maHV','hoTen','chucDanh','ngayNhanViec','ngayDGGD1','ngayDGGD2','trangThai'].forEach(c => {
+    const el = document.getElementById('vpArrow-' + c);
+    if (!el) return;
+    el.textContent = vpSortState.col === c ? (vpSortState.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+
 function renderVPTable() {
   const kw = (document.getElementById('searchInputVP')?.value || '').toLowerCase().trim();
   const filChucDanh = document.getElementById('filterVPChucDanh')?.value || '';
@@ -3288,12 +3394,18 @@ function renderVPTable() {
   }
 
   // [ĐỒNG BỘ VỚI TAB HV THỰC TẬP] Đưa HV đã Hoàn tất / Ngưng theo dõi xuống
-  // cuối danh sách (hiển thị mờ hơn), nhóm còn lại giữ nguyên thứ tự gốc.
+  // cuối danh sách (hiển thị mờ hơn); trong từng nhóm áp dụng sắp xếp thủ
+  // công (nếu người dùng đã bấm vào tiêu đề cột), ngược lại giữ thứ tự gốc.
   rows.sort((a, b) => {
     const aDone = HVVP_TT_KET_THUC.includes(a.trangThai || HVVP_TT_DANG_THEO_DOI) ? 1 : 0;
     const bDone = HVVP_TT_KET_THUC.includes(b.trangThai || HVVP_TT_DANG_THEO_DOI) ? 1 : 0;
-    return aDone - bDone;
+    if (aDone !== bDone) return aDone - bDone;
+    if (vpSortState.col) {
+      return compareSortValues(getVPSortValue(a, vpSortState.col), getVPSortValue(b, vpSortState.col), vpSortState.dir);
+    }
+    return 0;
   });
+  updateVPSortArrows();
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
