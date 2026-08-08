@@ -177,6 +177,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .stat-card.c-blue{--stat-accent:var(--blue);--stat-icon-bg:var(--blue-light);--stat-icon-fg:var(--blue);--stat-border:#BFDBFE}
 .stat-card.c-amber{--stat-accent:var(--amber);--stat-icon-bg:var(--amber-light);--stat-icon-fg:var(--amber);--stat-border:#FDE7B8}
 .stat-card.c-purple{--stat-accent:var(--purple);--stat-icon-bg:var(--purple-light);--stat-icon-fg:var(--purple);--stat-border:#DDD6FE}
+.stat-card.c-red{--stat-accent:var(--red);--stat-icon-bg:var(--red-light);--stat-icon-fg:var(--red);--stat-border:#FECACA}
+
+/* ── DASHBOARD: dải phân cách giữa 2 khối HV Thực tập / HV Văn phòng ──
+   [MỚI] Tách biệt trực quan 2 đối tượng khác nhau trên Dashboard, tránh
+   người dùng nhầm lẫn số liệu của HV thực tập với HV Văn phòng siêu thị. */
+.dash-section-divider{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.dash-section-divider .dash-section-icon{
+  width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;background:var(--purple-light);color:var(--purple)
+}
+.dash-section-divider .dash-section-title{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
+.dash-section-divider .dash-section-sub{font-size:12px;color:var(--text-faint);white-space:nowrap}
+.dash-section-divider .dash-section-line{flex:1;height:1px;background:var(--border)}
+#statsGridVP .stat-card::before{background:var(--stat-accent,var(--purple))}
 
 /* ── DASHBOARD OVERVIEW (donut + breakdown) ── */
 .dash-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
@@ -615,6 +629,76 @@ tbody tr:hover td{background:var(--gray-50)}
               <span class="panel-title">Học viên sắp đến hạn nộp bài</span>
             </div>
             <div id="dueSoonList" class="loading"><span class="spinner"></span>Đang tải...</div>
+          </div>
+        </div>
+
+        <!-- ═══ KHỐI RIÊNG: HV VĂN PHÒNG SIÊU THỊ ═══
+             [MỚI] Tách biệt hoàn toàn với khối HV Thực tập cấp trung ở trên —
+             số liệu, biểu đồ, danh sách cảnh báo đều tính riêng trên hvvpData,
+             không gộp chung với hvData để tránh gây hiểu nhầm cho người dùng. -->
+        <div class="dash-section-divider">
+          <span class="dash-section-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+          </span>
+          <span class="dash-section-title">Học viên Văn phòng siêu thị</span>
+          <span class="dash-section-sub">— số liệu riêng, không gộp với HV Thực tập cấp trung ở trên</span>
+          <span class="dash-section-line"></span>
+        </div>
+
+        <div class="stats-grid" id="statsGridVP">
+          <div class="stat-card c-purple">
+            <div class="stat-top">
+              <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
+            </div>
+            <div class="stat-label">Tổng HV Văn phòng</div>
+            <div class="stat-val" id="svp-total">–</div>
+            <div class="stat-sub">đang quản lý</div>
+          </div>
+          <div class="stat-card c-blue">
+            <div class="stat-top">
+              <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            </div>
+            <div class="stat-label">Đang theo dõi</div>
+            <div class="stat-val" id="svp-active" style="color:var(--blue)">–</div>
+            <div class="stat-sub">chưa hoàn tất / chưa ngưng</div>
+          </div>
+          <div class="stat-card c-amber">
+            <div class="stat-top">
+              <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg></div>
+            </div>
+            <div class="stat-label">Sắp đến hạn đánh giá</div>
+            <div class="stat-val" id="svp-soon" style="color:var(--amber)">–</div>
+            <div class="stat-sub">GĐ1 hoặc GĐ2/Cuối</div>
+          </div>
+          <div class="stat-card c-red">
+            <div class="stat-top">
+              <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            </div>
+            <div class="stat-label">Đã qua hạn đánh giá</div>
+            <div class="stat-val" id="svp-overdue" style="color:var(--red)">–</div>
+            <div class="stat-sub">cần xử lý ngay</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Tổng quan trạng thái theo dõi</span>
+            </div>
+            <div class="donut-wrap" id="donutWrapVP">
+              <svg class="donut-svg" id="donutSvgVP" width="120" height="120" viewBox="0 0 120 120"></svg>
+              <div class="donut-legend" id="donutLegendVP"></div>
+            </div>
+            <div class="panel-header" style="margin-top:20px;margin-bottom:10px">
+              <span class="panel-title" style="font-size:13px">Phân bố theo chức danh</span>
+            </div>
+            <div class="cd-bars" id="cdBarsVP"></div>
+          </div>
+          <div class="panel" style="margin-top:0">
+            <div class="panel-header">
+              <span class="panel-title">HV Văn phòng sắp đến hạn / quá hạn đánh giá</span>
+            </div>
+            <div id="dueSoonListVP" class="loading"><span class="spinner"></span>Đang tải...</div>
           </div>
         </div>
       </div>
@@ -1786,6 +1870,10 @@ function startApp() {
   });
 
   loadHV();
+  // [MỚI] Tải sẵn dữ liệu HV Văn phòng ngay khi khởi động app (không đợi
+  // người dùng bấm vào tab "HV VĂN PHÒNG") — để khối số liệu riêng trên
+  // Dashboard có dữ liệu hiển thị ngay từ lần load đầu tiên.
+  loadHVVP();
   const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
   navigate('dashboard', dashNav);
   resetIdleTimer();
@@ -1827,7 +1915,7 @@ function navigate(page, el) {
   document.getElementById('page-' + page).classList.add('active');
 
   if (page === 'giaovien' && currentUser.role === 'admin') loadGV();
-  if (page === 'dashboard') updateDashboard();
+  if (page === 'dashboard') { updateDashboard(); updateDashboardVP(); }
   if (page === 'hvvp') loadHVVP();
 }
 
@@ -2606,6 +2694,212 @@ function renderDashboardOverview(total, done, overdueCount) {
 }
 
 // =============================================
+// DASHBOARD — HV VĂN PHÒNG (khối riêng, tách biệt với HV Thực tập ở trên)
+// =============================================
+// [MỚI] Bảng màu cho biểu đồ "Phân bố theo chức danh" của HV Văn phòng — sinh
+// tự động theo thứ tự DANH_MUC_VP (15 chức danh) thay vì liệt kê tay từng mã,
+// lặp lại bảng màu nếu số chức danh vượt quá số màu.
+const VP_CHART_PALETTE = ['#2563EB','#0D9488','#7C3AED','#DB2777','#B45309','#059669','#0EA5E9','#DC2626','#4F46E5','#CA8A04','#16A34A','#9333EA','#0891B2','#EA580C','#65A30D'];
+function vpChucDanhColor(chucDanh) {
+  const idx = DANH_MUC_VP.findIndex(c => c.ten === chucDanh);
+  return idx >= 0 ? VP_CHART_PALETTE[idx % VP_CHART_PALETTE.length] : '#64748B';
+}
+
+// Với mỗi HV Văn phòng còn đang theo dõi (chưa Hoàn tất/Ngưng), xác định giai
+// đoạn đang cần chú ý nhất (GĐ1 trước, rồi tới GĐ2/Cuối) + số ngày còn lại.
+// Trả về 1 dòng cảnh báo / HV (không lặp GĐ1 và GĐ2 cùng lúc) để tránh đếm
+// trùng khi tính số liệu "Sắp đến hạn"/"Đã qua hạn" trên Dashboard.
+function buildVPWarningRows() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const rows = hvvpData.map(hv => ({ ...hv, ...computeVPStatus(hv) }));
+  const active = rows.filter(hv => !HVVP_TT_KET_THUC.includes(hv.trangThai || HVVP_TT_DANG_THEO_DOI));
+  const out = [];
+  active.forEach(hv => {
+    let stage = null, ngayDG = null, han = null, trangThai = null;
+    if (hv.trangThaiGD1 === 'Đã qua hạn' || hv.trangThaiGD1 === 'Sắp đến hạn') {
+      stage = 'GĐ1'; ngayDG = hv.ngayDGGD1; han = hv.hanGD1; trangThai = hv.trangThaiGD1;
+    } else if (hv.trangThaiGD2 === 'Đã qua hạn' || hv.trangThaiGD2 === 'Sắp đến hạn') {
+      stage = hv.soGiaiDoan === 2 ? 'GĐ2' : 'Cuối'; ngayDG = hv.ngayDGGD2; han = hv.hanGD2; trangThai = hv.trangThaiGD2;
+    }
+    if (!stage) return;
+    const diff = ngayDG ? Math.ceil((parseLocalDate(ngayDG) - today) / 86400000) : null;
+    out.push({ ...hv, stage, ngayDG, han, urgency: trangThai, diff });
+  });
+  return out.sort((a,b) => (a.diff ?? 0) - (b.diff ?? 0));
+}
+
+// Bấm vào donut/legend/thẻ số liệu VP -> sang tab HV Văn phòng, tự lọc sẵn.
+function goToVPByTrangThai(trangThai) {
+  const sel = document.getElementById('filterVPTrangThai');
+  const selHan = document.getElementById('filterVPHan');
+  if (sel) sel.value = trangThai;
+  if (selHan) selHan.value = '';
+  hvvpPage = 0;
+  const nav = document.querySelector(".nav-item[onclick*=\"'hvvp'\"]");
+  navigate('hvvp', nav);
+}
+function goToVPByHan(han) {
+  const sel = document.getElementById('filterVPHan');
+  if (sel) sel.value = han;
+  hvvpPage = 0;
+  const nav = document.querySelector(".nav-item[onclick*=\"'hvvp'\"]");
+  navigate('hvvp', nav);
+}
+
+function updateDashboardVP() {
+  const total = hvvpData.length;
+  const trangThaiCua = hv => hv.trangThai || HVVP_TT_DANG_THEO_DOI;
+  const dangTheoDoi = hvvpData.filter(hv => !HVVP_TT_KET_THUC.includes(trangThaiCua(hv))).length;
+  const hoanTat     = hvvpData.filter(hv => trangThaiCua(hv) === HVVP_TT_HOAN_TAT).length;
+  const ngung       = hvvpData.filter(hv => trangThaiCua(hv) === HVVP_TT_NGUNG).length;
+
+  const warnRows   = buildVPWarningRows();
+  const overdue    = warnRows.filter(r => r.urgency === 'Đã qua hạn');
+  const soon       = warnRows.filter(r => r.urgency === 'Sắp đến hạn');
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('svp-total', total);
+  setText('svp-active', dangTheoDoi);
+  setText('svp-soon', soon.length);
+  setText('svp-overdue', overdue.length);
+
+  renderDashboardOverviewVP(total, dangTheoDoi, hoanTat, ngung);
+
+  const el = document.getElementById('dueSoonListVP');
+  if (!el) return;
+
+  if (!overdue.length && !soon.length) {
+    el.innerHTML = '<div class="empty" style="padding:24px">✓ Không có HV Văn phòng nào sắp đến hạn hoặc quá hạn đánh giá</div>';
+    return;
+  }
+
+  const tableHead = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Mã HV</th><th>Họ tên</th><th>Chức danh</th>
+      <th>Giai đoạn</th><th>Hạn đánh giá</th><th>Còn lại</th>
+    </tr></thead><tbody>`;
+
+  const rowHTML = (hv) => {
+    let urgencyBadge, urgencyColor;
+    if (hv.diff == null) { urgencyBadge = '–'; urgencyColor = ''; }
+    else if (hv.diff < 0) {
+      urgencyBadge = `<span class="badge" style="background:var(--red-light);color:var(--red)">Quá hạn ${Math.abs(hv.diff)} ngày</span>`;
+      urgencyColor = 'color:var(--red);font-weight:600';
+    } else if (hv.diff <= 3) {
+      urgencyBadge = `<span class="badge" style="background:var(--amber-light);color:var(--amber)">Còn ${hv.diff} ngày</span>`;
+      urgencyColor = 'color:var(--amber);font-weight:600';
+    } else {
+      urgencyBadge = `<span class="badge badge-pending">Còn ${hv.diff} ngày</span>`;
+      urgencyColor = 'color:var(--amber)';
+    }
+    return `<tr class="dash-row-clickable" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">
+      <td class="td-code">${escapeHTML(hv.maHV)}</td>
+      <td style="min-width:120px">${escapeHTML(hv.hoTen)}</td>
+      <td style="min-width:120px">${escapeHTML(hv.chucDanh)}</td>
+      <td><span class="badge badge-gd-group">${escapeHTML(hv.stage)}</span></td>
+      <td style="${urgencyColor}">${fmtDate(hv.han)}</td>
+      <td>${urgencyBadge}</td>
+    </tr>`;
+  };
+
+  let html = '';
+  if (overdue.length) {
+    html += `<tr><td colspan="6" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--red);letter-spacing:.04em;background:var(--red-light)">
+      ⚠ QUÁ HẠN ĐÁNH GIÁ — ${overdue.length} học viên
+    </td></tr>`;
+    html += overdue.map(rowHTML).join('');
+  }
+  if (soon.length) {
+    html += `<tr><td colspan="6" style="padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--amber);letter-spacing:.04em;background:var(--amber-light)">
+      🔔 SẮP ĐẾN HẠN ĐÁNH GIÁ — ${soon.length} học viên
+    </td></tr>`;
+    html += soon.map(rowHTML).join('');
+  }
+  el.innerHTML = tableHead + html + '</tbody></table></div>';
+}
+
+function renderDashboardOverviewVP(total, dangTheoDoi, hoanTat, ngung) {
+  // ── Donut: trạng thái theo dõi (Đang theo dõi / Hoàn tất / Ngưng theo dõi) ──
+  const pct = total ? Math.round(hoanTat/total*100) : 0;
+  const r = 46, cx = 60, cy = 60;
+  const circumference = 2 * Math.PI * r;
+  const dangLen  = circumference * (dangTheoDoi / (total || 1));
+  const hoanLen  = circumference * (hoanTat / (total || 1));
+  const ngungLen = circumference * (ngung / (total || 1));
+
+  const slices = [
+    { status: 'Đang theo dõi', count: dangTheoDoi, color: 'var(--amber)', offset: 0,                        len: dangLen,  title: 'Bấm để xem HV đang theo dõi' },
+    { status: 'Hoàn tất',      count: hoanTat,      color: 'var(--green)', offset: -dangLen,                 len: hoanLen,  title: 'Bấm để xem HV đã hoàn tất' },
+    { status: 'Ngưng theo dõi',count: ngung,        color: 'var(--text-faint)', offset: -(dangLen + hoanLen), len: ngungLen, title: 'Bấm để xem HV ngưng theo dõi' },
+  ];
+
+  const svg = document.getElementById('donutSvgVP');
+  if (svg) {
+    const slicesSvg = slices.map(s => `
+      <circle class="donut-slice" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="14"
+        stroke-dasharray="${s.len} ${circumference}" stroke-dashoffset="${s.offset}"
+        transform="rotate(-90 ${cx} ${cy})" style="cursor:${s.count ? 'pointer' : 'default'}">
+        ${s.count ? `<title>${s.title}</title>` : ''}
+      </circle>`).join('');
+    svg.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="14"/>
+      ${slicesSvg}
+      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="25" font-weight="700" fill="var(--text)" style="pointer-events:none">${pct}%</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11.5" fill="var(--text-faint)" style="pointer-events:none">hoàn tất</text>
+    `;
+    svg.querySelectorAll('.donut-slice').forEach((slice, i) => {
+      const s = slices[i];
+      if (s.count > 0) slice.addEventListener('click', () => goToVPByTrangThai(s.status));
+    });
+  }
+  const legend = document.getElementById('donutLegendVP');
+  if (legend) {
+    const legendRow = (color, label, count, status) => `
+      <div class="donut-legend-item" style="cursor:${count ? 'pointer' : 'default'}" ${count ? `onclick="goToVPByTrangThai('${status}')"` : ''}>
+        <span class="donut-dot" style="background:${color}"></span>
+        <span class="donut-legend-label">${label}</span>
+        <span class="donut-legend-val">${count}</span>
+      </div>`;
+    legend.innerHTML =
+      legendRow('var(--amber)', 'Đang theo dõi', dangTheoDoi, 'Đang theo dõi') +
+      legendRow('var(--green)', 'Hoàn tất', hoanTat, 'Hoàn tất') +
+      legendRow('var(--text-faint)', 'Ngưng theo dõi', ngung, 'Ngưng theo dõi') +
+      `<div class="donut-legend-item" style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px">
+        <span class="donut-legend-label">Tổng số</span>
+        <span class="donut-legend-val">${total}</span>
+      </div>`;
+  }
+
+  // ── Breakdown theo chức danh (toàn bộ HV Văn phòng, mọi trạng thái) ──
+  const counts = {};
+  hvvpData.forEach(hv => {
+    const known = DANH_MUC_VP.some(c => c.ten === hv.chucDanh);
+    const key = known ? hv.chucDanh : '__other__';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  const order = [...DANH_MUC_VP.map(c => c.ten), '__other__'];
+  const maxCount = Math.max(1, ...Object.values(counts));
+  const barsEl = document.getElementById('cdBarsVP');
+  if (barsEl) {
+    const rows = order
+      .filter(k => counts[k])
+      .map(k => {
+        const c = counts[k];
+        const label = k === '__other__' ? 'Khác / chưa xác định' : k;
+        const color = k === '__other__' ? '#64748B' : vpChucDanhColor(k);
+        const widthPct = Math.round(c / maxCount * 100);
+        return `<div class="cd-bar-row">
+          <span class="cd-bar-name" title="${escapeHTML(label)}">${escapeHTML(label)}</span>
+          <span class="cd-bar-track"><span class="cd-bar-fill" style="width:${widthPct}%;background:${color}"></span></span>
+          <span class="cd-bar-count">${c}</span>
+        </div>`;
+      })
+      .join('');
+    barsEl.innerHTML = rows || '<div class="empty" style="padding:10px 0">Chưa có dữ liệu</div>';
+  }
+}
+
+// =============================================
 // ADD / EDIT HỌC VIÊN
 // =============================================
 function openAddHV() {
@@ -2951,6 +3245,9 @@ async function loadHVVP() {
   if (!res.ok) { toast(res.msg, 'error'); return; }
   hvvpData = res.data;
   renderVPTable();
+  // [MỚI] Đồng bộ luôn khối số liệu riêng của HV Văn phòng trên Dashboard mỗi
+  // khi dữ liệu VP được tải/làm mới (kể cả khi Dashboard không phải trang đang mở).
+  updateDashboardVP();
 }
 
 function renderVPTable() {
