@@ -1341,9 +1341,17 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
         <div class="form-field" id="gv-role-wrap">
           <label>Vai trò</label>
-          <select id="gv-role">
+          <select id="gv-role" onchange="onGvRoleChange()">
             <option value="gv">Giáo viên</option>
             <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-field" id="gv-phamvi-wrap">
+          <label>Phạm vi quản lý</label>
+          <select id="gv-phamvi">
+            <option value="all">Cả 2 mục (HV cấp trung + HV văn phòng)</option>
+            <option value="hv">Chỉ HV quản lý cấp trung</option>
+            <option value="hvvp">Chỉ HV văn phòng</option>
           </select>
         </div>
         <div id="gv-pw-section">
@@ -1895,6 +1903,20 @@ function startApp() {
     el.style.display = currentUser.role === 'admin' ? '' : 'none';
   });
 
+  // [PHÂN QUYỀN THEO MỤC] Tài khoản GV (không phải admin) chỉ thấy mục quản lý
+  // mà phamVi cho phép: 'hv' -> chỉ HV cấp trung, 'hvvp' -> chỉ HV văn phòng,
+  // 'all' (mặc định) -> cả 2 mục. Admin luôn thấy đủ.
+  const hvNavEl   = document.querySelector('.nav-item[onclick*="\'hocvien\'"]');
+  const hvvpNavEl = document.querySelector('.nav-item[onclick*="\'hvvp\'"]');
+  if (currentUser.role !== 'admin') {
+    const pv = currentUser.phamVi || 'all';
+    if (hvNavEl)   hvNavEl.style.display   = (pv === 'all' || pv === 'hv')   ? '' : 'none';
+    if (hvvpNavEl) hvvpNavEl.style.display = (pv === 'all' || pv === 'hvvp') ? '' : 'none';
+  } else {
+    if (hvNavEl)   hvNavEl.style.display   = '';
+    if (hvvpNavEl) hvvpNavEl.style.display = '';
+  }
+
   loadHV();
   // [MỚI] Tải sẵn dữ liệu HV Văn phòng ngay khi khởi động app (không đợi
   // người dùng bấm vào tab "HV VĂN PHÒNG") — để khối số liệu riêng trên
@@ -1920,6 +1942,14 @@ window.onload = () => {
 // NAVIGATION
 // =============================================
 function navigate(page, el) {
+  // [PHÂN QUYỀN THEO MỤC] Chặn phòng vệ ở phía client — nav item tương ứng đã
+  // bị ẩn nếu không có quyền, nhưng vẫn kiểm tra lại ở đây cho chắc chắn.
+  if (currentUser && currentUser.role !== 'admin') {
+    const pv = currentUser.phamVi || 'all';
+    if (page === 'hocvien' && !(pv === 'all' || pv === 'hv'))   { toast('Bạn không có quyền truy cập mục này', 'error'); return; }
+    if (page === 'hvvp'    && !(pv === 'all' || pv === 'hvvp')) { toast('Bạn không có quyền truy cập mục này', 'error'); return; }
+  }
+
   const auditWrap = document.getElementById('page-auditlog-wrap');
   const mainEl    = document.querySelector('.main');
 
@@ -3962,6 +3992,8 @@ async function loadGV() {
   renderGV();
 }
 
+const PHAM_VI_LABEL = { all: 'Cả 2 mục', hv: 'HV cấp trung', hvvp: 'HV văn phòng' };
+
 function renderGV() {
   const tbody = document.getElementById('gvBody');
   if (!gvData.length) {
@@ -3971,14 +4003,23 @@ function renderGV() {
   tbody.innerHTML = gvData.map(gv => `<tr>
     <td class="td-code">${escapeHTML(gv.username)}</td>
     <td>${escapeHTML(gv.ten)}</td>
-    <td><span class="badge ${gv.role==='admin'?'badge-admin':'badge-gv'}">${gv.role==='admin'?'Admin':'Giáo viên'}</span></td>
+    <td>
+      <span class="badge ${gv.role==='admin'?'badge-admin':'badge-gv'}">${gv.role==='admin'?'Admin':'Giáo viên'}</span>
+      ${gv.role!=='admin' ? `<span class="badge badge-gv" style="margin-left:4px">${PHAM_VI_LABEL[gv.phamVi] || 'Cả 2 mục'}</span>` : ''}
+    </td>
     <td>
       <div class="td-actions">
-        <button class="btn btn-sm" onclick="openEditGV('${gv.id}')">Đổi mật khẩu</button>
+        <button class="btn btn-sm" onclick="openEditGV('${gv.id}')">Sửa quyền / Mật khẩu</button>
         ${gv.role==='admin'?'':`<button class="btn btn-sm btn-danger" onclick="deleteGV('${gv.id}')">Xóa</button>`}
       </div>
     </td>
   </tr>`).join('');
+}
+
+// Ẩn ô "Phạm vi quản lý" khi vai trò là Admin (admin luôn toàn quyền, không phụ thuộc phamVi)
+function onGvRoleChange() {
+  const role = document.getElementById('gv-role').value;
+  document.getElementById('gv-phamvi-wrap').style.display = role === 'admin' ? 'none' : '';
 }
 
 function openAddGV() {
@@ -3986,9 +4027,11 @@ function openAddGV() {
   document.getElementById('modalGVTitle').textContent = 'Thêm tài khoản GV';
   ['gv-ten','gv-username','gv-password','gv-password-confirm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('gv-role').value = 'gv';
+  document.getElementById('gv-phamvi').value = 'all';
   document.getElementById('gv-pw-mismatch').style.display = 'none';
   // Thêm mới: hiện đủ tất cả
   ['gv-ten-wrap','gv-username-wrap','gv-role-wrap'].forEach(id => document.getElementById(id).style.display = '');
+  onGvRoleChange();
   document.getElementById('gv-pw-section-label').textContent = 'Mật khẩu';
   document.getElementById('gv-pw-label').textContent = 'Mật khẩu *';
   document.getElementById('btnSaveGV').textContent = 'Tạo tài khoản';
@@ -3999,18 +4042,22 @@ function openEditGV(id) {
   const gv = gvData.find(g => g.id==id);
   if (!gv) return;
   editingGVId = id;
-  document.getElementById('modalGVTitle').textContent = 'Đặt lại mật khẩu';
+  document.getElementById('modalGVTitle').textContent = 'Sửa quyền / Đặt lại mật khẩu';
   document.getElementById('gv-ten').value = gv.ten;
   document.getElementById('gv-username').value = gv.username;
   document.getElementById('gv-password').value = '';
   document.getElementById('gv-password-confirm').value = '';
   document.getElementById('gv-role').value = gv.role;
+  document.getElementById('gv-phamvi').value = gv.phamVi || 'all';
   document.getElementById('gv-pw-mismatch').style.display = 'none';
-  // Admin reset: ẩn thông tin tài khoản, chỉ hiện ô mật khẩu
-  ['gv-ten-wrap','gv-username-wrap','gv-role-wrap'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('gv-pw-section-label').textContent = 'Đặt lại mật khẩu cho: ' + gv.ten + ' (' + gv.username + ')';
-  document.getElementById('gv-pw-label').textContent = 'Mật khẩu mới *';
-  document.getElementById('btnSaveGV').textContent = 'Lưu mật khẩu';
+  // Cho phép đổi Vai trò + Phạm vi quản lý ngay tại đây (không bắt buộc đổi mật khẩu);
+  // Họ tên/Tên đăng nhập vẫn ẩn — form này không dùng để đổi 2 trường đó.
+  ['gv-ten-wrap','gv-username-wrap'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('gv-role-wrap').style.display = '';
+  onGvRoleChange();
+  document.getElementById('gv-pw-section-label').textContent = 'Đổi mật khẩu cho: ' + gv.ten + ' (' + gv.username + ') — để trống nếu không đổi';
+  document.getElementById('gv-pw-label').textContent = 'Mật khẩu mới';
+  document.getElementById('btnSaveGV').textContent = 'Lưu thay đổi';
   document.getElementById('modalGV').classList.add('open');
 }
 
@@ -4026,31 +4073,36 @@ async function saveGV() {
   const password  = document.getElementById('gv-password').value;
   const pwConfirm = document.getElementById('gv-password-confirm').value;
   const role      = document.getElementById('gv-role').value;
+  const phamVi    = role === 'admin' ? 'all' : document.getElementById('gv-phamvi').value;
 
   if (!editingGVId && (!ten || !username)) { toast('Vui lòng điền đầy đủ họ tên và tên đăng nhập', 'error'); return; }
-  if (!password) { toast('Vui lòng nhập mật khẩu', 'error'); return; }
-  if (password !== pwConfirm) {
-    document.getElementById('gv-pw-mismatch').style.display = '';
-    toast('Mật khẩu xác nhận không khớp', 'error');
-    return;
+  // Khi tạo mới, mật khẩu bắt buộc. Khi sửa, mật khẩu là TÙY CHỌN — để trống nếu chỉ đổi quyền.
+  const doiMatKhau = !editingGVId || password;
+  if (!editingGVId && !password) { toast('Vui lòng nhập mật khẩu', 'error'); return; }
+  if (doiMatKhau) {
+    if (password !== pwConfirm) {
+      document.getElementById('gv-pw-mismatch').style.display = '';
+      toast('Mật khẩu xác nhận không khớp', 'error');
+      return;
+    }
+    if (password.length < 6) { toast('Mật khẩu phải có ít nhất 6 ký tự', 'error'); return; }
+    const pwErr = validatePasswordComplexity(password);
+    if (pwErr) { toast(pwErr, 'error'); return; }
   }
-  if (password.length < 6) { toast('Mật khẩu phải có ít nhất 6 ký tự', 'error'); return; }
-  const pwErr = validatePasswordComplexity(password);
-  if (pwErr) { toast(pwErr, 'error'); return; }
 
   const btn = document.getElementById('btnSaveGV');
   btn.disabled = true; btn.textContent = 'Đang lưu...';
 
-  const data = { id: editingGVId, ten, username, role };
+  const data = { id: editingGVId, ten, username, role, phamVi };
   // [SECURITY] Hash SHA-256 trước khi gửi — không bao giờ gửi plaintext
-  data.password = await sha256(password);
+  if (doiMatKhau) data.password = await sha256(password);
 
   const action = editingGVId ? 'updateGV' : 'addGV';
   const res = await api(action, data);
   btn.disabled = false;
-  btn.textContent = editingGVId ? 'Lưu mật khẩu' : 'Tạo tài khoản';
+  btn.textContent = editingGVId ? 'Lưu thay đổi' : 'Tạo tài khoản';
   if (!res.ok) { toast(res.msg, 'error'); return; }
-  toast(editingGVId ? 'Đã đặt lại mật khẩu thành công' : 'Đã tạo tài khoản', 'success');
+  toast(editingGVId ? 'Đã lưu thay đổi' : 'Đã tạo tài khoản', 'success');
   closeModal('modalGV');
   loadGV();
 }
