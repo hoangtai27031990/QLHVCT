@@ -837,9 +837,9 @@ tbody tr:hover td{background:var(--gray-50)}
                   <th>Dự án</th>
                   <th>Tổng ngày ĐT</th>
                   <th>Ngày nhận việc</th>
-                  <th>Hạn ĐG GĐ1</th>
+                  <th>Gợi ý ĐG 1</th>
                   <th>Kết quả GĐ1</th>
-                  <th>Hạn ĐG GĐ2/Cuối</th>
+                  <th>Gợi ý ĐG 2</th>
                   <th>Kết quả GĐ2</th>
                   <th>Theo dõi</th>
                   <th>Ghi chú</th>
@@ -2776,7 +2776,7 @@ function updateDashboardVP() {
   const tableHead = `<div class="tbl-wrap"><table>
     <thead><tr>
       <th>Mã HV</th><th>Họ tên</th><th>Chức danh</th>
-      <th>Giai đoạn</th><th>Hạn đánh giá</th><th>Còn lại</th>
+      <th>Giai đoạn</th><th>Gợi ý ĐG</th><th>Còn lại</th>
     </tr></thead><tbody>`;
 
   const rowHTML = (hv) => {
@@ -2797,7 +2797,7 @@ function updateDashboardVP() {
       <td style="min-width:120px">${escapeHTML(hv.hoTen)}</td>
       <td style="min-width:120px">${escapeHTML(hv.chucDanh)}</td>
       <td><span class="badge badge-gd-group">${escapeHTML(hv.stage)}</span></td>
-      <td style="${urgencyColor}">${fmtDate(hv.han)}</td>
+      <td style="${urgencyColor}">${fmtDate(hv.ngayDG)}</td>
       <td>${urgencyBadge}</td>
     </tr>`;
   };
@@ -3301,9 +3301,9 @@ function renderVPTable() {
       <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.duAn || '')}">${hv.duAn ? escapeHTML(hv.duAn) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
-      <td>${hv.hanGD1 ? vpHanCellHtml(hv.hanGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.ngayDGGD1 ? vpHanCellHtml(hv.ngayDGGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.hanGD2 ? vpHanCellHtml(hv.hanGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${hv.ngayDGGD2 ? vpHanCellHtml(hv.ngayDGGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
@@ -4637,22 +4637,22 @@ function openDetailVP(id) {
   const coDiemGD1 = hv.diemGD1 !== '' && hv.diemGD1 !== null && hv.diemGD1 !== undefined && !isNaN(parseFloat(hv.diemGD1));
   const coDiemGD2 = hv.diemGD2 !== '' && hv.diemGD2 !== null && hv.diemGD2 !== undefined && !isNaN(parseFloat(hv.diemGD2));
 
-  if (hv.hanGD1) {
+  if (hv.ngayDGGD1) {
     tlItems.push({
-      label: 'Hạn đánh giá GĐ1', date: hv.hanGD1,
+      label: 'Gợi ý ĐG 1', date: hv.ngayDGGD1,
       badge: coDiemGD1 ? 'Đã đánh giá' : hv.trangThaiGD1,
       state: coDiemGD1 ? 'done'
         : hv.trangThaiGD1 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD1 === 'Sắp đến hạn' ? 'warn'
-        : (parseLocalDate(hv.hanGD1) <= today ? 'done' : 'upcoming')
+        : (parseLocalDate(hv.ngayDGGD1) <= today ? 'done' : 'upcoming')
     });
   }
-  if (hv.hanGD2) {
+  if (hv.ngayDGGD2) {
     tlItems.push({
-      label: hv.soGiaiDoan === 1 ? 'Hạn đánh giá' : 'Hạn đánh giá GĐ2/Cuối', date: hv.hanGD2,
+      label: hv.soGiaiDoan === 1 ? 'Gợi ý ĐG' : 'Gợi ý ĐG 2', date: hv.ngayDGGD2,
       badge: coDiemGD2 ? 'Đã đánh giá' : hv.trangThaiGD2,
       state: coDiemGD2 ? 'done'
         : hv.trangThaiGD2 === 'Đã qua hạn' ? 'overdue' : hv.trangThaiGD2 === 'Sắp đến hạn' ? 'warn'
-        : (parseLocalDate(hv.hanGD2) <= today ? 'done' : 'upcoming')
+        : (parseLocalDate(hv.ngayDGGD2) <= today ? 'done' : 'upcoming')
     });
   }
 
