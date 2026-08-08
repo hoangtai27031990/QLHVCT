@@ -676,11 +676,11 @@ tbody tr:hover td{background:var(--gray-50)}
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
           <div id="dashUpdatedAt" style="font-size:12px;color:var(--text-faint);display:flex;align-items:center;gap:6px"></div>
           <div style="display:flex;gap:8px">
-            <a href="#dash-section-captrung" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+            <a href="#dash-section-captrung" id="dashAnchorCapTrung" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Quản lý cấp trung
             </a>
-            <a href="#dash-section-vp" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+            <a href="#dash-section-vp" id="dashAnchorVP" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
               Văn phòng siêu thị
             </a>
@@ -688,6 +688,7 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
 
         <!-- ═══ KHỐI: HỌC VIÊN QUẢN LÝ CẤP TRUNG (dashboard cũ) ═══ -->
+        <div id="dashBlockCapTrung">
         <div class="dash-section-divider" id="dash-section-captrung" style="margin-bottom:16px;scroll-margin-top:16px">
           <span class="dash-section-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -753,11 +754,14 @@ tbody tr:hover td{background:var(--gray-50)}
             <div id="dueSoonList" class="loading"><span class="spinner"></span>Đang tải...</div>
           </div>
         </div>
+        </div>
+        <!-- /dashBlockCapTrung -->
 
         <!-- ═══ KHỐI RIÊNG: HV VĂN PHÒNG SIÊU THỊ ═══
              [MỚI] Tách biệt hoàn toàn với khối HV Thực tập cấp trung ở trên —
              số liệu, biểu đồ, danh sách cảnh báo đều tính riêng trên hvvpData,
              không gộp chung với hvData để tránh gây hiểu nhầm cho người dùng. -->
+        <div id="dashBlockVP">
         <div class="dash-section-divider" id="dash-section-vp" style="scroll-margin-top:16px">
           <span class="dash-section-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
@@ -823,6 +827,8 @@ tbody tr:hover td{background:var(--gray-50)}
             <div id="dueSoonListVP" class="loading"><span class="spinner"></span>Đang tải...</div>
           </div>
         </div>
+        </div>
+        <!-- /dashBlockVP -->
       </div>
 
       <!-- HỌC VIÊN -->
@@ -2033,6 +2039,20 @@ function startApp() {
     if (hvNavEl)   hvNavEl.style.display   = '';
     if (hvvpNavEl) hvvpNavEl.style.display = '';
   }
+
+  // [MỚI] Ẩn/hiện luôn từng khối trên Dashboard theo đúng quyền — trước đây cả
+  // 2 khối (HV cấp trung + HV Văn phòng) luôn hiển thị đồng thời cho mọi tài
+  // khoản, khiến tài khoản bị giới hạn phạm vi vẫn thấy 1 khối rỗng/toàn số 0.
+  const dashCapTrungEls = [
+    document.getElementById('dashBlockCapTrung'),
+    document.getElementById('dashAnchorCapTrung')
+  ];
+  const dashVPEls = [
+    document.getElementById('dashBlockVP'),
+    document.getElementById('dashAnchorVP')
+  ];
+  dashCapTrungEls.forEach(el => { if (el) el.style.display = coQuyenHV()   ? '' : 'none'; });
+  dashVPEls.forEach(el      => { if (el) el.style.display = coQuyenHVVP() ? '' : 'none'; });
 
   // [FIX] Chỉ tải dữ liệu của mục mà tài khoản THỰC SỰ có quyền truy cập —
   // gọi loadHV()/loadHVVP() vô điều kiện trước đây khiến tài khoản bị giới
