@@ -1699,6 +1699,23 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzCZVN5xlKdy5JzzCWgIHnU
 // vì script độc hại không thể đọc dữ liệu từ tab/cửa sổ khác.
 let token = sessionStorage.getItem('sc_token') || '';
 let currentUser = JSON.parse(sessionStorage.getItem('sc_user') || 'null');
+
+// [MỚI] Kiểm tra quyền theo mục ở phía client — đối chiếu đúng logic với
+// coQuyenHV_()/coQuyenHVVP_() bên Apps Script, để tránh gọi API vào mục mà
+// tài khoản không có quyền (gây hiện toast lỗi "Bạn không có quyền..." dù
+// đây không phải lỗi thật, chỉ là tài khoản bị giới hạn phạm vi quản lý).
+function coQuyenHV() {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  const pv = currentUser.phamVi || 'all';
+  return pv === 'all' || pv === 'hv';
+}
+function coQuyenHVVP() {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  const pv = currentUser.phamVi || 'all';
+  return pv === 'all' || pv === 'hvvp';
+}
 let hvData = [];
 let gvData = [];
 let filterChucDanh = '';
@@ -2017,11 +2034,15 @@ function startApp() {
     if (hvvpNavEl) hvvpNavEl.style.display = '';
   }
 
-  loadHV();
+  // [FIX] Chỉ tải dữ liệu của mục mà tài khoản THỰC SỰ có quyền truy cập —
+  // gọi loadHV()/loadHVVP() vô điều kiện trước đây khiến tài khoản bị giới
+  // hạn phạm vi (phamVi = 'hv' hoặc 'hvvp') luôn thấy toast lỗi "Bạn không có
+  // quyền truy cập..." ngay khi vừa đăng nhập, dù đó không phải lỗi thật.
+  if (coQuyenHV())   loadHV();
   // [MỚI] Tải sẵn dữ liệu HV Văn phòng ngay khi khởi động app (không đợi
   // người dùng bấm vào tab "HV VĂN PHÒNG") — để khối số liệu riêng trên
   // Dashboard có dữ liệu hiển thị ngay từ lần load đầu tiên.
-  loadHVVP();
+  if (coQuyenHVVP()) loadHVVP();
   const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
   navigate('dashboard', dashNav);
   resetIdleTimer();
@@ -2206,7 +2227,7 @@ function navigate(page, el) {
 
   if (page === 'giaovien' && currentUser.role === 'admin') loadGV();
   if (page === 'dashboard') { updateDashboard(); updateDashboardVP(); }
-  if (page === 'hvvp') loadHVVP();
+  if (page === 'hvvp' && coQuyenHVVP()) loadHVVP();
 }
 
 // =============================================
