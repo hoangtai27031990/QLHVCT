@@ -3278,6 +3278,14 @@ function renderVPTable() {
     rows = rows.filter(hv => hv.trangThaiGD1 === filHan || hv.trangThaiGD2 === filHan);
   }
 
+  // [ĐỒNG BỘ VỚI TAB HV THỰC TẬP] Đưa HV đã Hoàn tất / Ngưng theo dõi xuống
+  // cuối danh sách (hiển thị mờ hơn), nhóm còn lại giữ nguyên thứ tự gốc.
+  rows.sort((a, b) => {
+    const aDone = HVVP_TT_KET_THUC.includes(a.trangThai || HVVP_TT_DANG_THEO_DOI) ? 1 : 0;
+    const bDone = HVVP_TT_KET_THUC.includes(b.trangThai || HVVP_TT_DANG_THEO_DOI) ? 1 : 0;
+    return aDone - bDone;
+  });
+
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
     document.getElementById('hvvpPager').innerHTML = '';
@@ -3290,11 +3298,16 @@ function renderVPTable() {
   const pageStart = hvvpPage * HVVP_PER_PAGE;
   const pageItems = rows.slice(pageStart, pageStart + HVVP_PER_PAGE);
 
+  let vpKetThucSeparatorInserted = false;
   tbody.innerHTML = pageItems.map(hv => {
     const trangThai = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
     const daKetThuc = HVVP_TT_KET_THUC.includes(trangThai);
-    return `
-    <tr>
+    let separatorRow = '';
+    if (daKetThuc && !vpKetThucSeparatorInserted) {
+      vpKetThucSeparatorInserted = true;
+      separatorRow = `<tr class="vp-ketthuc-separator"><td colspan="13" style="text-align:center;padding:10px 0;background:var(--surface-muted,#f5f5f7);color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.5px">— Đã hoàn tất / Ngưng theo dõi —</td></tr>`;
+    }
+    return `${separatorRow}<tr${daKetThuc ? ' style="opacity:.6"' : ''}>
       <td style="font-family:monospace;font-size:12px;cursor:pointer" class="td-code" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maHV || '–')}</td>
       <td style="cursor:pointer;font-weight:500" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.hoTen)}</td>
       <td style="cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.chucDanh)}</td>
