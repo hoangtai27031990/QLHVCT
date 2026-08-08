@@ -4579,6 +4579,8 @@ async function renderActivityLog() {
     if (a === 'login')    return `<span class="badge audit-action-login">Đăng nhập</span>`;
     if (a === 'logout')   return `<span class="badge audit-action-logout">Đăng xuất</span>`;
     if (a === 'changepw') return `<span class="badge audit-action-changepw">Đổi mật khẩu</span>`;
+    if (a === 'GuiEmailNhacHan')     return `<span class="badge audit-action-add">Gửi email nhắc hạn</span>`;
+    if (a === 'GuiEmailNhacHan_Loi') return `<span class="badge audit-action-delete">Lỗi gửi email nhắc hạn</span>`;
     return `<span class="badge badge-new">${escapeHTML(a)}</span>`;
   };
 
@@ -4594,6 +4596,8 @@ async function renderActivityLog() {
     const timeStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const roleLabel = l.role === 'admin'
       ? `<span class="badge badge-admin" style="font-size:10px">Admin</span>`
+      : l.role === 'system'
+      ? `<span class="badge badge-neutral" style="font-size:10px">Hệ thống</span>`
       : `<span class="badge badge-gv" style="font-size:10px">GV</span>`;
     return `<tr>
       <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${timeStr}</td>
