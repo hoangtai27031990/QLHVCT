@@ -949,16 +949,34 @@ tbody tr:hover td{background:var(--gray-50)}
                 Nhập Excel
               </button>
               <input type="file" id="importFileVP" accept=".xlsx,.xls" style="display:none" onchange="importExcelVP(event)">
+              <button class="btn" onclick="exportCSVVP()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Xuất CSV
+              </button>
               <button class="btn btn-primary" onclick="openAddHVVP()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Thêm học viên
               </button>
             </div>
           </div>
+          <div id="bulkBarVP" style="display:none;align-items:center;gap:8px;background:var(--green-light);border:1px solid var(--green-mid);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green-dark)">
+            <span id="bulkCountVP" style="font-weight:600"></span>
+            <div style="flex:1"></div>
+            <button class="btn btn-sm" onclick="exportSelectedCSVVP()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Xuất CSV
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="bulkDeleteHVVP()" id="bulkDeleteBtnVP" style="display:none">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Xóa
+            </button>
+            <button class="btn btn-sm" onclick="clearSelectionVP()">Bỏ chọn</button>
+          </div>
           <div class="tbl-wrap">
             <table id="hvvpTable">
               <thead>
                 <tr>
+                  <th style="width:32px"><input type="checkbox" id="selectAllChkVP" onchange="toggleSelectAllVP(this)"></th>
                   <th class="th-sortable" onclick="sortVPBy('maHV')">Mã HV<span class="sort-arrow" id="vpArrow-maHV"></span></th>
                   <th class="th-sortable" onclick="sortVPBy('hoTen')">Họ và tên<span class="sort-arrow" id="vpArrow-hoTen"></span></th>
                   <th class="th-sortable" onclick="sortVPBy('chucDanh')">Chức danh<span class="sort-arrow" id="vpArrow-chucDanh"></span></th>
@@ -975,7 +993,7 @@ tbody tr:hover td{background:var(--gray-50)}
                 </tr>
               </thead>
               <tbody id="hvvpBody">
-                <tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
+                <tr><td colspan="14" class="loading"><span class="spinner"></span>Đang tải...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1635,6 +1653,43 @@ tbody tr:hover td{background:var(--gray-50)}
         style="opacity:.45;cursor:not-allowed;transition:opacity .15s">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
         Xóa <span id="bulkDeleteBtnLabel"></span> học viên
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL XÁC NHẬN XÓA NHIỀU HV VĂN PHÒNG -->
+<div class="overlay" id="modalBulkDeleteHVVP">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header" style="border-bottom-color:var(--red);background:var(--red-light)">
+      <h3 style="color:var(--red);display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Xác nhận xóa nhiều học viên
+      </h3>
+      <button class="modal-close" onclick="closeModal('modalBulkDeleteHVVP')">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px 20px">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Bạn sắp xóa vĩnh viễn <b id="bulkDeleteCountLabelVP" style="color:var(--text)"></b> học viên:</p>
+      <div id="bulkDeleteListVP" style="background:var(--red-light);border:1px solid rgba(220,38,38,.15);border-radius:var(--radius);padding:10px 14px;margin-bottom:18px;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+        Nhập <b style="font-family:monospace;color:var(--text)">XOA</b> để xác nhận:
+      </p>
+      <div class="form-field">
+        <input type="text" id="bulkDeleteConfirmInputVP" placeholder="Nhập XOA..." autocomplete="off"
+          oninput="checkBulkDeleteConfirmVP()"
+          style="border-color:var(--border-md);font-family:monospace;letter-spacing:.05em;text-transform:uppercase">
+      </div>
+      <p style="font-size:11px;color:var(--red);margin-top:10px;display:flex;align-items:center;gap:5px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalBulkDeleteHVVP')">Hủy</button>
+      <button class="btn btn-danger" id="btnConfirmBulkDeleteVP" disabled onclick="confirmBulkDeleteHVVP()"
+        style="opacity:.45;cursor:not-allowed;transition:opacity .15s">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        Xóa <span id="bulkDeleteBtnLabelVP"></span> học viên
       </button>
     </div>
   </div>
@@ -3531,6 +3586,7 @@ const DANH_MUC_VP = [
   { ten: 'Nhân viên Kỹ thuật',                        ma: 'ST-KTH-NV',     soNgay: 68 },
 ];
 let hvvpData = [];
+let selectedHVVP = new Set();
 let editingHVVPId = null;
 let pendingDeleteHVVPId = null;
 let hvvpPage = 0;
@@ -3752,8 +3808,9 @@ function renderVPTable() {
   updateVPSortArrows();
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--text-faint);padding:24px">Không có học viên nào phù hợp</td></tr>`;
     document.getElementById('hvvpPager').innerHTML = '';
+    updateBulkBarVP();
     return;
   }
 
@@ -3770,9 +3827,10 @@ function renderVPTable() {
     let separatorRow = '';
     if (daKetThuc && !vpKetThucSeparatorInserted) {
       vpKetThucSeparatorInserted = true;
-      separatorRow = `<tr class="vp-ketthuc-separator"><td colspan="13" style="text-align:center;padding:10px 0;background:var(--surface-muted,#f5f5f7);color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.5px">— Đã hoàn tất / Ngưng theo dõi —</td></tr>`;
+      separatorRow = `<tr class="vp-ketthuc-separator"><td colspan="14" style="text-align:center;padding:10px 0;background:var(--surface-muted,#f5f5f7);color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.5px">— Đã hoàn tất / Ngưng theo dõi —</td></tr>`;
     }
     return `${separatorRow}<tr${daKetThuc ? ' style="opacity:.6"' : ''}>
+      <td><input type="checkbox" class="hvvpChk" data-id="${hv.id}" ${selectedHVVP.has(String(hv.id))?'checked':''} onchange="toggleSelectRowVP('${hv.id}',this)"></td>
       <td style="font-family:monospace;font-size:12px;cursor:pointer" class="td-code" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.maHV || '–')}</td>
       <td style="cursor:pointer;font-weight:500" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.hoTen)}</td>
       <td style="cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.chucDanh)}</td>
@@ -3808,6 +3866,13 @@ function renderVPTable() {
   `;
   }).join('');
 
+  const selectAllChkVP = document.getElementById('selectAllChkVP');
+  if (selectAllChkVP) {
+    const allChecked = pageItems.length > 0 && pageItems.every(hv => selectedHVVP.has(String(hv.id)));
+    selectAllChkVP.checked = allChecked;
+    selectAllChkVP.indeterminate = !allChecked && pageItems.some(hv => selectedHVVP.has(String(hv.id)));
+  }
+
   document.getElementById('hvvpPager').innerHTML =
     `<div style="display:flex;align-items:center;gap:14px">
       <span style="font-size:13px">Hiển thị ${pageStart+1}–${Math.min(pageStart+pageItems.length,rows.length)} / ${rows.length} học viên</span>
@@ -3824,6 +3889,8 @@ function renderVPTable() {
       <span style="padding:5px 8px;font-size:13px">Trang ${hvvpPage+1} / ${totalPages}</span>
       <button class="btn btn-sm" style="padding:6px 14px;font-size:13px" onclick="hvvpPage++;renderVPTable()" ${hvvpPage>=totalPages-1?'disabled':''}>Sau ›</button>
     </div>`;
+
+  updateBulkBarVP();
 }
 
 // [FIX] Cho phép người dùng tự chọn số dòng/trang cho bảng HV Văn phòng,
@@ -3832,6 +3899,136 @@ function changeHVVPPerPage(val) {
   HVVP_PER_PAGE = (val === 'all') ? 999999 : parseInt(val, 10);
   localStorage.setItem('sc_hvvp_per_page', String(HVVP_PER_PAGE));
   hvvpPage = 0;
+  renderVPTable();
+}
+
+// =============================================
+// [MỚI] CHỌN NHIỀU HV VĂN PHÒNG (chọn dòng / chọn tất cả / xuất CSV / xóa hàng loạt)
+// — bổ sung tương tự tiện ích đã có sẵn ở tab "Học viên" (HV cấp trung).
+// =============================================
+function toggleSelectAllVP(chk) {
+  document.querySelectorAll('#hvvpBody .hvvpChk').forEach(c => {
+    const id = c.getAttribute('data-id');
+    if (chk.checked) selectedHVVP.add(id); else selectedHVVP.delete(id);
+    c.checked = chk.checked;
+  });
+  updateBulkBarVP();
+}
+
+function toggleSelectRowVP(id, chk) {
+  if (chk.checked) selectedHVVP.add(String(id)); else selectedHVVP.delete(String(id));
+  const selectAllChkVP = document.getElementById('selectAllChkVP');
+  if (selectAllChkVP) {
+    const boxes = [...document.querySelectorAll('#hvvpBody .hvvpChk')];
+    selectAllChkVP.checked = boxes.length > 0 && boxes.every(c => c.checked);
+    selectAllChkVP.indeterminate = !selectAllChkVP.checked && boxes.some(c => c.checked);
+  }
+  updateBulkBarVP();
+}
+
+function clearSelectionVP() {
+  selectedHVVP.clear();
+  renderVPTable();
+}
+
+function updateBulkBarVP() {
+  const bar = document.getElementById('bulkBarVP');
+  if (!bar) return;
+  const count = selectedHVVP.size;
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('bulkCountVP').textContent = `Đã chọn ${count} học viên`;
+    document.getElementById('bulkDeleteBtnVP').style.display = currentUser.role === 'admin' ? '' : 'none';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function rowsToCSVVP(rows) {
+  const headers = ['Mã HV','Họ và tên','Chức danh','Mã chức danh','Dự án','Tổng ngày ĐT',
+    'Ngày nhận việc','Gợi ý ĐG GĐ1','Kết quả GĐ1','Gợi ý ĐG GĐ2/Cuối','Kết quả GĐ2',
+    'Trạng thái theo dõi','Ghi chú'];
+  const data = rows.map(hv => {
+    const calc = computeVPStatus(hv);
+    return [
+      hv.maHV, hv.hoTen, hv.chucDanh, calc.maChucDanh, hv.duAn, calc.tongSoNgayDT,
+      fmtDate(hv.ngayNhanViec), fmtDate(calc.ngayDGGD1), hv.diemGD1,
+      fmtDate(calc.ngayDGGD2), hv.diemGD2,
+      hv.trangThai || HVVP_TT_DANG_THEO_DOI, hv.ghiChu
+    ].map(v => '"'+(v||'').toString().replace(/"/g,'""')+'"');
+  });
+  return [headers.join(','), ...data.map(r=>r.join(','))].join('\n');
+}
+
+function exportSelectedCSVVP() {
+  const rows = hvvpData.filter(h => selectedHVVP.has(String(h.id)));
+  if (!rows.length) { toast('Chưa chọn học viên nào', 'error'); return; }
+  downloadCSV(rowsToCSVVP(rows), 'hv_vanphong_chon_' + new Date().toISOString().slice(0,10) + '.csv');
+}
+
+function exportCSVVP() {
+  if (!hvvpData.length) { toast('Chưa có học viên nào', 'error'); return; }
+  downloadCSV(rowsToCSVVP(hvvpData), 'hv_vanphong_' + new Date().toISOString().slice(0,10) + '.csv');
+}
+
+function bulkDeleteHVVP() {
+  if (currentUser.role !== 'admin') { toast('Chỉ admin được phép xóa', 'error'); return; }
+  const ids = [...selectedHVVP];
+  if (!ids.length) { toast('Chưa chọn học viên nào', 'error'); return; }
+
+  const hvList = ids.map(id => hvvpData.find(h => String(h.id) === String(id))).filter(Boolean);
+
+  document.getElementById('bulkDeleteCountLabelVP').textContent = hvList.length;
+  document.getElementById('bulkDeleteBtnLabelVP').textContent = hvList.length;
+  document.getElementById('bulkDeleteConfirmInputVP').value = '';
+  document.getElementById('btnConfirmBulkDeleteVP').disabled = true;
+  document.getElementById('btnConfirmBulkDeleteVP').style.opacity = '.45';
+  document.getElementById('btnConfirmBulkDeleteVP').style.cursor = 'not-allowed';
+
+  const listEl = document.getElementById('bulkDeleteListVP');
+  listEl.innerHTML = hvList.map(hv => `
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:monospace;font-size:12px;font-weight:600;color:var(--text);min-width:54px">${escapeHTML(hv.maHV || '')}</span>
+      <span style="font-size:13px;font-weight:500;color:var(--text)">${escapeHTML(hv.hoTen || '')}</span>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:auto">${escapeHTML(hv.chucDanh||'')}</span>
+    </div>`).join('');
+
+  document.getElementById('modalBulkDeleteHVVP').classList.add('open');
+  setTimeout(() => document.getElementById('bulkDeleteConfirmInputVP').focus(), 150);
+}
+
+function checkBulkDeleteConfirmVP() {
+  const val = document.getElementById('bulkDeleteConfirmInputVP').value.trim().toUpperCase();
+  const btn = document.getElementById('btnConfirmBulkDeleteVP');
+  const ok = val === 'XOA';
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '.45';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+async function confirmBulkDeleteHVVP() {
+  const ids = [...selectedHVVP];
+  closeModal('modalBulkDeleteHVVP');
+
+  let okCount = 0, failCount = 0;
+  const deletedIds = [];
+  for (const id of ids) {
+    const hv = hvvpData.find(h => String(h.id) === String(id));
+    const res = await api('deleteHVVP', { id });
+    if (res.ok) {
+      okCount++;
+      if (hv) auditLogVP('vp_delete', hv); // fire-and-forget
+      deletedIds.push(String(id));
+    } else {
+      failCount++;
+    }
+  }
+
+  hvvpData = hvvpData.filter(h => !deletedIds.includes(String(h.id)));
+  deletedIds.forEach(id => selectedHVVP.delete(id));
+
+  toast(`Đã xóa ${okCount} học viên${failCount ? `, lỗi ${failCount}` : ''}`, failCount ? 'error' : 'success');
+  selectedHVVP.clear();
   renderVPTable();
 }
 
