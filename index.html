@@ -852,7 +852,7 @@ tbody tr:hover td{background:var(--gray-50)}
               <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
               <button class="btn" onclick="exportCSV()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Xuất CSV
+                Xuất tất cả (CSV)
               </button>
               <button class="btn btn-primary" onclick="openAddHV()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -865,7 +865,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <div style="flex:1"></div>
             <button class="btn btn-sm" onclick="exportSelectedCSV()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Xuất CSV
+              Xuất đã chọn (CSV)
             </button>
             <button class="btn btn-sm btn-danger" onclick="bulkDeleteHV()" id="bulkDeleteBtn" style="display:none">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -951,7 +951,7 @@ tbody tr:hover td{background:var(--gray-50)}
               <input type="file" id="importFileVP" accept=".xlsx,.xls" style="display:none" onchange="importExcelVP(event)">
               <button class="btn" onclick="exportCSVVP()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Xuất CSV
+                Xuất tất cả (CSV)
               </button>
               <button class="btn btn-primary" onclick="openAddHVVP()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -964,7 +964,7 @@ tbody tr:hover td{background:var(--gray-50)}
             <div style="flex:1"></div>
             <button class="btn btn-sm" onclick="exportSelectedCSVVP()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Xuất CSV
+              Xuất đã chọn (CSV)
             </button>
             <button class="btn btn-sm btn-danger" onclick="bulkDeleteHVVP()" id="bulkDeleteBtnVP" style="display:none">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -2831,7 +2831,7 @@ function toggleSelectRow(id, chk) {
   const selectAllChk = document.getElementById('selectAllChk');
   if (selectAllChk) {
     const boxes = [...document.querySelectorAll('#hvBody .hvChk')];
-    selectAllChk.checked = boxes.every(c => c.checked);
+    selectAllChk.checked = boxes.length > 0 && boxes.every(c => c.checked);
     selectAllChk.indeterminate = !selectAllChk.checked && boxes.some(c => c.checked);
   }
   updateBulkBar();
