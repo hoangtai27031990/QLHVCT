@@ -1353,7 +1353,7 @@ tbody tr:hover td{background:var(--gray-50)}
         <div class="form-field">
           <label>Ngày đánh giá gợi ý – GĐ2/Cuối</label>
           <input type="text" id="fvp-ngayDGGD2" readonly placeholder="Tự tính">
-          <span class="calc-note">Hạn GĐ2/Cuối − 12 ngày</span>
+          <span class="calc-note">Hạn GĐ2/Cuối − 10 ngày</span>
         </div>
         <div class="form-field">
           <label>Kết quả đánh giá GĐ2/Cuối</label>
@@ -3651,7 +3651,7 @@ const HVVP_TT_KET_THUC = [HVVP_TT_HOAN_TAT, HVVP_TT_NGUNG];
 //  Hạn GĐ1        = ngày nhận việc + 30 - 1        (chỉ khi có 2 giai đoạn)
 //  Ngày ĐG GĐ1    = Hạn GĐ1 - 3
 //  Hạn GĐ2/Cuối   = ngày nhận việc + tổng ngày - 1
-//  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 12
+//  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 10
 //  Trạng thái     = so hôm nay với Ngày ĐG: qua hạn / còn ≤3 ngày = sắp đến hạn / còn lại chưa tới hạn
 //  Nếu hv.trangThai là "Hoàn tất"/"Ngưng theo dõi" -> không tính trạng thái GĐ1/GĐ2 nữa.
 function computeVPStatus(hv) {
@@ -3686,7 +3686,7 @@ function computeVPStatus(hv) {
     out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1, hv.diemGD1);
   }
   out.hanGD2 = addDays(hv.ngayNhanViec, cd.soNgay - 1);
-  out.ngayDGGD2 = addDays(out.hanGD2, -12);
+  out.ngayDGGD2 = addDays(out.hanGD2, -10);
   out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2, hv.diemGD2);
 
   return out;
