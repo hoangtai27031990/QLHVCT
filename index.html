@@ -1214,6 +1214,17 @@ tbody tr:hover td{background:var(--gray-50)}
           <input type="text" id="f-hanNop" readonly placeholder="Tự tính">
         </div>
 
+        <div class="form-section-title">Gia hạn nộp bài (nếu có)</div>
+        <div class="form-field">
+          <label>Ngày gia hạn nộp bài mới</label>
+          <input type="date" id="f-ngayGiaHan" oninput="calcDates()">
+          <span class="calc-note">Để trống nếu học viên không xin gia hạn. Nếu nhập, hệ thống sẽ nhắc hạn theo ngày này thay cho hạn gốc.</span>
+        </div>
+        <div class="form-field form-full">
+          <label>Lý do gia hạn</label>
+          <textarea id="f-lyDoGiaHan" placeholder="VD: HV xin gia hạn do lý do sức khỏe... (không bắt buộc)"></textarea>
+        </div>
+
         <div class="form-section-title">Đề tài</div>
         <div class="form-field form-full">
           <label>Tên đề tài</label>
@@ -2389,6 +2400,20 @@ function calcDates() {
   document.getElementById('f-hanNop').value        = start ? fmtDate(addDays(addMonths(start, 6), -10)) : '';
 }
 
+// [MỚI] Tính hạn nộp bài HIỆU LỰC cho 1 học viên (HV quản lý cấp trung),
+// có tính đến trường hợp học viên đã được gia hạn (hv.ngayGiaHan).
+// Nếu có ngayGiaHan -> dùng làm hạn nộp bài hiệu lực (thay cho công thức gốc
+// "ngày bắt đầu + 6 tháng − 10 ngày"). Nếu không -> dùng hạn gốc như cũ.
+// Dùng hàm này ở MỌI nơi cần hạn nộp bài (bảng danh sách, sắp xếp, dashboard,
+// chi tiết học viên...) để đảm bảo nhất quán, thay vì tính lại rải rác.
+function computeHanNop(hv) {
+  const start = hv.ngayBatDau;
+  const hanGoc = start ? addDays(addMonths(start, 6), -10) : '';
+  const daGiaHan = !!(hv.ngayGiaHan && hv.ngayGiaHan.trim());
+  const hanNop = daGiaHan ? hv.ngayGiaHan : hanGoc;
+  return { hanNop, hanGoc, daGiaHan };
+}
+
 // =============================================
 // SCORE CALCULATIONS
 // =============================================
@@ -2622,9 +2647,8 @@ function getHVSortValue(hv, col) {
     case 'donVi': return hv.donVi || '';
     case 'nguoiHD': return hv.nguoiHD || '';
     case 'hanNop': {
-      if (!hv.ngayBatDau) return null;
-      const h = addDays(addMonths(hv.ngayBatDau, 6), -10);
-      return h ? parseLocalDate(h).getTime() : null;
+      const { hanNop } = computeHanNop(hv);
+      return hanNop ? parseLocalDate(hanNop).getTime() : null;
     }
     case 'diemGD2': {
       const { gd2 } = computeScores(hv);
@@ -2666,9 +2690,7 @@ function renderTable() {
   // [FIX] Đưa học viên có trạng thái "Đã chuyển QTĐT" xuống cuối danh sách,
   // trong nhóm còn lại sắp theo hạn nộp bài gần nhất lên trước
   const getHanNopDays = (hv) => {
-    const start = hv.ngayBatDau;
-    if (!start) return null;
-    const hanNop = addDays(addMonths(start, 6), -10);
+    const { hanNop } = computeHanNop(hv);
     return hanNop ? Math.ceil((parseLocalDate(hanNop) - new Date()) / 86400000) : null;
   };
   filtered.sort((a, b) => {
@@ -2715,8 +2737,7 @@ function renderTable() {
     }
 
     const { gd2, bq } = computeScores(hv);
-    const start = hv.ngayBatDau;
-    const hanNop = start ? addDays(addMonths(start, 6), -10) : '';
+    const { hanNop, hanGoc, daGiaHan } = computeHanNop(hv);
     // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
     const daysLeft = hanNop ? Math.ceil((parseLocalDate(hanNop) - today) / 86400000) : null;
 
@@ -2747,6 +2768,12 @@ function renderTable() {
       hv.email ? `✉ ${escapeHTML(hv.email)}` : '',
     ].filter(Boolean).join('<br>');
 
+    // [MỚI] Tooltip riêng cho ô Hạn nộp bài khi HV đã được gia hạn — hiện hạn
+    // gốc + hạn mới + lý do, để người dùng biết ngay không cần mở chi tiết.
+    const hanNopTooltip = daGiaHan
+      ? `📌 Đã gia hạn<br>Hạn gốc: ${fmtDate(hanGoc)}<br>Hạn mới: ${fmtDate(hanNop)}${hv.lyDoGiaHan ? '<br>Lý do: ' + escapeHTML(hv.lyDoGiaHan) : ''}`
+      : '';
+
     return `${separatorRow}<tr${isQTDT ? ' style="opacity:.6"' : ''}>
       <td><input type="checkbox" class="hvChk" data-id="${hv.id}" ${selectedHV.has(String(hv.id))?'checked':''} onchange="toggleSelectRow('${hv.id}',this)"></td>
       <td class="td-code" style="cursor:pointer" onclick="openDetail('${hv.id}')">${escapeHTML(hv.maHV)}</td>
@@ -2754,7 +2781,12 @@ function renderTable() {
       <td style="min-width:100px"><span class="badge ${badgeCD}" style="max-width:130px;display:inline-block;white-space:normal;line-height:1.4;text-align:left">${escapeHTML(hv.chucDanh)}</span></td>
       <td class="td-muted">${escapeHTML(hv.donVi) || '–'}</td>
       <td class="td-muted" style="font-size:12px">${escapeHTML(hv.nguoiHD) || '–'}</td>
-      <td style="font-size:12px;${hanNopStyle}${overdue}">${calIcon}${fmtDate(hanNop)}</td>
+      <td style="font-size:12px;${hanNopStyle}${overdue}">
+        <div class="td-detai-wrap" style="display:inline-block">
+          ${calIcon}${fmtDate(hanNop)}${daGiaHan ? ' <span class="badge badge-sent" style="font-size:10px;padding:1px 6px">Đã gia hạn</span>' : ''}
+          ${daGiaHan ? `<div class="detai-tooltip">${hanNopTooltip}</div>` : ''}
+        </div>
+      </td>
       <td>
         <div class="td-detai-wrap">
           ${escapeHTML(hv.tenDeTai) || '<span style="color:var(--text-faint)">–</span>'}
@@ -2857,16 +2889,19 @@ function updateBulkBar() {
 function rowsToCSV(rows) {
   const headers = ['Mã HV','Họ','Tên','Chức danh','Đơn vị TT','Người HD',
     'SĐT','Email',
-    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài',
+    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài (gốc)',
+    'Ngày gia hạn','Lý do gia hạn','Hạn nộp bài (hiệu lực)',
     'Tên đề tài','Điểm GĐ1','GK1','GK2','GK3','Điểm quá trình',
     'Điểm bài thu hoạch','Điểm GĐ2','Điểm BQ chung','Trạng thái','Ghi chú'];
   const data = rows.map(h => {
     const {bth,gd2,bq} = computeScores(h);
     const s = h.ngayBatDau;
+    const { hanNop } = computeHanNop(h);
     return [
       h.maHV, h.ho, h.ten, h.chucDanh, h.donVi, h.nguoiHD,
       h.sdt, h.email,
       fmtDate(s), fmtDate(addMonths(s,2)), fmtDate(addMonths(s,6)), fmtDate(addDays(addMonths(s,6),-10)),
+      h.ngayGiaHan ? fmtDate(h.ngayGiaHan) : '', h.lyDoGiaHan || '', fmtDate(hanNop),
       h.tenDeTai, h.diemGD1, h.gk1, h.gk2, h.gk3, h.diemQuyTrinh,
       bth?.toFixed(2)||'', gd2?.toFixed(2)||'', bq?.toFixed(2)||'',
       h.trangThai, h.ghiChu
@@ -2959,12 +2994,13 @@ function isDone(h) {
   return tt === 'Đã nộp bài' || tt === 'Đã chuyển QTĐT';
 }
 
-// Học viên chưa hoàn thành và đã quá hạn nộp bài (hạn = ngày bắt đầu + 6 tháng - 10 ngày)
+// Học viên chưa hoàn thành và đã quá hạn nộp bài (hạn hiệu lực = hạn gia hạn nếu có,
+// ngược lại = ngày bắt đầu + 6 tháng - 10 ngày)
 function isOverdue(h) {
   if (isDone(h) || !h.ngayBatDau) return false;
   const today = new Date(); today.setHours(0,0,0,0);
-  const han = addDays(addMonths(h.ngayBatDau, 6), -10);
-  const diff = Math.ceil((parseLocalDate(han) - today) / 86400000);
+  const { hanNop } = computeHanNop(h);
+  const diff = Math.ceil((parseLocalDate(hanNop) - today) / 86400000);
   return diff < 0;
 }
 
@@ -2989,10 +3025,10 @@ function updateDashboard() {
   // Phân nhóm: chỉ HV chưa hoàn thành mới cần cảnh báo
   const pending = hvData.filter(h => !isDone(h) && h.ngayBatDau);
   const withDiff = pending.map(h => {
-    const han = addDays(addMonths(h.ngayBatDau, 6), -10);
+    const { hanNop } = computeHanNop(h);
     // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
-    const diff = Math.ceil((parseLocalDate(han) - today) / 86400000);
-    return { ...h, han, diff };
+    const diff = Math.ceil((parseLocalDate(hanNop) - today) / 86400000);
+    return { ...h, han: hanNop, diff };
   });
 
   const overdue  = withDiff.filter(h => h.diff < 0).sort((a,b) => a.diff - b.diff);
@@ -3409,6 +3445,8 @@ function openEditHV(id) {
   document.getElementById('f-donVi').value       = hv.donVi || '';
   document.getElementById('f-nguoiHD').value     = hv.nguoiHD || '';
   document.getElementById('f-ngayBatDau').value  = hv.ngayBatDau || '';
+  document.getElementById('f-ngayGiaHan').value  = hv.ngayGiaHan || '';
+  document.getElementById('f-lyDoGiaHan').value  = hv.lyDoGiaHan || '';
   document.getElementById('f-tenDeTai').value    = hv.tenDeTai || '';
   document.getElementById('f-diemGD1').value     = hv.diemGD1 || '';
   document.getElementById('f-gk1').value         = hv.gk1 || '';
@@ -3426,7 +3464,7 @@ function openEditHV(id) {
 
 function clearHVForm() {
   ['f-maHV','f-ho','f-ten','f-sdt','f-email','f-donVi','f-nguoiHD','f-ngayBatDau',
-   'f-ngayGiaoDT','f-ngayHoanThanh','f-hanNop','f-tenDeTai',
+   'f-ngayGiaoDT','f-ngayHoanThanh','f-hanNop','f-ngayGiaHan','f-lyDoGiaHan','f-tenDeTai',
    'f-diemGD1','f-gk1','f-gk2','f-gk3','f-diemQuyTrinh',
    'f-diemBTH','f-diemGD2','f-diemBQ','f-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
@@ -3458,6 +3496,8 @@ async function saveHV() {
     donVi:         document.getElementById('f-donVi').value.trim(),
     nguoiHD:       document.getElementById('f-nguoiHD').value.trim(),
     ngayBatDau:    document.getElementById('f-ngayBatDau').value,
+    ngayGiaHan:    document.getElementById('f-ngayGiaHan').value,
+    lyDoGiaHan:    document.getElementById('f-lyDoGiaHan').value.trim(),
     tenDeTai:      document.getElementById('f-tenDeTai').value.trim(),
     diemGD1:       document.getElementById('f-diemGD1').value,
     gk1:           document.getElementById('f-gk1').value,
@@ -4733,7 +4773,7 @@ function downloadTemplate() {
 // =============================================
 // IMPORT EXCEL
 // =============================================
-const IMPORT_FIELDS = ['maHV','ho','ten','chucDanh','donVi','nguoiHD','ngayBatDau','tenDeTai',
+const IMPORT_FIELDS = ['maHV','ho','ten','chucDanh','donVi','nguoiHD','ngayBatDau','ngayGiaHan','lyDoGiaHan','tenDeTai',
   'diemGD1','gk1','gk2','gk3','diemQuyTrinh','trangThai','ghiChu','email','sdt'];
 
 function excelDateToStr(v) {
@@ -4817,7 +4857,7 @@ async function confirmImportExcel() {
       IMPORT_FIELDS.forEach(f => {
         let v = row[f];
         if (v === undefined) v = '';
-        if (f === 'ngayBatDau') v = excelDateToStr(v);
+        if (f === 'ngayBatDau' || f === 'ngayGiaHan') v = excelDateToStr(v);
         else if (f === 'sdt') v = String(v).replace(/^'/, '').trim();
         else v = (v === null || v === undefined) ? '' : String(v).trim();
         payload[f] = v;
@@ -4868,16 +4908,19 @@ async function confirmImportExcel() {
 function exportCSV() {
   const headers = ['Mã HV','Họ','Tên','Chức danh','Đơn vị TT','Người HD',
     'SĐT','Email',
-    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài',
+    'Ngày bắt đầu','Ngày giao đề tài','Ngày hoàn thành','Hạn nộp bài (gốc)',
+    'Ngày gia hạn','Lý do gia hạn','Hạn nộp bài (hiệu lực)',
     'Tên đề tài','Điểm GĐ1','GK1','GK2','GK3','Điểm quá trình',
     'Điểm bài thu hoạch','Điểm GĐ2','Điểm BQ chung','Trạng thái','Ghi chú'];
   const rows = hvData.map(h => {
     const {bth,gd2,bq} = computeScores(h);
     const s = h.ngayBatDau;
+    const { hanNop } = computeHanNop(h);
     return [
       h.maHV, h.ho, h.ten, h.chucDanh, h.donVi, h.nguoiHD,
       h.sdt, h.email,
       fmtDate(s), fmtDate(addMonths(s,2)), fmtDate(addMonths(s,6)), fmtDate(addDays(addMonths(s,6),-10)),
+      h.ngayGiaHan ? fmtDate(h.ngayGiaHan) : '', h.lyDoGiaHan || '', fmtDate(hanNop),
       h.tenDeTai, h.diemGD1, h.gk1, h.gk2, h.gk3, h.diemQuyTrinh,
       bth?.toFixed(2)||'', gd2?.toFixed(2)||'', bq?.toFixed(2)||'',
       h.trangThai, h.ghiChu
@@ -4961,6 +5004,7 @@ async function clearAuditLog() {
 const FIELD_LABELS = {
   maHV:'Mã HV', ho:'Họ', ten:'Tên', chucDanh:'Chức danh', donVi:'Đơn vị',
   nguoiHD:'Người HD', sdt:'SĐT', email:'Email', ngayBatDau:'Ngày bắt đầu',
+  ngayGiaHan:'Ngày gia hạn nộp bài', lyDoGiaHan:'Lý do gia hạn',
   tenDeTai:'Đề tài', diemGD1:'Điểm GĐ1', gk1:'GK1', gk2:'GK2', gk3:'GK3',
   diemQuyTrinh:'Điểm quá trình', trangThai:'Trạng thái', ghiChu:'Ghi chú'
 };
@@ -5203,7 +5247,7 @@ function openDetail(id) {
   const start = hv.ngayBatDau;
   const ngayGiao      = start ? addMonths(start, 2) : '';
   const ngayHoanThanh = start ? addMonths(start, 6) : '';
-  const hanNop        = start ? addDays(addMonths(start, 6), -10) : '';
+  const { hanNop, hanGoc, daGiaHan } = computeHanNop(hv);
   const today         = new Date(); today.setHours(0,0,0,0);
   // [FIX] Dùng parseLocalDate thay vì new Date() để tránh lệch ngày UTC
   const daysLeft      = hanNop ? Math.ceil((parseLocalDate(hanNop) - today) / 86400000) : null;
@@ -5226,10 +5270,18 @@ function openDetail(id) {
     { label:'Bắt đầu thực tập',   date: start,          state: start ? 'done' : 'upcoming' },
     { label:'Giao đề tài',         date: ngayGiao,        state: ngayGiao && parseLocalDate(ngayGiao) <= today ? 'done' : 'upcoming' },
     { label:'Hoàn thành thực tập', date: ngayHoanThanh,   state: ngayHoanThanh && parseLocalDate(ngayHoanThanh) <= today ? 'done' : 'upcoming' },
-    { label:'Hạn nộp bài',         date: hanNop,
+    { label: daGiaHan ? 'Hạn nộp bài (đã gia hạn)' : 'Hạn nộp bài', date: hanNop,
       state: !hanNop ? 'upcoming' : daysLeft < 0 && !isDone(hv) ? 'overdue' : daysLeft !== null && daysLeft <= 14 ? 'warn' : parseLocalDate(hanNop) <= today ? 'done' : 'upcoming'
     },
   ];
+
+  // [MỚI] Khối thông tin gia hạn (chỉ hiện khi HV đã được gia hạn)
+  const giaHanBlock = daGiaHan ? `
+    <div class="detail-row" style="background:var(--amber-light,#FFFBEB);border:1px solid var(--amber-border,#FDE7B8);border-radius:8px;padding:10px 12px;margin-top:6px">
+      <div style="font-size:12px;font-weight:700;color:var(--amber,#B45309);margin-bottom:4px">📌 Đã gia hạn nộp bài</div>
+      <div style="font-size:12.5px;color:var(--text)">Hạn gốc: ${fmtDate(hanGoc)} → Hạn mới: <b>${fmtDate(hanNop)}</b></div>
+      ${hv.lyDoGiaHan ? `<div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">Lý do: ${escapeHTML(hv.lyDoGiaHan)}</div>` : ''}
+    </div>` : '';
 
   const urgencyNote = () => {
     if (!hanNop) return '';
@@ -5294,9 +5346,10 @@ function openDetail(id) {
             <div class="tl-dot ${item.state}"></div>
             <div class="tl-label">${item.label}</div>
             <div class="tl-date">${item.date ? fmtDate(item.date) : 'Chưa xác định'}</div>
-            ${item.label === 'Hạn nộp bài' ? `<div class="tl-badge">${urgencyNote()}</div>` : ''}
+            ${item.label.startsWith('Hạn nộp bài') ? `<div class="tl-badge">${urgencyNote()}</div>` : ''}
           </div>`).join('')}
       </div>
+      ${giaHanBlock}
     </div>`;
 
   document.getElementById('detailOverlay').style.display = 'block';
