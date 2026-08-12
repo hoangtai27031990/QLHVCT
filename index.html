@@ -1871,13 +1871,25 @@ async function sha256(str) {
 // Payload (token, dữ liệu học viên) không còn xuất hiện trong URL,
 // server log, hay browser history. Apps Script phải dùng doPost() phía GAS.
 // =============================================
+// [MỚI] Giới hạn thời gian chờ tối đa cho 1 lượt gọi API — trước đây KHÔNG
+// có giới hạn nào cả (fetch() mặc định chờ vô thời hạn), nên nếu mạng/GAS
+// thực sự bị treo (không phải chỉ chậm do chờ khóa ghi — điều này đã được
+// giảm xuống 10s ở phía server), front-end sẽ "đứng hình" không báo lỗi,
+// người dùng không biết nên chờ tiếp hay tải lại trang. 30 giây đủ rộng để
+// không hủy oan 1 request đang xử lý hợp lệ (chờ khóa 10s + đọc/ghi Sheet +
+// độ trễ mạng), nhưng vẫn đảm bảo KHÔNG treo vô hạn thực sự.
+const API_TIMEOUT_MS = 30000;
+
 async function api(action, data = {}, _retried = false) {
   const payload = JSON.stringify({ action, token, ...data });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: payload,
+      signal: controller.signal,
     });
     const text = await res.text();
     let result;
@@ -1909,6 +1921,18 @@ async function api(action, data = {}, _retried = false) {
     // ràng (đăng nhập) và tự quyết định có thử lại hay không.
     return result;
   } catch (e) {
+    // [MỚI] Phân biệt lỗi do TỰ HỦY vì quá thời gian (AbortError) với lỗi
+    // mạng thông thường, để báo đúng nguyên nhân cho người dùng — đặc biệt
+    // quan trọng với các thao tác GHI (add/update/delete): dữ liệu CÓ THỂ đã
+    // được ghi thành công ở phía server trước khi bị hủy kết nối, nên không
+    // nên coi đây chắc chắn là "thất bại hoàn toàn".
+    if (e.name === 'AbortError') {
+      return {
+        ok: false,
+        msg: 'Yêu cầu mất quá nhiều thời gian (quá ' + Math.round(API_TIMEOUT_MS / 1000) + 's) và đã bị hủy. ' +
+             'Dữ liệu có thể đã được lưu — vui lòng tải lại trang để kiểm tra trước khi thử lại.'
+      };
+    }
     // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại hoàn toàn, không nhận được phản
     // hồi nào) là loại lỗi KHÁC — server không có cách nào tự retry giúp
     // được vì request chưa từng đến nơi, nên vẫn giữ retry 1 lần ở đây.
@@ -1917,6 +1941,8 @@ async function api(action, data = {}, _retried = false) {
       return api(action, data, true);
     }
     return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -3581,6 +3607,13 @@ async function saveHV() {
   const originalLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Đang lưu...';
+  // [MỚI] Nếu quá 4s vẫn chưa có phản hồi (thường do đang chờ tới lượt ghi —
+  // nhiều người cùng thao tác gần lúc nhau), đổi thông báo để người dùng biết
+  // đây là đang XỬ LÝ/CHỜ, không phải app bị treo/lỗi.
+  const slowHintTimer = setTimeout(() => {
+    if (!btn.disabled) return;
+    btn.textContent = 'Đang xử lý, vui lòng đợi...';
+  }, 4000);
 
   try {
     const action = editingHVId ? 'updateHV' : 'addHV';
@@ -3611,6 +3644,7 @@ async function saveHV() {
     renderTable();
     updateDashboard();
   } finally {
+    clearTimeout(slowHintTimer);
     btn.disabled = false;
     btn.textContent = originalLabel;
   }
@@ -4564,26 +4598,41 @@ async function saveHVVP() {
 
   const oldHv = editingHVVPId ? hvvpData.find(h => h.id == editingHVVPId) : null;
 
+  const originalLabel = btn.textContent;
   btn.disabled = true;
-  const payload = { maHV, hoTen, duAn, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
-  const res = editingHVVPId
-    ? await api('updateHVVP', { id: editingHVVPId, ...payload })
-    : await api('addHVVP', payload);
-  btn.disabled = false;
+  btn.textContent = 'Đang lưu...';
+  // [MỚI] Nếu quá 4s vẫn chưa có phản hồi (thường do đang chờ tới lượt ghi —
+  // nhiều người cùng thao tác gần lúc nhau), đổi thông báo để người dùng biết
+  // đây là đang XỬ LÝ/CHỜ, không phải app bị treo/lỗi.
+  const slowHintTimer = setTimeout(() => {
+    if (!btn.disabled) return;
+    btn.textContent = 'Đang xử lý, vui lòng đợi...';
+  }, 4000);
 
-  if (!res.ok) { toast(res.msg, 'error'); return; }
+  try {
+    const payload = { maHV, hoTen, duAn, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
+    const res = editingHVVPId
+      ? await api('updateHVVP', { id: editingHVVPId, ...payload })
+      : await api('addHVVP', payload);
 
-  // Ghi audit log (fire-and-forget, không block UI)
-  if (editingHVVPId && oldHv) {
-    const changes = buildChangesVP(oldHv, payload);
-    if (changes.length) auditLogVP('vp_edit', payload, changes);
-  } else {
-    auditLogVP('vp_add', payload);
+    if (!res.ok) { toast(res.msg, 'error'); return; }
+
+    // Ghi audit log (fire-and-forget, không block UI)
+    if (editingHVVPId && oldHv) {
+      const changes = buildChangesVP(oldHv, payload);
+      if (changes.length) auditLogVP('vp_edit', payload, changes);
+    } else {
+      auditLogVP('vp_add', payload);
+    }
+
+    toast(editingHVVPId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
+    closeModal('modalHVVP');
+    loadHVVP();
+  } finally {
+    clearTimeout(slowHintTimer);
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
-
-  toast(editingHVVPId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
-  closeModal('modalHVVP');
-  loadHVVP();
 }
 
 function deleteHVVP(id) {
