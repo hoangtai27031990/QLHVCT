@@ -2159,24 +2159,55 @@ function startApp() {
   dashCapTrungEls.forEach(el => { if (el) el.style.display = coQuyenHV()   ? '' : 'none'; });
   dashVPEls.forEach(el      => { if (el) el.style.display = coQuyenHVVP() ? '' : 'none'; });
 
-  // [FIX] Chỉ tải dữ liệu của mục mà tài khoản THỰC SỰ có quyền truy cập —
-  // gọi loadHV()/loadHVVP() vô điều kiện trước đây khiến tài khoản bị giới
-  // hạn phạm vi (phamVi = 'hv' hoặc 'hvvp') luôn thấy toast lỗi "Bạn không có
-  // quyền truy cập..." ngay khi vừa đăng nhập, dù đó không phải lỗi thật.
-  if (coQuyenHV())   loadHV();
-  // [MỚI] Tải sẵn dữ liệu HV Văn phòng ngay khi khởi động app (không đợi
-  // người dùng bấm vào tab "HV VĂN PHÒNG") — để khối số liệu riêng trên
-  // Dashboard có dữ liệu hiển thị ngay từ lần load đầu tiên.
-  if (coQuyenHVVP()) loadHVVP();
+  // [CẬP NHẬT HIỆU NĂNG] Trước đây lúc đăng nhập gọi 3 request song song
+  // (loadHV + loadHVVP + loadReminderCounts), khiến backend mở/đọc sheet
+  // HocVien + HocVienVP tới 2 lần (1 lần cho bảng, 1 lần nữa cho chuông thông
+  // báo) gần như cùng lúc -> tranh chấp Spreadsheet, làm chậm cả 3 request và
+  // khiến các thao tác ghi (vd xóa HV VP) dễ bị timeout "Hệ thống đang bận".
+  // Giờ gộp thành 1 request duy nhất (loadDashboardBundle) — backend chỉ mở
+  // mỗi sheet TỐI ĐA 1 lần và tái sử dụng dữ liệu đó để tính luôn reminder.
+  loadDashboardBundle();
   const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
   navigate('dashboard', dashNav);
   resetIdleTimer();
 
-  // [MỚI] Tải ngay số liệu chuông thông báo (sắp/đã quá hạn) khi vừa đăng
-  // nhập, và tự làm mới mỗi 10 phút — không cần đợi email nhắc hạn 8h sáng.
-  loadReminderCounts();
+  // Tự làm mới số liệu chuông thông báo mỗi 10 phút — không cần đợi email
+  // nhắc hạn 8h sáng. Từ lần thứ 2 trở đi chỉ cần gọi getReminderCounts()
+  // riêng lẻ (không cần tải lại toàn bộ bảng HV/HVVP).
   clearInterval(notifPollTimer);
   notifPollTimer = setInterval(loadReminderCounts, 10 * 60 * 1000);
+}
+
+// [MỚI] Gộp getHV + getHVVP + getReminderCounts thành 1 lệnh gọi API duy nhất
+// (action 'getDashboardBundle'), dùng lúc khởi động app thay cho 3 lệnh gọi
+// song song trước đây. Chỉ yêu cầu đúng phần dữ liệu mà tài khoản có quyền —
+// backend tự bỏ qua phần không có quyền (giống coQuyenHV_()/coQuyenHVVP_()).
+async function loadDashboardBundle() {
+  const res = await api('getDashboardBundle');
+  if (!res || !res.ok) {
+    // [FALLBACK] Nếu vì lý do gì đó action mới lỗi (vd bản Apps Script chưa
+    // deploy code mới), fallback về cách gọi 3 request riêng lẻ như cũ để
+    // app vẫn dùng được bình thường, không "đứng hình" tại đây.
+    if (coQuyenHV())   loadHV();
+    if (coQuyenHVVP()) loadHVVP();
+    loadReminderCounts();
+    return;
+  }
+  if (coQuyenHV() && res.hv) {
+    hvData = res.hv;
+    renderTable();
+    updateDashboard();
+  }
+  if (coQuyenHVVP() && res.hvvp) {
+    hvvpData = res.hvvp;
+    renderVPTable();
+    updateDashboardVP();
+  }
+  if (res.reminderCounts) {
+    notifData = res.reminderCounts;
+    renderNotifBadge();
+    renderNotifDropdown();
+  }
 }
 
 // =============================================
