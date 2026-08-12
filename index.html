@@ -1888,7 +1888,7 @@ async function api(action, data = {}, _retried = false) {
       // [FIX ỔN ĐỊNH] Lỗi parse cũng có thể do phản hồi bị cắt giữa chừng
       // (mạng chập chờn) — thử lại 1 lần trước khi báo lỗi hẳn.
       if (!_retried) {
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 400));
         return api(action, data, true);
       }
       return { ok: false, msg: 'Lỗi parse response từ server' };
@@ -1898,28 +1898,22 @@ async function api(action, data = {}, _retried = false) {
       handleSessionExpired();
       return result;
     }
-    // [FIX ỔN ĐỊNH #2] Tự động thử lại 1 lần khi gặp lỗi HỆ THỐNG TẠM THỜI
-    // (Sheets nghẽn, GAS quota tức thời...) — áp dụng cho MỌI action, KỂ CẢ
-    // 'login'. Trước đây action 'login' bị loại trừ hoàn toàn khỏi cơ chế
-    // retry (để tránh thử lại khi sai mật khẩu / tài khoản bị khóa — những
-    // lỗi retry cũng vô ích), nhưng điều đó vô tình chặn luôn retry cho
-    // đúng trường hợp cần nhất: đăng nhập ngay lúc Sheets/GAS tạm nghẽn.
-    // Giờ tách riêng 2 trường hợp bằng isSystemError(): KHÔNG BAO GIỜ retry
-    // lỗi xác thực thật của login (sai mật khẩu, khóa tạm thời, thiếu
-    // thông tin...), nhưng VẪN retry nếu server báo rõ đây là lỗi hệ thống
-    // tạm thời.
-    const canRetryThis = (action === 'login') ? isSystemError(result.msg) : !isAuthError(result.msg);
-    if (!result.ok && canRetryThis && !_retried) {
-      await new Promise(r => setTimeout(r, 700));
-      return api(action, data, true);
-    }
+    // [TINH CHỈNH] KHÔNG tự retry ở client khi server báo lỗi hệ thống tạm
+    // thời (isSystemError) — vì phía server (login()/readHVDataFromSheet_()/
+    // readHVVPDataFromSheet_()...) ĐÃ tự thử lại nội bộ (withSheetRetry_())
+    // trước khi trả lỗi này về. Retry thêm 1 lần nữa ở client sẽ cộng dồn
+    // thành gấp đôi số lần đọc Sheet + thêm 1 lượt round-trip mạng, khiến
+    // đăng nhập/tải dashboard "chậm hẳn" mỗi khi Sheets thật sự chậm kéo dài
+    // (chứ không chỉ chậm thoáng qua) — thay vì nhanh hơn. Giờ trả lỗi ngay
+    // để người dùng thấy nút "Thử lại" (bảng HV/HVVP) hoặc thông báo lỗi rõ
+    // ràng (đăng nhập) và tự quyết định có thử lại hay không.
     return result;
   } catch (e) {
-    // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại) cũng thử lại 1 lần — áp dụng
-    // cho MỌI action, kể cả 'login': mất mạng/GAS phản hồi không phải JSON
-    // chớp nhoáng lúc đăng nhập không nên bắt người dùng phải bấm lại thủ công.
+    // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại hoàn toàn, không nhận được phản
+    // hồi nào) là loại lỗi KHÁC — server không có cách nào tự retry giúp
+    // được vì request chưa từng đến nơi, nên vẫn giữ retry 1 lần ở đây.
     if (!_retried) {
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, 400));
       return api(action, data, true);
     }
     return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
