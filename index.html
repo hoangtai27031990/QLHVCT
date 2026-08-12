@@ -1898,22 +1898,44 @@ async function api(action, data = {}, _retried = false) {
       handleSessionExpired();
       return result;
     }
-    // [FIX ỔN ĐỊNH] Nếu lỗi KHÔNG PHẢI do hết phiên (ví dụ server báo
-    // "Hệ thống tạm thời gián đoạn" do Sheets nghẽn/quota tức thời),
-    // tự động thử lại 1 lần trước khi trả lỗi cho người dùng thấy.
-    if (!result.ok && action !== 'login' && !isAuthError(result.msg) && !_retried) {
+    // [FIX ỔN ĐỊNH #2] Tự động thử lại 1 lần khi gặp lỗi HỆ THỐNG TẠM THỜI
+    // (Sheets nghẽn, GAS quota tức thời...) — áp dụng cho MỌI action, KỂ CẢ
+    // 'login'. Trước đây action 'login' bị loại trừ hoàn toàn khỏi cơ chế
+    // retry (để tránh thử lại khi sai mật khẩu / tài khoản bị khóa — những
+    // lỗi retry cũng vô ích), nhưng điều đó vô tình chặn luôn retry cho
+    // đúng trường hợp cần nhất: đăng nhập ngay lúc Sheets/GAS tạm nghẽn.
+    // Giờ tách riêng 2 trường hợp bằng isSystemError(): KHÔNG BAO GIỜ retry
+    // lỗi xác thực thật của login (sai mật khẩu, khóa tạm thời, thiếu
+    // thông tin...), nhưng VẪN retry nếu server báo rõ đây là lỗi hệ thống
+    // tạm thời.
+    const canRetryThis = (action === 'login') ? isSystemError(result.msg) : !isAuthError(result.msg);
+    if (!result.ok && canRetryThis && !_retried) {
       await new Promise(r => setTimeout(r, 700));
       return api(action, data, true);
     }
     return result;
   } catch (e) {
-    // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại) cũng thử lại 1 lần
+    // [FIX ỔN ĐỊNH] Lỗi mạng (fetch thất bại) cũng thử lại 1 lần — áp dụng
+    // cho MỌI action, kể cả 'login': mất mạng/GAS phản hồi không phải JSON
+    // chớp nhoáng lúc đăng nhập không nên bắt người dùng phải bấm lại thủ công.
     if (!_retried) {
       await new Promise(r => setTimeout(r, 700));
       return api(action, data, true);
     }
     return { ok: false, msg: 'Lỗi kết nối: ' + e.message };
   }
+}
+
+// [MỚI] Nhận diện lỗi HỆ THỐNG TẠM THỜI (Sheets nghẽn, GAS quota tức thời,
+// khóa tranh chấp LockService...) để biết khi nào NÊN tự động thử lại —
+// khác với lỗi xác thực (sai mật khẩu, tài khoản bị khóa) hay lỗi nghiệp vụ
+// (thiếu dữ liệu, trùng mã...) là những lỗi thử lại cũng chắc chắn thất bại
+// giống vậy, không nên retry.
+function isSystemError(msg) {
+  if (!msg) return false;
+  const m = String(msg).toLowerCase();
+  return m.includes('tam thoi') || m.includes('tạm thời') ||
+         m.includes('dang ban') || m.includes('đang bận');
 }
 
 // Kiểm tra thông báo lỗi từ server có liên quan đến phiên đăng nhập hết hạn/không hợp lệ.
@@ -2047,13 +2069,12 @@ async function doLogin() {
   // [SECURITY] Hash mật khẩu bằng SHA-256 trước khi gửi lên server.
   // Mật khẩu gốc không bao giờ truyền qua mạng hoặc lưu vào sessionStorage.
   const passwordHash = await sha256(password);
-  const payload = JSON.stringify({ action: 'login', username, password: passwordHash });
-  // [SECURITY FIX] Dùng POST để thông tin đăng nhập không lộ trên URL hay server log
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: payload,
-  }).then(r => r.json()).catch(() => ({ ok: false, msg: 'Không thể kết nối đến server' }));
+  // [FIX ỔN ĐỊNH] Trước đây hàm này gọi fetch() trực tiếp, KHÔNG có cơ chế
+  // thử lại — chỉ cần 1 lần mạng chập chờn hoặc GAS phản hồi chậm/không
+  // phải JSON (cold start, quota tức thời...) là báo lỗi ngay cho người
+  // dùng, trong khi mọi action khác đều được api() tự thử lại 1 lần trước
+  // khi báo lỗi. Giờ dùng chung api() để login cũng được bảo vệ như vậy.
+  const res = await api('login', { username, password: passwordHash });
 
   btn.classList.remove('loading');
   btn.disabled = false;
@@ -2598,10 +2619,30 @@ function clearAllValidation() {
 // =============================================
 async function loadHV() {
   const res = await api('getHV');
-  if (!res.ok) { toast(res.msg, 'error'); return; }
+  if (!res.ok) {
+    toast(res.msg, 'error');
+    // [FIX ỔN ĐỊNH] Trước đây chỉ hiện toast rồi dừng, bảng có thể bị kẹt ở
+    // trạng thái "Đang tải..." (hoặc trống) vô thời hạn nếu chưa có dữ liệu
+    // cũ để hiển thị lại — người dùng phải F5 mới biết cách khắc phục. Giờ
+    // hiện rõ nút "Thử lại" ngay trong bảng khi chưa có dữ liệu nào để hiển thị.
+    const tbody = document.getElementById('hvBody');
+    if (tbody && (!hvData || !hvData.length)) {
+      tbody.innerHTML = tableErrorRowHtml(12, res.msg, 'loadHV');
+    }
+    return;
+  }
   hvData = res.data;
   renderTable();
   updateDashboard();
+}
+
+// [MỚI] Sinh 1 dòng <tr> báo lỗi tải dữ liệu + nút "Thử lại", dùng chung cho
+// các bảng HV/HVVP khi api() thất bại (kể cả sau khi đã tự retry ngầm 1 lần).
+function tableErrorRowHtml(colspan, msg, retryFnName) {
+  return `<tr><td colspan="${colspan}" style="text-align:center;padding:28px 16px;color:var(--text-faint)">
+    <div style="margin-bottom:10px">⚠️ Không tải được dữ liệu${msg ? ': ' + escapeHTML(msg) : ''}</div>
+    <button class="btn btn-sm" onclick="${retryFnName}()">Thử lại</button>
+  </td></tr>`;
 }
 
 function getBadgeCD(cd) {
@@ -3799,7 +3840,15 @@ async function loadHVVP() {
   document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
   populateVPChucDanhSelect();
   const res = await api('getHVVP');
-  if (!res.ok) { toast(res.msg, 'error'); return; }
+  if (!res.ok) {
+    toast(res.msg, 'error');
+    // [FIX ỔN ĐỊNH] Trước đây bảng bị kẹt mãi ở "Đang tải..." nếu request
+    // thất bại (kể cả sau khi api() đã tự retry ngầm 1 lần) — người dùng
+    // không biết phải làm gì ngoài F5 lại trang. Giờ hiện nút "Thử lại".
+    const tbody = document.getElementById('hvvpBody');
+    if (tbody) tbody.innerHTML = tableErrorRowHtml(13, res.msg, 'loadHVVP');
+    return;
+  }
   hvvpData = res.data;
   renderVPTable();
   // [MỚI] Đồng bộ luôn khối số liệu riêng của HV Văn phòng trên Dashboard mỗi
