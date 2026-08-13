@@ -3987,6 +3987,22 @@ function vpTheoDoiBadgeClass(trangThai) {
   return 'badge-vp-soon';
 }
 
+// [MỚI] Tô màu điểm đánh giá GĐ1/GĐ2 theo ngưỡng: >=6 xanh lá (đạt tốt),
+// <5 đỏ (chưa đạt), còn lại (5 đến dưới 6) giữ màu mặc định — không đủ tệ để
+// cảnh báo nhưng cũng chưa hẳn tốt.
+function vpDiemCellHtml(diem) {
+  if (diem === '' || diem === null || diem === undefined) {
+    return '<span style="color:var(--text-faint)">–</span>';
+  }
+  const n = parseFloat(diem);
+  if (isNaN(n)) return escapeHTML(String(diem));
+  let color = '';
+  if (n >= 6) color = 'var(--green)';
+  else if (n < 5) color = 'var(--red)';
+  const style = color ? `color:${color};font-weight:700` : '';
+  return `<span style="${style}">${escapeHTML(String(diem))}</span>`;
+}
+
 async function loadHVVP(forceRefresh = false) {
   // [FIX HIỆU NĂNG - MỤC 2] Nếu dữ liệu vừa tải trong TTL gần đây và không bị
   // ép làm mới, chỉ render lại từ dữ liệu đã có sẵn trong bộ nhớ — không gọi
@@ -4125,9 +4141,9 @@ function renderVPTable() {
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.ngayDGGD1 ? vpHanCellHtml(hv.ngayDGGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${vpDiemCellHtml(hv.diemGD1)}</td>
       <td>${hv.ngayDGGD2 ? vpHanCellHtml(hv.ngayDGGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${vpDiemCellHtml(hv.diemGD2)}</td>
       <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
       <td style="white-space:nowrap">
@@ -5818,8 +5834,10 @@ function openDetailVP(id) {
     if (val === '' || val === null || val === undefined || isNaN(n)) {
       return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="color:var(--text-faint)">–</span></div>`;
     }
-    const cls = n < 5 ? 'color:var(--red)' : n < 7 ? 'color:var(--amber)' : 'color:var(--green)';
-    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px">${n.toFixed(2)}</span></div>`;
+    // [ĐỒNG BỘ] Cùng ngưỡng màu với bảng danh sách HV Văn phòng: >=6 xanh lá,
+    // <5 đỏ, còn lại (5 đến dưới 6) giữ màu mặc định.
+    const cls = n < 5 ? 'color:var(--red)' : n >= 6 ? 'color:var(--green)' : '';
+    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px;font-weight:${cls?700:500}">${n.toFixed(2)}</span></div>`;
   };
 
   const today = parseLocalDate(new Date().toISOString().slice(0,10));
