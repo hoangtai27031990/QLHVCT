@@ -953,6 +953,7 @@ tbody tr:hover td{background:var(--gray-50)}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Xuất tất cả (CSV)
               </button>
+              <button class="btn" onclick="refreshHVVP()" title="Tải lại dữ liệu mới nhất từ server">⟳ Làm mới</button>
               <button class="btn btn-primary" onclick="openAddHVVP()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Thêm học viên
@@ -2243,6 +2244,7 @@ async function loadDashboardBundle() {
   }
   if (coQuyenHVVP() && res.hvvp) {
     hvvpData = res.hvvp;
+    hvvpDataLoadedAt = Date.now(); // [MỚI - MỤC 2] để loadHVVP() không tải lại ngay khi vừa vào tab
     renderVPTable();
     updateDashboardVP();
   }
@@ -3736,6 +3738,17 @@ const DANH_MUC_VP = [
   { ten: 'Nhân viên Kỹ thuật',                        ma: 'ST-KTH-NV',     soNgay: 68 },
 ];
 let hvvpData = [];
+// [FIX HIỆU NĂNG - MỤC 2] Thời điểm hvvpData được tải gần nhất từ server, dùng
+// để quyết định có cần gọi lại api('getHVVP') hay không mỗi khi chuyển vào tab
+// "HV Văn phòng". Trước đây switchPage()/navigate() gọi thẳng loadHVVP() MỖI
+// LẦN vào tab, dù dữ liệu vừa tải cách đó vài giây — trong lúc đang thao tác
+// chỉnh sửa liên tục, cache 60s phía backend gần như luôn bị invalidate ngay
+// trước đó nên hầu hết các lần chuyển tab đều là cache-miss, phải mở lại
+// Spreadsheet từ đầu. Giờ có thêm 1 lớp cache phía CLIENT (TTL 30s): nếu dữ
+// liệu đã tải trong 30s gần nhất, chuyển tab chỉ render lại từ hvvpData đang
+// có sẵn, không gọi server.
+let hvvpDataLoadedAt = 0;
+const HVVP_CLIENT_CACHE_TTL_MS = 30000;
 let selectedHVVP = new Set();
 let editingHVVPId = null;
 let pendingDeleteHVVPId = null;
@@ -3874,7 +3887,15 @@ function vpTheoDoiBadgeClass(trangThai) {
   return 'badge-vp-soon';
 }
 
-async function loadHVVP() {
+async function loadHVVP(forceRefresh = false) {
+  // [FIX HIỆU NĂNG - MỤC 2] Nếu dữ liệu vừa tải trong TTL gần đây và không bị
+  // ép làm mới, chỉ render lại từ dữ liệu đã có sẵn trong bộ nhớ — không gọi
+  // server. Áp dụng cho trường hợp phổ biến nhất: người dùng chuyển qua lại
+  // giữa các tab (vd Dashboard <-> HV Văn phòng) nhiều lần trong thời gian ngắn.
+  if (!forceRefresh && hvvpDataLoadedAt && (Date.now() - hvvpDataLoadedAt) < HVVP_CLIENT_CACHE_TTL_MS) {
+    renderVPTable();
+    return;
+  }
   document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
   populateVPChucDanhSelect();
   const res = await api('getHVVP');
@@ -3888,10 +3909,18 @@ async function loadHVVP() {
     return;
   }
   hvvpData = res.data;
+  hvvpDataLoadedAt = Date.now(); // [MỚI - MỤC 2]
   renderVPTable();
   // [MỚI] Đồng bộ luôn khối số liệu riêng của HV Văn phòng trên Dashboard mỗi
   // khi dữ liệu VP được tải/làm mới (kể cả khi Dashboard không phải trang đang mở).
   updateDashboardVP();
+}
+
+// [MỚI - MỤC 2] Làm mới thủ công — bỏ qua cache, gọi lại server ngay. Dùng
+// cho nút "⟳ Làm mới" trên toolbar để người dùng chủ động lấy dữ liệu mới
+// nhất khi biết có người khác vừa thao tác.
+async function refreshHVVP() {
+  await loadHVVP(true);
 }
 
 // [MỚI] Sắp xếp thủ công bảng HV Văn phòng — bấm vào tiêu đề cột để sắp xếp,
@@ -4528,7 +4557,7 @@ async function confirmImportVP() {
 
     toast(`Đã import thành công ${validData.length} học viên`, 'success');
     closeModal('modalImportVPPreview');
-    loadHVVP();
+    loadHVVP(true); // [MỚI - MỤC 2] ép làm mới để thấy đúng dữ liệu vừa import, bỏ qua cache
   } finally {
     btn.disabled = false;
   }
@@ -4637,7 +4666,7 @@ async function saveHVVP() {
 
     toast(editingHVVPId ? 'Đã cập nhật học viên' : 'Đã thêm học viên', 'success');
     closeModal('modalHVVP');
-    loadHVVP();
+    loadHVVP(true); // [MỚI - MỤC 2] ép làm mới để lấy đúng hạn/trạng thái vừa tính lại từ server, bỏ qua cache
   } finally {
     clearTimeout(slowHintTimer);
     btn.disabled = false;
