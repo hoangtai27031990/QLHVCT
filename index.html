@@ -283,6 +283,25 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .cd-bar-track{height:8px;border-radius:5px;background:var(--gray-100);overflow:hidden}
 .cd-bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
 
+/* ── [MỚI] DASHBOARD: XU HƯỚNG THEO THỜI GIAN (trend charts, tự vẽ bằng SVG,
+   không dùng thư viện ngoài — nhất quán với donut/cd-bars đã có sẵn) ── */
+.trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:980px){.trend-grid{grid-template-columns:1fr}}
+.trend-svg{width:100%;height:auto;display:block;overflow:visible}
+.trend-bar{transition:opacity .15s}
+.trend-bar:hover{opacity:.75}
+.trend-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-muted);margin-bottom:10px}
+.trend-legend-item{display:flex;align-items:center;gap:6px}
+.trend-legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.trend-legend-line{width:14px;height:2px;border-radius:2px;flex-shrink:0}
+.trend-axis-label{font-size:9.5px;fill:var(--text-faint)}
+.trend-value-label{font-size:9.5px;fill:var(--text-muted);font-weight:600}
+.trend-empty{padding:24px;text-align:center;color:var(--text-faint);font-size:13px}
+.trend-tabs{display:flex;gap:6px;margin-bottom:12px}
+.trend-tab-btn{font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid var(--border-md);background:#fff;color:var(--text-muted);cursor:pointer}
+.trend-tab-btn.active{background:var(--gray-900);color:#fff;border-color:var(--gray-900)}
+#page-dashboard .trend-legend{font-size:13px}
+
 /* ── PANEL ── */
 .panel{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px}
 .panel+.panel{margin-top:16px}
@@ -686,6 +705,10 @@ tbody tr:hover td{background:var(--gray-50)}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
               Văn phòng siêu thị
             </a>
+            <a href="#dash-section-trends" id="dashAnchorTrends" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Xu hướng
+            </a>
           </div>
         </div>
 
@@ -831,6 +854,58 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
         </div>
         <!-- /dashBlockVP -->
+
+        <!-- ═══ KHỐI [MỚI]: XU HƯỚNG THEO THỜI GIAN ═══
+             Bổ sung góc nhìn xu hướng (trước đây Dashboard chỉ có số liệu tức
+             thời/snapshot): số HV mới theo tháng, tỷ lệ hoàn thành theo quý,
+             điểm trung bình theo chức danh (HV VP) / đơn vị (HV cấp trung).
+             Tính trực tiếp trên hvData/hvvpData đã tải sẵn — không gọi thêm
+             request nào tới server. -->
+        <div id="dashBlockTrends">
+        <div class="dash-section-divider" id="dash-section-trends" style="scroll-margin-top:16px">
+          <span class="dash-section-icon" style="background:var(--blue-light);color:var(--blue)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </span>
+          <span class="dash-section-title">Xu hướng theo thời gian</span>
+          <span class="dash-section-line"></span>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Học viên mới theo tháng (12 tháng gần nhất)</span>
+          </div>
+          <div class="trend-legend">
+            <span class="trend-legend-item"><span class="trend-legend-dot" style="background:var(--blue)"></span>HV Quản lý cấp trung</span>
+            <span class="trend-legend-item"><span class="trend-legend-dot" style="background:var(--purple)"></span>HV Văn phòng</span>
+          </div>
+          <div id="trendMonthlyWrap"><svg class="trend-svg" id="trendMonthlySvg" viewBox="0 0 900 220"></svg></div>
+        </div>
+
+        <div class="trend-grid">
+          <div class="panel" style="margin-top:0">
+            <div class="panel-header">
+              <span class="panel-title">Tỷ lệ hoàn thành theo quý (8 quý gần nhất)</span>
+            </div>
+            <div class="trend-legend">
+              <span class="trend-legend-item"><span class="trend-legend-line" style="background:var(--blue)"></span>HV Quản lý cấp trung</span>
+              <span class="trend-legend-item"><span class="trend-legend-line" style="background:var(--purple)"></span>HV Văn phòng</span>
+            </div>
+            <div id="trendQuarterlyWrap"><svg class="trend-svg" id="trendQuarterlySvg" viewBox="0 0 420 220"></svg></div>
+          </div>
+
+          <div class="panel" style="margin-top:0">
+            <div class="panel-header">
+              <span class="panel-title">Điểm trung bình</span>
+            </div>
+            <div class="trend-tabs">
+              <button type="button" class="trend-tab-btn active" id="trendAvgTabVP" onclick="switchTrendAvgTab('vp')">Theo chức danh (HV Văn phòng)</button>
+              <button type="button" class="trend-tab-btn" id="trendAvgTabHV" onclick="switchTrendAvgTab('hv')">Theo đơn vị (HV cấp trung)</button>
+            </div>
+            <div class="cd-bars" id="trendAvgScoreBars"></div>
+          </div>
+        </div>
+        </div>
+        <!-- /dashBlockTrends -->
       </div>
 
       <!-- HỌC VIÊN -->
@@ -3211,6 +3286,7 @@ function updateDashboard() {
   if (trendEl) trendEl.textContent = total ? Math.round(done/total*100)+'%' : '';
 
   renderDashboardOverview(total, done, overdue.length);
+  renderTrendsSection(); // [MỚI] cập nhật khối "Xu hướng theo thời gian" mỗi khi dashboard cấp trung refresh
 
   const el = document.getElementById('dueSoonList');
 
@@ -3452,6 +3528,7 @@ function updateDashboardVP() {
   setText('svp-overdue', overdue.length);
 
   renderDashboardOverviewVP(total, dangTheoDoi, hoanTat, ngung);
+  renderTrendsSection(); // [MỚI] cập nhật khối "Xu hướng theo thời gian" mỗi khi dashboard VP refresh
 
   const el = document.getElementById('dueSoonListVP');
   if (!el) return;
@@ -3585,6 +3662,234 @@ function renderDashboardOverviewVP(total, dangTheoDoi, hoanTat, ngung) {
       .join('');
     barsEl.innerHTML = rows || '<div class="empty" style="padding:10px 0">Chưa có dữ liệu</div>';
   }
+}
+
+// =============================================
+// [MỚI] DASHBOARD: XU HƯỚNG THEO THỜI GIAN
+// Dashboard trước đây chỉ là "snapshot" (số liệu tại thời điểm hiện tại) —
+// bổ sung 3 góc nhìn xu hướng theo thời gian, tính trực tiếp trên hvData/
+// hvvpData đã có sẵn trong bộ nhớ (không gọi thêm request nào tới server):
+//   1) Số học viên mới theo tháng (12 tháng gần nhất) — HV cấp trung tính
+//      theo ngayBatDau, HV Văn phòng tính theo ngayNhanViec.
+//   2) Tỷ lệ hoàn thành theo quý (8 quý gần nhất) — theo cohort: học viên
+//      "vào" quý nào (ngayBatDau/ngayNhanViec rơi vào quý đó) thì tính % đã
+//      hoàn thành TRONG SỐ những người vào quý đó, tại THỜI ĐIỂM HIỆN TẠI
+//      (không phải hoàn thành đúng trong quý đó).
+//   3) Điểm trung bình theo chức danh (HV Văn phòng: trung bình các điểm GĐ
+//      đã có) / theo đơn vị (HV cấp trung: điểm bình quân GĐ2 - trường bq).
+// =============================================
+
+// ── Helper ngày tháng dùng riêng cho khối xu hướng (không đụng tới các hàm
+// ngày tháng khác đang dùng ở nơi khác, tránh ảnh hưởng ngoài ý muốn) ──
+function trendYearMonth_(ymd) {
+  if (!ymd) return null;
+  const s = String(ymd);
+  return /^\d{4}-\d{2}/.test(s) ? s.slice(0, 7) : null; // "yyyy-MM"
+}
+function trendQuarterInfo_(ymd) {
+  if (!ymd) return null;
+  const m = /^(\d{4})-(\d{2})/.exec(String(ymd));
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]);
+  const q = Math.ceil(mo / 3);
+  return { key: `${y}-Q${q}`, y, q };
+}
+
+// 1) Gom số HV mới theo từng tháng, N tháng gần nhất (tính đến tháng hiện tại)
+function buildTrendMonthlySeries_(months) {
+  months = months || 12;
+  const now = new Date();
+  const buckets = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    buckets.push({ key, label: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`, hv: 0, hvvp: 0 });
+  }
+  const idx = {};
+  buckets.forEach((b, i) => idx[b.key] = i);
+
+  (hvData || []).forEach(h => {
+    const key = trendYearMonth_(h.ngayBatDau);
+    if (key && idx[key] !== undefined) buckets[idx[key]].hv++;
+  });
+  (hvvpData || []).forEach(h => {
+    const key = trendYearMonth_(h.ngayNhanViec);
+    if (key && idx[key] !== undefined) buckets[idx[key]].hvvp++;
+  });
+  return buckets;
+}
+
+// 2) Gom tỷ lệ hoàn thành theo quý (cohort theo quý bắt đầu/nhận việc), N quý gần nhất
+function buildTrendQuarterlySeries_(quarters) {
+  quarters = quarters || 8;
+  const now = new Date();
+  let y = now.getFullYear(), q = Math.ceil((now.getMonth() + 1) / 3);
+  const list = [];
+  for (let i = 0; i < quarters; i++) {
+    list.unshift({ key: `${y}-Q${q}`, label: `Q${q}/${String(y).slice(2)}`, hvTotal: 0, hvDone: 0, vpTotal: 0, vpDone: 0 });
+    q--; if (q < 1) { q = 4; y--; }
+  }
+  const idx = {};
+  list.forEach((b, i) => idx[b.key] = i);
+
+  (hvData || []).forEach(h => {
+    const qi = trendQuarterInfo_(h.ngayBatDau);
+    if (!qi || idx[qi.key] === undefined) return;
+    const b = list[idx[qi.key]];
+    b.hvTotal++;
+    if (isDone(h)) b.hvDone++;
+  });
+  (hvvpData || []).forEach(h => {
+    const qi = trendQuarterInfo_(h.ngayNhanViec);
+    if (!qi || idx[qi.key] === undefined) return;
+    const b = list[idx[qi.key]];
+    b.vpTotal++;
+    const tt = h.trangThai || HVVP_TT_DANG_THEO_DOI;
+    if (tt === HVVP_TT_HOAN_TAT) b.vpDone++;
+  });
+  return list;
+}
+
+// 3a) Điểm trung bình theo chức danh — HV Văn phòng (trung bình các điểm GĐ đã nhập)
+function buildTrendAvgScoreVP_() {
+  const map = {};
+  (hvvpData || []).forEach(h => {
+    const scores = [parseFloat(h.diemGD1), parseFloat(h.diemGD2)].filter(v => !isNaN(v));
+    if (!scores.length) return;
+    const avgPerson = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const key = h.chucDanh || '(Chưa rõ chức danh)';
+    if (!map[key]) map[key] = { sum: 0, count: 0 };
+    map[key].sum += avgPerson;
+    map[key].count++;
+  });
+  return Object.keys(map)
+    .map(k => ({ label: k, avg: map[k].sum / map[k].count, count: map[k].count, color: vpChucDanhColor(k) }))
+    .sort((a, b) => b.avg - a.avg);
+}
+
+// 3b) Điểm trung bình theo đơn vị — HV Quản lý cấp trung (dùng điểm bình quân GĐ2 - trường bq)
+function buildTrendAvgScoreHV_() {
+  const map = {};
+  (hvData || []).forEach(h => {
+    const { bq } = computeScores(h);
+    if (bq === null || isNaN(bq)) return;
+    const key = h.donVi || '(Chưa rõ đơn vị)';
+    if (!map[key]) map[key] = { sum: 0, count: 0 };
+    map[key].sum += bq;
+    map[key].count++;
+  });
+  return Object.keys(map)
+    .map(k => ({ label: k, avg: map[k].sum / map[k].count, count: map[k].count, color: 'var(--blue)' }))
+    .sort((a, b) => b.avg - a.avg);
+}
+
+// ── Vẽ biểu đồ cột nhóm (2 cột/tháng: HV cấp trung + HV Văn phòng) ──
+function renderTrendMonthlyChart() {
+  const svg = document.getElementById('trendMonthlySvg');
+  if (!svg) return;
+  const buckets = buildTrendMonthlySeries_(12);
+  const W = 900, H = 220, padL = 28, padR = 10, padT = 14, padB = 30;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+  const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.hv, b.hvvp)));
+  const n = buckets.length;
+  const groupW = chartW / n;
+  const barW = Math.min(16, groupW * 0.32);
+
+  let bars = '';
+  let axis = '';
+  buckets.forEach((b, i) => {
+    const gx = padL + i * groupW + groupW / 2;
+    const hHv   = maxVal ? (b.hv   / maxVal) * chartH : 0;
+    const hHvvp = maxVal ? (b.hvvp / maxVal) * chartH : 0;
+    const yHv   = padT + chartH - hHv;
+    const yHvvp = padT + chartH - hHvvp;
+    bars += `<rect class="trend-bar" x="${(gx - barW - 2).toFixed(1)}" y="${yHv.toFixed(1)}" width="${barW}" height="${hHv.toFixed(1)}" rx="2" fill="var(--blue)"><title>${b.label}: ${b.hv} HV cấp trung mới</title></rect>`;
+    bars += `<rect class="trend-bar" x="${(gx + 2).toFixed(1)}" y="${yHvvp.toFixed(1)}" width="${barW}" height="${hHvvp.toFixed(1)}" rx="2" fill="var(--purple)"><title>${b.label}: ${b.hvvp} HV Văn phòng mới</title></rect>`;
+    if (b.hv)   bars += `<text class="trend-value-label" x="${(gx - barW/2 - 2).toFixed(1)}" y="${(yHv - 4).toFixed(1)}" text-anchor="middle">${b.hv}</text>`;
+    if (b.hvvp) bars += `<text class="trend-value-label" x="${(gx + barW/2 + 2).toFixed(1)}" y="${(yHvvp - 4).toFixed(1)}" text-anchor="middle">${b.hvvp}</text>`;
+    axis += `<text class="trend-axis-label" x="${gx.toFixed(1)}" y="${H - 8}" text-anchor="middle">${b.label}</text>`;
+  });
+
+  const hasData = buckets.some(b => b.hv || b.hvvp);
+  svg.innerHTML = hasData
+    ? `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="var(--border)" stroke-width="1"/>${bars}${axis}`
+    : `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--text-faint)" font-size="13">Chưa có dữ liệu</text>`;
+}
+
+// ── Vẽ biểu đồ đường (2 đường: % hoàn thành theo quý, HV cấp trung + HV Văn phòng) ──
+function renderTrendQuarterlyChart() {
+  const svg = document.getElementById('trendQuarterlySvg');
+  if (!svg) return;
+  const quarters = buildTrendQuarterlySeries_(8);
+  const W = 420, H = 220, padL = 30, padR = 10, padT = 14, padB = 26;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+  const n = quarters.length;
+  const stepX = n > 1 ? chartW / (n - 1) : 0;
+
+  const pctOf = (done, total) => total ? Math.round(done / total * 100) : null;
+  const yOf = (pct) => padT + chartH - (pct / 100) * chartH;
+
+  const buildLine = (getPct, color) => {
+    const pts = quarters.map((q, i) => ({ x: padL + i * stepX, pct: getPct(q) }));
+    const withVal = pts.filter(p => p.pct !== null);
+    if (withVal.length === 0) return '';
+    const path = withVal.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${yOf(p.pct).toFixed(1)}`).join(' ');
+    const dots = withVal.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${yOf(p.pct).toFixed(1)}" r="3" fill="${color}"><title>${p.pct}%</title></circle>`).join('');
+    return `<path d="${path}" fill="none" stroke="${color}" stroke-width="2"/>${dots}`;
+  };
+
+  const hvLine   = buildLine(q => pctOf(q.hvDone, q.hvTotal), 'var(--blue)');
+  const vpLine   = buildLine(q => pctOf(q.vpDone, q.vpTotal), 'var(--purple)');
+  const gridLines = [0, 25, 50, 75, 100].map(p =>
+    `<line x1="${padL}" y1="${yOf(p).toFixed(1)}" x2="${W-padR}" y2="${yOf(p).toFixed(1)}" stroke="var(--gray-100)" stroke-width="1"/>
+     <text class="trend-axis-label" x="${padL - 4}" y="${(yOf(p)+3).toFixed(1)}" text-anchor="end">${p}%</text>`
+  ).join('');
+  const axis = quarters.map((q, i) => `<text class="trend-axis-label" x="${(padL + i*stepX).toFixed(1)}" y="${H-8}" text-anchor="middle">${q.label}</text>`).join('');
+
+  const hasData = quarters.some(q => q.hvTotal || q.vpTotal);
+  svg.innerHTML = hasData
+    ? `${gridLines}${hvLine}${vpLine}${axis}`
+    : `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--text-faint)" font-size="13">Chưa có dữ liệu</text>`;
+}
+
+// ── Điểm trung bình theo chức danh (VP) / đơn vị (HV cấp trung) — dùng lại
+// đúng style thanh ngang cd-bar-* đã có sẵn, chuyển tab bằng nút bấm ──
+let trendAvgTab = 'vp';
+function switchTrendAvgTab(tab) {
+  trendAvgTab = tab;
+  const btnVP = document.getElementById('trendAvgTabVP');
+  const btnHV = document.getElementById('trendAvgTabHV');
+  if (btnVP) btnVP.classList.toggle('active', tab === 'vp');
+  if (btnHV) btnHV.classList.toggle('active', tab === 'hv');
+  renderTrendAvgScoreBars();
+}
+function renderTrendAvgScoreBars() {
+  const el = document.getElementById('trendAvgScoreBars');
+  if (!el) return;
+  const rows = trendAvgTab === 'vp' ? buildTrendAvgScoreVP_() : buildTrendAvgScoreHV_();
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty" style="padding:10px 0">Chưa có điểm để tính trung bình</div>';
+    return;
+  }
+  const maxAvg = Math.max(1, ...rows.map(r => r.avg));
+  el.innerHTML = rows.map(r => {
+    const widthPct = Math.max(4, Math.round(r.avg / maxAvg * 100));
+    return `<div class="cd-bar-row">
+      <span class="cd-bar-name" title="${escapeHTML(r.label)} (${r.count} HV)">${escapeHTML(r.label)}</span>
+      <span class="cd-bar-track"><span class="cd-bar-fill" style="width:${widthPct}%;background:${r.color}"></span></span>
+      <span class="cd-bar-count">${r.avg.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+// Hàm tổng — gọi lại toàn bộ khối "Xu hướng theo thời gian" mỗi khi dashboard
+// cấp trung hoặc dashboard VP được cập nhật (an toàn khi gọi nhiều lần / khi
+// 1 trong 2 nguồn dữ liệu chưa tải xong — phần thiếu coi như 0, tự cập nhật
+// đúng khi nguồn còn lại tải xong và gọi lại).
+function renderTrendsSection() {
+  renderTrendMonthlyChart();
+  renderTrendQuarterlyChart();
+  renderTrendAvgScoreBars();
 }
 
 // =============================================
