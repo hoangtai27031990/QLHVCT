@@ -1053,13 +1053,14 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="toolbar">
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="auditPage=0;renderAuditLog()">
+                <input type="text" id="auditSearch" placeholder="Tìm mã HV, họ tên, người sửa..." oninput="debouncedRenderAuditLog()">
               </div>
               <select id="auditFilterSource" onchange="auditPage=0;renderAuditLog()" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border-md);color:var(--text)">
                 <option value="">Tất cả đối tượng</option>
                 <option value="hv">HV thực tập</option>
                 <option value="hvvp">HV Văn phòng</option>
               </select>
+              <button class="btn" onclick="refreshAuditLog()" title="Tải lại dữ liệu mới nhất từ server">⟳ Làm mới</button>
               <button class="btn" onclick="clearAuditLog()" style="color:var(--red)">Xóa log cũ</button>
             </div>
           </div>
@@ -1090,8 +1091,9 @@ tbody tr:hover td{background:var(--gray-50)}
             <div class="toolbar">
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="activitySearch" placeholder="Tìm tên tài khoản..." oninput="activityPage=0;renderActivityLog()">
+                <input type="text" id="activitySearch" placeholder="Tìm tên tài khoản..." oninput="debouncedRenderActivityLog()">
               </div>
+              <button class="btn" onclick="refreshActivityLog()" title="Tải lại dữ liệu mới nhất từ server">⟳ Làm mới</button>
               <button class="btn" onclick="clearActivityLog()" style="color:var(--red)">Xóa log cũ</button>
             </div>
           </div>
@@ -2542,6 +2544,14 @@ function debounce(fn, delay) {
   };
 }
 const debouncedRenderTable = debounce(() => { hvPage = 0; renderTable(); }, 300);
+
+// [FIX HIỆU NĂNG] Debounce ô tìm kiếm Audit Log / Activity Log — trước đây
+// mỗi ký tự gõ vào ô tìm kiếm là 1 lần renderAuditLog()/renderActivityLog()
+// chạy ngay lập tức. Kết hợp với cache ở getAuditLogs()/getActivityLogs(),
+// giờ chỉ lọc lại trên dữ liệu đã có sẵn, và đợi 300ms sau lần gõ cuối mới
+// render để tránh giật khi gõ nhanh.
+const debouncedRenderAuditLog    = debounce(() => { auditPage = 0; renderAuditLog(); }, 300);
+const debouncedRenderActivityLog = debounce(() => { activityPage = 0; renderActivityLog(); }, 300);
 
 // =============================================
 // INLINE FORM VALIDATION
@@ -5102,17 +5112,33 @@ async function auditLog(action, hv, changes = null) {
   api('addAuditLog', { entry }).catch(e => console.warn('[auditLog]', e));
 }
 
-async function getAuditLogs() {
+// [FIX HIỆU NĂNG] Cache dữ liệu audit log ở phía client (TTL 30s). Trước đây
+// mỗi lần renderAuditLog() chạy (kể cả mỗi ký tự gõ vào ô tìm kiếm, đổi
+// trang, đổi bộ lọc) đều gọi lại api('getAuditLog') -> server mở Spreadsheet
+// và đọc toàn bộ sheet AuditLog (có thể tới 1000 dòng) từ đầu. Giờ chỉ thực
+// sự gọi server khi cache trống/hết hạn; lọc + phân trang chạy trên dữ liệu
+// đã có sẵn trong bộ nhớ trình duyệt.
+let _auditLogsCache = null;
+let _auditLogsCacheTime = 0;
+const AUDIT_LOG_CACHE_TTL_MS = 30000;
+
+async function getAuditLogs(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && _auditLogsCache && (now - _auditLogsCacheTime) < AUDIT_LOG_CACHE_TTL_MS) {
+    return _auditLogsCache;
+  }
   try {
     const res = await api('getAuditLog');
     if (!res.ok) {
       toast(res.msg || 'Không tải được lịch sử chỉnh sửa', 'error');
-      return [];
+      return _auditLogsCache || [];
     }
-    return res.logs || [];
+    _auditLogsCache = res.logs || [];
+    _auditLogsCacheTime = now;
+    return _auditLogsCache;
   } catch (e) {
     toast('Lỗi kết nối khi tải lịch sử chỉnh sửa', 'error');
-    return [];
+    return _auditLogsCache || [];
   }
 }
 
@@ -5120,8 +5146,15 @@ async function clearAuditLog() {
   if (!confirm('Xóa toàn bộ lịch sử chỉnh sửa trên Google Sheet?')) return;
   const res = await api('clearAuditLog');
   if (!res.ok) { toast(res.msg || 'Xóa thất bại', 'error'); return; }
-  await renderAuditLog();
+  _auditLogsCache = null; // [FIX] xóa cache để lần tải kế tiếp lấy đúng dữ liệu mới (rỗng)
+  await renderAuditLog(true);
   toast('Đã xóa lịch sử', 'success');
+}
+
+// [MỚI] Làm mới thủ công — bỏ qua cache, gọi lại server ngay.
+async function refreshAuditLog() {
+  auditPage = 0;
+  await renderAuditLog(true);
 }
 
 const FIELD_LABELS = {
@@ -5176,10 +5209,10 @@ async function auditLogVP(action, hv, changes = null) {
   api('addAuditLog', { entry }).catch(e => console.warn('[auditLogVP]', e));
 }
 
-async function renderAuditLog() {
+async function renderAuditLog(forceRefresh = false) {
   const q = (document.getElementById('auditSearch')?.value || '').toLowerCase();
   const src = document.getElementById('auditFilterSource')?.value || '';
-  const allLogs = await getAuditLogs();
+  const allLogs = await getAuditLogs(forceRefresh);
   const isVP = a => (a || '').startsWith('vp_');
   let logs = allLogs.filter(l => {
     if (src === 'hv' && isVP(l.action)) return false;
@@ -5270,17 +5303,28 @@ async function activityLog(action, user, detail = '') {
   api('addActivityLog', { entry }).catch(e => console.warn('[activityLog]', e));
 }
 
-async function getActivityLogs() {
+// [FIX HIỆU NĂNG] Cache tương tự audit log — xem giải thích ở _auditLogsCache.
+let _activityLogsCache = null;
+let _activityLogsCacheTime = 0;
+const ACTIVITY_LOG_CACHE_TTL_MS = 30000;
+
+async function getActivityLogs(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && _activityLogsCache && (now - _activityLogsCacheTime) < ACTIVITY_LOG_CACHE_TTL_MS) {
+    return _activityLogsCache;
+  }
   try {
     const res = await api('getActivityLog');
     if (!res.ok) {
       toast(res.msg || 'Không tải được nhật ký hoạt động', 'error');
-      return [];
+      return _activityLogsCache || [];
     }
-    return res.logs || [];
+    _activityLogsCache = res.logs || [];
+    _activityLogsCacheTime = now;
+    return _activityLogsCache;
   } catch (e) {
     toast('Lỗi kết nối khi tải nhật ký hoạt động', 'error');
-    return [];
+    return _activityLogsCache || [];
   }
 }
 
@@ -5288,13 +5332,20 @@ async function clearActivityLog() {
   if (!confirm('Xóa toàn bộ nhật ký hoạt động trên Google Sheet?')) return;
   const res = await api('clearActivityLog');
   if (!res.ok) { toast(res.msg || 'Xóa thất bại', 'error'); return; }
-  await renderActivityLog();
+  _activityLogsCache = null; // [FIX] xóa cache để lần tải kế tiếp lấy đúng dữ liệu mới (rỗng)
+  await renderActivityLog(true);
   toast('Đã xóa nhật ký', 'success');
 }
 
-async function renderActivityLog() {
+// [MỚI] Làm mới thủ công — bỏ qua cache, gọi lại server ngay.
+async function refreshActivityLog() {
+  activityPage = 0;
+  await renderActivityLog(true);
+}
+
+async function renderActivityLog(forceRefresh = false) {
   const q = (document.getElementById('activitySearch')?.value || '').toLowerCase();
-  const allLogs = await getActivityLogs();
+  const allLogs = await getActivityLogs(forceRefresh);
   let logs = allLogs.filter(l => {
     if (!q) return true;
     return (l.username||'').toLowerCase().includes(q)
