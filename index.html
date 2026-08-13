@@ -1988,6 +1988,19 @@ async function api(action, data = {}, _retried = false) {
       }
       return { ok: false, msg: 'Lỗi parse response từ server' };
     }
+    // [MỚI - FIX ĐĂNG XUẤT OAN LÚC IMPORT] Mỗi lần server phản hồi được (bất kể
+    // action gì, bất kể ok true/false), coi đây là bằng chứng phiên đang thực sự
+    // được sử dụng -> reset lại đồng hồ đếm 30 phút không hoạt động. Quan trọng
+    // nhất với các vòng lặp tự động gọi nhiều lần liên tiếp (import Excel HV/HVVP,
+    // lưu hàng loạt...) — trong lúc đó KHÔNG có thao tác chuột/bàn phím nào, nên
+    // nếu chỉ dựa vào các sự kiện UI (mousemove/click/keydown...) như trước đây,
+    // 1 file import chạy đủ lâu (vượt quá 30 phút kể từ lần thao tác chuột/phím
+    // GẦN NHẤT, không phải từ lúc đăng nhập) sẽ bị tự động đăng xuất giữa chừng,
+    // dù token 30 ngày vẫn còn nguyên hiệu lực. Bỏ qua action 'login' vì lúc đó
+    // chưa có token/currentUser để resetIdleTimer() xử lý (hàm tự return sớm nếu
+    // thiếu, nhưng gọi thêm cũng vô hại — chỉ bỏ qua cho rõ ràng).
+    if (token && action !== 'login') resetIdleTimer();
+
     // Token hết hạn / không hợp lệ THẬT SỰ -> tự đăng xuất và báo cho người dùng
     if (!result.ok && action !== 'login' && isAuthError(result.msg)) {
       handleSessionExpired();
