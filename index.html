@@ -3990,6 +3990,22 @@ function vpTheoDoiBadgeClass(trangThai) {
   return 'badge-vp-soon';
 }
 
+// [MỚI] Tô màu điểm đánh giá GĐ1/GĐ2 theo ngưỡng: >=6 xanh lá (đạt tốt),
+// <5 đỏ (chưa đạt), còn lại (5 đến dưới 6) giữ màu mặc định — không đủ tệ để
+// cảnh báo nhưng cũng chưa hẳn tốt.
+function vpDiemCellHtml(diem) {
+  if (diem === '' || diem === null || diem === undefined) {
+    return '<span style="color:var(--text-faint)">–</span>';
+  }
+  const n = parseFloat(diem);
+  if (isNaN(n)) return escapeHTML(String(diem));
+  let color = '';
+  if (n >= 6) color = 'var(--green)';
+  else if (n < 5) color = 'var(--red)';
+  const style = color ? `color:${color};font-weight:700` : '';
+  return `<span style="${style}">${escapeHTML(String(diem))}</span>`;
+}
+
 async function loadHVVP(forceRefresh = false) {
   // [FIX HIỆU NĂNG - MỤC 2] Nếu dữ liệu vừa tải trong TTL gần đây và không bị
   // ép làm mới, chỉ render lại từ dữ liệu đã có sẵn trong bộ nhớ — không gọi
@@ -4128,9 +4144,9 @@ function renderVPTable() {
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.ngayDGGD1 ? vpHanCellHtml(hv.ngayDGGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${vpDiemCellHtml(hv.diemGD1)}</td>
       <td>${hv.ngayDGGD2 ? vpHanCellHtml(hv.ngayDGGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
+      <td>${vpDiemCellHtml(hv.diemGD2)}</td>
       <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
       <td style="white-space:nowrap">
@@ -4658,31 +4674,7 @@ async function importExcelVP(event) {
       }
 
       // Hiển thị preview
-      const tbody = document.getElementById('importVPPreviewBody');
-      tbody.innerHTML = pendingImportVPData.map((item, idx) => `
-        <tr style="background:${item.error ? 'var(--red-light)' : 'transparent'}">
-          <td style="text-align:center;font-size:12px">${item.row}</td>
-          <td class="td-code">${escapeHTML(item.maHV)}</td>
-          <td>${escapeHTML(item.hoTen)}</td>
-          <td class="td-code">${escapeHTML(item.maCD)}</td>
-          <td>${escapeHTML(item.chucDanh || '–')}</td>
-          <td>${item.ngayNhanViec || '–'}</td>
-          <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
-          <td style="color:var(--red);font-weight:600">${item.error ? `❌ ${item.error}` : '✅'}</td>
-        </tr>
-      `).join('');
-
-      const statsEl = document.getElementById('importVPStats');
-      statsEl.textContent = `Tổng: ${pendingImportVPData.length} dòng | Hợp lệ: ${validRows.length} | Lỗi: ${errors.length}`;
-
-      const errorsDiv = document.getElementById('importVPErrors');
-      const errorsList = document.getElementById('importVPErrorsList');
-      if (errors.length > 0) {
-        errorsDiv.style.display = 'block';
-        errorsList.innerHTML = errors.map(e => `<div>• ${e}</div>`).join('');
-      } else {
-        errorsDiv.style.display = 'none';
-      }
+      renderImportVPPreviewTable_();
 
       const btnConfirm = document.getElementById('btnConfirmImportVP');
       btnConfirm.disabled = validRows.length === 0;
@@ -4696,18 +4688,82 @@ async function importExcelVP(event) {
   event.target.value = '';
 }
 
+// [MỚI - FIX IMPORT] Tách render bảng preview thành hàm riêng để có thể gọi
+// lại sau khi import (không chỉ lúc đọc file lần đầu) — dùng để cập nhật
+// đúng trạng thái THẬT SỰ của từng dòng sau khi gọi server (đã lưu / lỗi gì),
+// thay vì để nguyên dấu ✅ tĩnh chỉ phản ánh việc validate hợp lệ ở phía
+// client (không đảm bảo đã thực sự lưu xuống Sheet).
+function renderImportVPPreviewTable_() {
+  const tbody = document.getElementById('importVPPreviewBody');
+  const validRows = pendingImportVPData.filter(item => !item.error);
+  const errors = pendingImportVPData.filter(item => item.error).map(item => `Dòng ${item.row}: ${item.error}`);
+
+  tbody.innerHTML = pendingImportVPData.map((item) => {
+    let bg = 'transparent';
+    let statusHtml = '✅';
+    if (item.error) {
+      bg = 'var(--red-light)';
+      statusHtml = `<span style="color:var(--red);font-weight:600">❌ ${escapeHTML(item.error)}</span>`;
+    } else if (item.importStatus === 'success') {
+      bg = 'var(--green-light)';
+      statusHtml = `<span style="color:var(--green-dark);font-weight:600">✅ Đã lưu</span>`;
+    } else if (item.importStatus === 'failed') {
+      bg = 'var(--red-light)';
+      statusHtml = `<span style="color:var(--red);font-weight:600">❌ ${escapeHTML(item.importMsg || 'Lỗi khi lưu')}</span>`;
+    }
+    return `
+        <tr style="background:${bg}">
+          <td style="text-align:center;font-size:12px">${item.row}</td>
+          <td class="td-code">${escapeHTML(item.maHV)}</td>
+          <td>${escapeHTML(item.hoTen)}</td>
+          <td class="td-code">${escapeHTML(item.maCD)}</td>
+          <td>${escapeHTML(item.chucDanh || '–')}</td>
+          <td>${item.ngayNhanViec || '–'}</td>
+          <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
+          <td>${statusHtml}</td>
+        </tr>`;
+  }).join('');
+
+  const successCount = pendingImportVPData.filter(item => item.importStatus === 'success').length;
+  const failedCount  = pendingImportVPData.filter(item => item.importStatus === 'failed').length;
+  const statsEl = document.getElementById('importVPStats');
+  statsEl.textContent = `Tổng: ${pendingImportVPData.length} dòng | Hợp lệ: ${validRows.length} | Lỗi định dạng: ${pendingImportVPData.filter(i=>i.error).length}` +
+    (successCount || failedCount ? ` | Đã lưu: ${successCount} | Lưu lỗi: ${failedCount}` : '');
+
+  const errorsDiv = document.getElementById('importVPErrors');
+  const errorsList = document.getElementById('importVPErrorsList');
+  if (errors.length > 0) {
+    errorsDiv.style.display = 'block';
+    errorsList.innerHTML = errors.map(e => `<div>• ${escapeHTML(e)}</div>`).join('');
+  } else {
+    errorsDiv.style.display = 'none';
+  }
+}
+
 async function confirmImportVP() {
-  const validData = pendingImportVPData.filter(item => !item.error);
+  // [FIX] Chỉ lấy các dòng CHƯA lưu thành công (bỏ qua lỗi validate ở client
+  // và những dòng đã import thành công ở lần bấm trước đó) — cho phép bấm
+  // "Import" lại an toàn sau khi sửa lỗi 1 vài dòng, không tạo trùng lặp các
+  // dòng đã lưu thành công trước đó.
+  const validData = pendingImportVPData.filter(item => !item.error && item.importStatus !== 'success');
   if (!validData.length) {
     toast('Không có dữ liệu hợp lệ để import', 'error');
     return;
   }
 
   const btn = document.getElementById('btnConfirmImportVP');
+  if (btn.disabled) return; // tránh bấm nhiều lần liên tiếp
+  const originalLabel = btn.textContent;
   btn.disabled = true;
 
+  let added = 0, failed = 0;
+
   try {
+    let i = 0;
     for (const item of validData) {
+      i++;
+      btn.textContent = `Đang lưu ${i}/${validData.length}...`;
+
       const payload = {
         maHV: item.maHV,
         hoTen: item.hoTen,
@@ -4717,18 +4773,64 @@ async function confirmImportVP() {
         ghiChu: `[Import từ Excel ngày ${new Date().toLocaleDateString('vi-VN')}]`
       };
 
-      const res = await api('addHVVP', payload);
-      if (!res.ok) {
-        toast(`Lỗi import: ${res.msg}`, 'error');
-        return;
+      let res;
+      try {
+        res = await api('addHVVP', payload);
+      } catch (e) {
+        res = { ok: false, msg: e.message || 'Lỗi kết nối không xác định' };
       }
+
+      if (res.ok) {
+        item.importStatus = 'success';
+        added++;
+        continue;
+      }
+
+      // [FIX MỤC 3] Timeout KHÔNG đồng nghĩa với thất bại — server có thể vẫn
+      // đang ghi hoặc đã ghi xong, chỉ là phản hồi không kịp về. Xác minh lại
+      // trước khi kết luận, để tránh báo "lỗi" oan cho 1 dòng thực ra ĐÃ lưu
+      // (và tránh người dùng import lại tạo trùng "Mã HV đã tồn tại").
+      if (res.timedOut) {
+        const verify = await verifySavedAfterTimeout_('hvvp', { maHV: item.maHV });
+        if (verify.verified) {
+          item.importStatus = 'success';
+          added++;
+          continue;
+        }
+      }
+
+      // [FIX QUAN TRỌNG] Trước đây gặp lỗi ở BẤT KỲ dòng nào là toast rồi
+      // `return` ngay lập tức — các dòng còn lại trong file KHÔNG BAO GIỜ
+      // được thử, và những dòng đã lưu thành công trước đó cũng không được
+      // phản ánh lại lên giao diện (không gọi loadHVVP()). Đây chính là
+      // nguyên nhân "import 3 HV nhưng sheet chỉ có 1, frontend không báo
+      // gì" — dòng 2 lỗi khiến dòng 3 không được thử và người dùng không
+      // biết chuyện gì đã xảy ra. Giờ TIẾP TỤC xử lý hết các dòng còn lại.
+      item.importStatus = 'failed';
+      item.importMsg = res.msg || 'Lỗi không xác định';
+      failed++;
     }
 
-    toast(`Đã import thành công ${validData.length} học viên`, 'success');
-    closeModal('modalImportVPPreview');
-    loadHVVP(true); // [MỚI - MỤC 2] ép làm mới để thấy đúng dữ liệu vừa import, bỏ qua cache
+    // [FIX] Luôn làm mới danh sách sau khi import — BẤT KỂ có lỗi hay không —
+    // để giao diện phản ánh đúng những gì đã thực sự được ghi trên server,
+    // thay vì có thể để trống/cũ nếu có lỗi giữa chừng.
+    if (added > 0) await loadHVVP(true);
+
+    // Cập nhật lại bảng preview để hiện đúng trạng thái THẬT của từng dòng
+    // (đã lưu / lưu lỗi kèm lý do cụ thể) thay vì dấu ✅ tĩnh lúc validate.
+    renderImportVPPreviewTable_();
+
+    if (failed === 0) {
+      toast(`Đã import thành công ${added} học viên`, 'success');
+      closeModal('modalImportVPPreview');
+    } else if (added > 0) {
+      toast(`Import hoàn tất: ${added} thành công, ${failed} lỗi — xem chi tiết trong bảng để sửa và import lại`, 'warning');
+    } else {
+      toast(`Import thất bại toàn bộ ${failed} dòng — xem chi tiết trong bảng`, 'error');
+    }
   } finally {
     btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 
@@ -5195,7 +5297,10 @@ async function confirmImportExcel() {
   hvData.forEach(h => { if (h.maHV) existingByMaHV[String(h.maHV).trim()] = h; });
 
   try {
+    let rowIdx = 0;
     for (const row of rows) {
+      rowIdx++;
+      btn.textContent = `Đang nhập ${rowIdx}/${rows.length}...`; // [MỚI] chỉ báo tiến trình, tránh cảm giác "treo" khi import nhiều dòng
       const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
       const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
       const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
@@ -5227,13 +5332,34 @@ async function confirmImportExcel() {
 
       const existing = existingByMaHV[maHV];
       let res;
-      if (existing) {
-        res = await api('updateHV', { ...payload, id: existing.id });
-        if (res.ok) updated++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi cập nhật'}`); }
-      } else {
-        res = await api('addHV', payload);
-        if (res.ok) added++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi thêm mới'}`); }
+      try {
+        if (existing) {
+          res = await api('updateHV', { ...payload, id: existing.id });
+        } else {
+          res = await api('addHV', payload);
+        }
+      } catch (e) {
+        res = { ok: false, msg: e.message || 'Lỗi kết nối không xác định' };
       }
+
+      if (res.ok) {
+        if (existing) updated++; else added++;
+        continue;
+      }
+
+      // [FIX MỤC 3] Timeout KHÔNG đồng nghĩa với thất bại — xác minh lại với
+      // server trước khi kết luận, để tránh báo "lỗi" oan cho 1 dòng thực ra
+      // ĐÃ được lưu (và tránh tạo bản ghi trùng nếu người dùng import lại).
+      if (res.timedOut) {
+        const verify = await verifySavedAfterTimeout_('hv', existing ? { id: existing.id } : { maHV });
+        if (verify.verified) {
+          if (existing) updated++; else added++;
+          continue;
+        }
+      }
+
+      failed++;
+      failedRows.push(`${maHV}: ${res.msg || (existing ? 'lỗi cập nhật' : 'lỗi thêm mới')}`);
     }
 
     if (failedRows.length) console.error('[Import Excel] Các dòng lỗi:', failedRows);
@@ -5782,8 +5908,10 @@ function openDetailVP(id) {
     if (val === '' || val === null || val === undefined || isNaN(n)) {
       return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="color:var(--text-faint)">–</span></div>`;
     }
-    const cls = n < 5 ? 'color:var(--red)' : n < 7 ? 'color:var(--amber)' : 'color:var(--green)';
-    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px">${n.toFixed(2)}</span></div>`;
+    // [ĐỒNG BỘ] Cùng ngưỡng màu với bảng danh sách HV Văn phòng: >=6 xanh lá,
+    // <5 đỏ, còn lại (5 đến dưới 6) giữ màu mặc định.
+    const cls = n < 5 ? 'color:var(--red)' : n >= 6 ? 'color:var(--green)' : '';
+    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px;font-weight:${cls?700:500}">${n.toFixed(2)}</span></div>`;
   };
 
   const today = parseLocalDate(new Date().toISOString().slice(0,10));
