@@ -1357,7 +1357,7 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
         <div class="form-field">
           <label>Kết quả đánh giá GĐ1</label>
-          <input type="number" id="fvp-diemGD1" step="0.1" min="0" max="10" placeholder="0 – 10">
+          <input type="number" id="fvp-diemGD1" step="0.1" min="0" max="10" placeholder="0 – 10" oninput="checkVPAutoHoanTat()">
         </div>
 
         <div class="form-section-title">Giai đoạn 2 / Cuối</div>
@@ -1373,18 +1373,21 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
         <div class="form-field">
           <label>Kết quả đánh giá GĐ2/Cuối</label>
-          <input type="number" id="fvp-diemGD2" step="0.1" min="0" max="10" placeholder="0 – 10">
+          <input type="number" id="fvp-diemGD2" step="0.1" min="0" max="10" placeholder="0 – 10" oninput="checkVPAutoHoanTat()">
         </div>
 
         <div class="form-section-title">Theo dõi</div>
         <div class="form-field form-full">
           <label>Trạng thái theo dõi</label>
-          <select id="fvp-trangThai">
+          <select id="fvp-trangThai" onchange="onVpTrangThaiManualChange()">
             <option value="Đang theo dõi">Đang theo dõi</option>
             <option value="Hoàn tất">Hoàn tất</option>
             <option value="Ngưng theo dõi">Ngưng theo dõi</option>
           </select>
           <span class="calc-note">Chọn "Hoàn tất" hoặc "Ngưng theo dõi" để kết thúc theo dõi hạn đánh giá cho học viên này.</span>
+          <span class="calc-note" id="fvp-autoHoanTat-note" style="display:none;color:var(--green-dark,#059669);font-weight:600">
+            ✓ Đã đủ điểm đạt (≥ 6) cho các giai đoạn cần đánh giá — hệ thống tự động gợi ý chuyển sang "Hoàn tất". Bạn vẫn có thể đổi lại nếu muốn tiếp tục theo dõi.
+          </span>
         </div>
 
         <div class="form-section-title">Ghi chú</div>
@@ -3987,22 +3990,6 @@ function vpTheoDoiBadgeClass(trangThai) {
   return 'badge-vp-soon';
 }
 
-// [MỚI] Tô màu điểm đánh giá GĐ1/GĐ2 theo ngưỡng: >=6 xanh lá (đạt tốt),
-// <5 đỏ (chưa đạt), còn lại (5 đến dưới 6) giữ màu mặc định — không đủ tệ để
-// cảnh báo nhưng cũng chưa hẳn tốt.
-function vpDiemCellHtml(diem) {
-  if (diem === '' || diem === null || diem === undefined) {
-    return '<span style="color:var(--text-faint)">–</span>';
-  }
-  const n = parseFloat(diem);
-  if (isNaN(n)) return escapeHTML(String(diem));
-  let color = '';
-  if (n >= 6) color = 'var(--green)';
-  else if (n < 5) color = 'var(--red)';
-  const style = color ? `color:${color};font-weight:700` : '';
-  return `<span style="${style}">${escapeHTML(String(diem))}</span>`;
-}
-
 async function loadHVVP(forceRefresh = false) {
   // [FIX HIỆU NĂNG - MỤC 2] Nếu dữ liệu vừa tải trong TTL gần đây và không bị
   // ép làm mới, chỉ render lại từ dữ liệu đã có sẵn trong bộ nhớ — không gọi
@@ -4141,9 +4128,9 @@ function renderVPTable() {
       <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.ngayDGGD1 ? vpHanCellHtml(hv.ngayDGGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${vpDiemCellHtml(hv.diemGD1)}</td>
+      <td>${hv.diemGD1 !== '' && hv.diemGD1 != null ? escapeHTML(String(hv.diemGD1)) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${hv.ngayDGGD2 ? vpHanCellHtml(hv.ngayDGGD2, hv.trangThaiGD2) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${vpDiemCellHtml(hv.diemGD2)}</td>
+      <td>${hv.diemGD2 !== '' && hv.diemGD2 != null ? escapeHTML(String(hv.diemGD2)) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td><span class="badge ${vpTheoDoiBadgeClass(trangThai)}">${escapeHTML(trangThai)}</span></td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.ghiChu || '')}">${escapeHTML(hv.ghiChu || '')}</td>
       <td style="white-space:nowrap">
@@ -4367,6 +4354,69 @@ function calcVPDates() {
   document.getElementById('fvp-ngayDGGD1').value    = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
   document.getElementById('fvp-hanGD2').value       = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
   document.getElementById('fvp-ngayDGGD2').value    = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
+  checkVPAutoHoanTat(); // [MỚI] chức danh đổi -> số giai đoạn có thể đổi theo -> kiểm tra lại điều kiện gợi ý Hoàn tất
+}
+
+// [MỚI] Điểm đánh giá đạt yêu cầu để được gợi ý tự động chuyển "Hoàn tất".
+const VP_DIEM_DAT_YEU_CAU = 6;
+
+// [MỚI] Tự động GỢI Ý chuyển trạng thái theo dõi sang "Hoàn tất" ngay khi đã
+// nhập đủ điểm đánh giá cho TẤT CẢ giai đoạn cần thiết (1 giai đoạn nếu tổng
+// số ngày ĐT = 38, 2 giai đoạn nếu nhiều hơn) VÀ mọi điểm đó đều đạt (>= 6).
+// Đây chỉ là GỢI Ý — tự điền sẵn lựa chọn "Hoàn tất" vào ô chọn để người dùng
+// khỏi phải nhớ đổi tay (nguyên nhân chính khiến HV đã xong vẫn bị nhắc hạn),
+// nhưng người dùng vẫn có thể tự đổi lại trước khi bấm "Lưu".
+// Chỉ tự đổi khi trạng thái HIỆN TẠI là "Đang theo dõi" — không đụng tới HV
+// đã "Ngưng theo dõi" (đó là quyết định chủ động khác, không liên quan điểm số).
+function checkVPAutoHoanTat() {
+  const trangThaiEl = document.getElementById('fvp-trangThai');
+  const noteEl = document.getElementById('fvp-autoHoanTat-note');
+  if (!trangThaiEl) return;
+
+  const chucDanh = document.getElementById('fvp-chucDanh').value;
+  const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
+  const calc = computeVPStatus({ chucDanh, ngayNhanViec, trangThai: trangThaiEl.value });
+  const soGiaiDoan = calc.soGiaiDoan;
+  if (!soGiaiDoan) { if (noteEl) noteEl.style.display = 'none'; return; } // chưa chọn chức danh -> chưa biết cần mấy giai đoạn
+
+  const parseScore = (id) => {
+    const v = document.getElementById(id).value.trim();
+    if (v === '') return null;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+  const gd1 = parseScore('fvp-diemGD1');
+  const gd2 = parseScore('fvp-diemGD2');
+  const dat = (v) => v !== null && v >= VP_DIEM_DAT_YEU_CAU;
+
+  // soGiaiDoan === 1 (tổng ngày ĐT = 38) -> chỉ cần điểm GĐ2/Cuối đạt.
+  // soGiaiDoan === 2 -> cần CẢ điểm GĐ1 và GĐ2 đều đạt.
+  const duDiemDat = soGiaiDoan === 1 ? dat(gd2) : (dat(gd1) && dat(gd2));
+
+  if (duDiemDat) {
+    if (trangThaiEl.value === HVVP_TT_DANG_THEO_DOI) {
+      trangThaiEl.value = HVVP_TT_HOAN_TAT;
+      trangThaiEl.dataset.autoSet = '1'; // đánh dấu đây là hệ thống tự gợi ý, không phải người dùng tự chọn
+    }
+    if (noteEl) noteEl.style.display = (trangThaiEl.value === HVVP_TT_HOAN_TAT) ? '' : 'none';
+  } else {
+    // Nếu trạng thái "Hoàn tất" hiện tại là do CHÍNH hàm này tự gợi ý (chưa bị
+    // người dùng chỉnh tay) mà giờ điểm không còn đủ/đạt nữa (vd vừa sửa nhầm,
+    // xóa điểm) -> đưa lại về "Đang theo dõi" để không "kẹt" ở Hoàn tất sai.
+    if (trangThaiEl.value === HVVP_TT_HOAN_TAT && trangThaiEl.dataset.autoSet === '1') {
+      trangThaiEl.value = HVVP_TT_DANG_THEO_DOI;
+    }
+    if (noteEl) noteEl.style.display = 'none';
+  }
+}
+
+// Người dùng tự tay đổi trạng thái theo dõi -> không còn coi là "hệ thống tự
+// gợi ý" nữa, để lần kiểm tra điểm tiếp theo không tự ý ghi đè lựa chọn thủ công.
+function onVpTrangThaiManualChange() {
+  const trangThaiEl = document.getElementById('fvp-trangThai');
+  trangThaiEl.dataset.autoSet = '';
+  const noteEl = document.getElementById('fvp-autoHoanTat-note');
+  if (noteEl) noteEl.style.display = 'none';
 }
 
 function clearHVVPForm() {
@@ -4374,6 +4424,9 @@ function clearHVVPForm() {
    'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-diemGD1','fvp-diemGD2','fvp-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fvp-chucDanh').value = '';
+  document.getElementById('fvp-trangThai').dataset.autoSet = '';
+  const autoNoteEl = document.getElementById('fvp-autoHoanTat-note');
+  if (autoNoteEl) autoNoteEl.style.display = 'none';
   document.getElementById('fvp-trangThai').value = HVVP_TT_DANG_THEO_DOI;
 }
 
@@ -4605,7 +4658,31 @@ async function importExcelVP(event) {
       }
 
       // Hiển thị preview
-      renderImportVPPreviewTable_();
+      const tbody = document.getElementById('importVPPreviewBody');
+      tbody.innerHTML = pendingImportVPData.map((item, idx) => `
+        <tr style="background:${item.error ? 'var(--red-light)' : 'transparent'}">
+          <td style="text-align:center;font-size:12px">${item.row}</td>
+          <td class="td-code">${escapeHTML(item.maHV)}</td>
+          <td>${escapeHTML(item.hoTen)}</td>
+          <td class="td-code">${escapeHTML(item.maCD)}</td>
+          <td>${escapeHTML(item.chucDanh || '–')}</td>
+          <td>${item.ngayNhanViec || '–'}</td>
+          <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
+          <td style="color:var(--red);font-weight:600">${item.error ? `❌ ${item.error}` : '✅'}</td>
+        </tr>
+      `).join('');
+
+      const statsEl = document.getElementById('importVPStats');
+      statsEl.textContent = `Tổng: ${pendingImportVPData.length} dòng | Hợp lệ: ${validRows.length} | Lỗi: ${errors.length}`;
+
+      const errorsDiv = document.getElementById('importVPErrors');
+      const errorsList = document.getElementById('importVPErrorsList');
+      if (errors.length > 0) {
+        errorsDiv.style.display = 'block';
+        errorsList.innerHTML = errors.map(e => `<div>• ${e}</div>`).join('');
+      } else {
+        errorsDiv.style.display = 'none';
+      }
 
       const btnConfirm = document.getElementById('btnConfirmImportVP');
       btnConfirm.disabled = validRows.length === 0;
@@ -4619,82 +4696,18 @@ async function importExcelVP(event) {
   event.target.value = '';
 }
 
-// [MỚI - FIX IMPORT] Tách render bảng preview thành hàm riêng để có thể gọi
-// lại sau khi import (không chỉ lúc đọc file lần đầu) — dùng để cập nhật
-// đúng trạng thái THẬT SỰ của từng dòng sau khi gọi server (đã lưu / lỗi gì),
-// thay vì để nguyên dấu ✅ tĩnh chỉ phản ánh việc validate hợp lệ ở phía
-// client (không đảm bảo đã thực sự lưu xuống Sheet).
-function renderImportVPPreviewTable_() {
-  const tbody = document.getElementById('importVPPreviewBody');
-  const validRows = pendingImportVPData.filter(item => !item.error);
-  const errors = pendingImportVPData.filter(item => item.error).map(item => `Dòng ${item.row}: ${item.error}`);
-
-  tbody.innerHTML = pendingImportVPData.map((item) => {
-    let bg = 'transparent';
-    let statusHtml = '✅';
-    if (item.error) {
-      bg = 'var(--red-light)';
-      statusHtml = `<span style="color:var(--red);font-weight:600">❌ ${escapeHTML(item.error)}</span>`;
-    } else if (item.importStatus === 'success') {
-      bg = 'var(--green-light)';
-      statusHtml = `<span style="color:var(--green-dark);font-weight:600">✅ Đã lưu</span>`;
-    } else if (item.importStatus === 'failed') {
-      bg = 'var(--red-light)';
-      statusHtml = `<span style="color:var(--red);font-weight:600">❌ ${escapeHTML(item.importMsg || 'Lỗi khi lưu')}</span>`;
-    }
-    return `
-        <tr style="background:${bg}">
-          <td style="text-align:center;font-size:12px">${item.row}</td>
-          <td class="td-code">${escapeHTML(item.maHV)}</td>
-          <td>${escapeHTML(item.hoTen)}</td>
-          <td class="td-code">${escapeHTML(item.maCD)}</td>
-          <td>${escapeHTML(item.chucDanh || '–')}</td>
-          <td>${item.ngayNhanViec || '–'}</td>
-          <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
-          <td>${statusHtml}</td>
-        </tr>`;
-  }).join('');
-
-  const successCount = pendingImportVPData.filter(item => item.importStatus === 'success').length;
-  const failedCount  = pendingImportVPData.filter(item => item.importStatus === 'failed').length;
-  const statsEl = document.getElementById('importVPStats');
-  statsEl.textContent = `Tổng: ${pendingImportVPData.length} dòng | Hợp lệ: ${validRows.length} | Lỗi định dạng: ${pendingImportVPData.filter(i=>i.error).length}` +
-    (successCount || failedCount ? ` | Đã lưu: ${successCount} | Lưu lỗi: ${failedCount}` : '');
-
-  const errorsDiv = document.getElementById('importVPErrors');
-  const errorsList = document.getElementById('importVPErrorsList');
-  if (errors.length > 0) {
-    errorsDiv.style.display = 'block';
-    errorsList.innerHTML = errors.map(e => `<div>• ${escapeHTML(e)}</div>`).join('');
-  } else {
-    errorsDiv.style.display = 'none';
-  }
-}
-
 async function confirmImportVP() {
-  // [FIX] Chỉ lấy các dòng CHƯA lưu thành công (bỏ qua lỗi validate ở client
-  // và những dòng đã import thành công ở lần bấm trước đó) — cho phép bấm
-  // "Import" lại an toàn sau khi sửa lỗi 1 vài dòng, không tạo trùng lặp các
-  // dòng đã lưu thành công trước đó.
-  const validData = pendingImportVPData.filter(item => !item.error && item.importStatus !== 'success');
+  const validData = pendingImportVPData.filter(item => !item.error);
   if (!validData.length) {
     toast('Không có dữ liệu hợp lệ để import', 'error');
     return;
   }
 
   const btn = document.getElementById('btnConfirmImportVP');
-  if (btn.disabled) return; // tránh bấm nhiều lần liên tiếp
-  const originalLabel = btn.textContent;
   btn.disabled = true;
 
-  let added = 0, failed = 0;
-
   try {
-    let i = 0;
     for (const item of validData) {
-      i++;
-      btn.textContent = `Đang lưu ${i}/${validData.length}...`;
-
       const payload = {
         maHV: item.maHV,
         hoTen: item.hoTen,
@@ -4704,64 +4717,18 @@ async function confirmImportVP() {
         ghiChu: `[Import từ Excel ngày ${new Date().toLocaleDateString('vi-VN')}]`
       };
 
-      let res;
-      try {
-        res = await api('addHVVP', payload);
-      } catch (e) {
-        res = { ok: false, msg: e.message || 'Lỗi kết nối không xác định' };
+      const res = await api('addHVVP', payload);
+      if (!res.ok) {
+        toast(`Lỗi import: ${res.msg}`, 'error');
+        return;
       }
-
-      if (res.ok) {
-        item.importStatus = 'success';
-        added++;
-        continue;
-      }
-
-      // [FIX MỤC 3] Timeout KHÔNG đồng nghĩa với thất bại — server có thể vẫn
-      // đang ghi hoặc đã ghi xong, chỉ là phản hồi không kịp về. Xác minh lại
-      // trước khi kết luận, để tránh báo "lỗi" oan cho 1 dòng thực ra ĐÃ lưu
-      // (và tránh người dùng import lại tạo trùng "Mã HV đã tồn tại").
-      if (res.timedOut) {
-        const verify = await verifySavedAfterTimeout_('hvvp', { maHV: item.maHV });
-        if (verify.verified) {
-          item.importStatus = 'success';
-          added++;
-          continue;
-        }
-      }
-
-      // [FIX QUAN TRỌNG] Trước đây gặp lỗi ở BẤT KỲ dòng nào là toast rồi
-      // `return` ngay lập tức — các dòng còn lại trong file KHÔNG BAO GIỜ
-      // được thử, và những dòng đã lưu thành công trước đó cũng không được
-      // phản ánh lại lên giao diện (không gọi loadHVVP()). Đây chính là
-      // nguyên nhân "import 3 HV nhưng sheet chỉ có 1, frontend không báo
-      // gì" — dòng 2 lỗi khiến dòng 3 không được thử và người dùng không
-      // biết chuyện gì đã xảy ra. Giờ TIẾP TỤC xử lý hết các dòng còn lại.
-      item.importStatus = 'failed';
-      item.importMsg = res.msg || 'Lỗi không xác định';
-      failed++;
     }
 
-    // [FIX] Luôn làm mới danh sách sau khi import — BẤT KỂ có lỗi hay không —
-    // để giao diện phản ánh đúng những gì đã thực sự được ghi trên server,
-    // thay vì có thể để trống/cũ nếu có lỗi giữa chừng.
-    if (added > 0) await loadHVVP(true);
-
-    // Cập nhật lại bảng preview để hiện đúng trạng thái THẬT của từng dòng
-    // (đã lưu / lưu lỗi kèm lý do cụ thể) thay vì dấu ✅ tĩnh lúc validate.
-    renderImportVPPreviewTable_();
-
-    if (failed === 0) {
-      toast(`Đã import thành công ${added} học viên`, 'success');
-      closeModal('modalImportVPPreview');
-    } else if (added > 0) {
-      toast(`Import hoàn tất: ${added} thành công, ${failed} lỗi — xem chi tiết trong bảng để sửa và import lại`, 'warning');
-    } else {
-      toast(`Import thất bại toàn bộ ${failed} dòng — xem chi tiết trong bảng`, 'error');
-    }
+    toast(`Đã import thành công ${validData.length} học viên`, 'success');
+    closeModal('modalImportVPPreview');
+    loadHVVP(true); // [MỚI - MỤC 2] ép làm mới để thấy đúng dữ liệu vừa import, bỏ qua cache
   } finally {
     btn.disabled = false;
-    btn.textContent = originalLabel;
   }
 }
 
@@ -4810,8 +4777,13 @@ function openEditHVVP(id) {
   document.getElementById('fvp-diemGD1').value = hv.diemGD1 || '';
   document.getElementById('fvp-diemGD2').value = hv.diemGD2 || '';
   document.getElementById('fvp-trangThai').value = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
+  // [MỚI] Trạng thái đang có sẵn trong dữ liệu là do người dùng đã tự chọn từ
+  // trước (hoặc mặc định) — KHÔNG đánh dấu là "hệ thống tự gợi ý", để tránh
+  // checkVPAutoHoanTat() lỡ tự đổi ngược lại "Đang theo dõi" nếu người dùng
+  // chỉ đang xem/sửa thông tin khác mà chưa kịp đổi điểm.
+  document.getElementById('fvp-trangThai').dataset.autoSet = '';
   document.getElementById('fvp-ghiChu').value = hv.ghiChu || '';
-  calcVPDates();
+  calcVPDates(); // gọi kèm checkVPAutoHoanTat() để hiện ghi chú nếu điểm đã có sẵn đều đạt
   clearAllValidation();
   document.getElementById('modalHVVP').classList.add('open');
 }
@@ -5223,10 +5195,7 @@ async function confirmImportExcel() {
   hvData.forEach(h => { if (h.maHV) existingByMaHV[String(h.maHV).trim()] = h; });
 
   try {
-    let rowIdx = 0;
     for (const row of rows) {
-      rowIdx++;
-      btn.textContent = `Đang nhập ${rowIdx}/${rows.length}...`; // [MỚI] chỉ báo tiến trình, tránh cảm giác "treo" khi import nhiều dòng
       const maHV = String(row.maHV ?? row['Mã HV'] ?? '').trim();
       const ho   = String(row.ho   ?? row['Họ']   ?? '').trim();
       const ten  = String(row.ten  ?? row['Tên']  ?? '').trim();
@@ -5258,34 +5227,13 @@ async function confirmImportExcel() {
 
       const existing = existingByMaHV[maHV];
       let res;
-      try {
-        if (existing) {
-          res = await api('updateHV', { ...payload, id: existing.id });
-        } else {
-          res = await api('addHV', payload);
-        }
-      } catch (e) {
-        res = { ok: false, msg: e.message || 'Lỗi kết nối không xác định' };
+      if (existing) {
+        res = await api('updateHV', { ...payload, id: existing.id });
+        if (res.ok) updated++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi cập nhật'}`); }
+      } else {
+        res = await api('addHV', payload);
+        if (res.ok) added++; else { failed++; failedRows.push(`${maHV}: ${res.msg || 'lỗi thêm mới'}`); }
       }
-
-      if (res.ok) {
-        if (existing) updated++; else added++;
-        continue;
-      }
-
-      // [FIX MỤC 3] Timeout KHÔNG đồng nghĩa với thất bại — xác minh lại với
-      // server trước khi kết luận, để tránh báo "lỗi" oan cho 1 dòng thực ra
-      // ĐÃ được lưu (và tránh tạo bản ghi trùng nếu người dùng import lại).
-      if (res.timedOut) {
-        const verify = await verifySavedAfterTimeout_('hv', existing ? { id: existing.id } : { maHV });
-        if (verify.verified) {
-          if (existing) updated++; else added++;
-          continue;
-        }
-      }
-
-      failed++;
-      failedRows.push(`${maHV}: ${res.msg || (existing ? 'lỗi cập nhật' : 'lỗi thêm mới')}`);
     }
 
     if (failedRows.length) console.error('[Import Excel] Các dòng lỗi:', failedRows);
@@ -5834,10 +5782,8 @@ function openDetailVP(id) {
     if (val === '' || val === null || val === undefined || isNaN(n)) {
       return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="color:var(--text-faint)">–</span></div>`;
     }
-    // [ĐỒNG BỘ] Cùng ngưỡng màu với bảng danh sách HV Văn phòng: >=6 xanh lá,
-    // <5 đỏ, còn lại (5 đến dưới 6) giữ màu mặc định.
-    const cls = n < 5 ? 'color:var(--red)' : n >= 6 ? 'color:var(--green)' : '';
-    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px;font-weight:${cls?700:500}">${n.toFixed(2)}</span></div>`;
+    const cls = n < 5 ? 'color:var(--red)' : n < 7 ? 'color:var(--amber)' : 'color:var(--green)';
+    return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-val" style="${cls};font-size:14px">${n.toFixed(2)}</span></div>`;
   };
 
   const today = parseLocalDate(new Date().toISOString().slice(0,10));
