@@ -455,6 +455,8 @@ tbody tr:hover td{background:var(--gray-50)}
 .toast-item{padding:10px 16px;border-radius:var(--radius);font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(15,23,42,.18);animation:slideIn .2s ease}
 .toast-item.success{background:var(--green)}
 .toast-item.error{background:var(--red)}
+.toast-item.warning{background:var(--amber)}
+.toast-item.info{background:var(--blue)}
 @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
 
 /* ── LOADING ── */
@@ -1930,8 +1932,15 @@ async function api(action, data = {}, _retried = false) {
     // được ghi thành công ở phía server trước khi bị hủy kết nối, nên không
     // nên coi đây chắc chắn là "thất bại hoàn toàn".
     if (e.name === 'AbortError') {
+      // [FIX MỤC 3] Đánh dấu rõ ràng bằng cờ `timedOut` thay vì chỉ nhét
+      // thông tin vào chuỗi msg — để các hàm gọi api() (đặc biệt saveHV()/
+      // saveHVVP()) có thể lập trình xử lý riêng: THAY VÌ báo lỗi mập mờ và
+      // để người dùng tự đoán "đã lưu hay chưa, có nên tải lại trang không",
+      // giờ tự động gọi lại server để XÁC NHẬN trạng thái thật sự (xem
+      // verifySavedAfterTimeout_()), rồi mới báo kết quả chắc chắn.
       return {
         ok: false,
+        timedOut: true,
         msg: 'Yêu cầu mất quá nhiều thời gian (quá ' + Math.round(API_TIMEOUT_MS / 1000) + 's) và đã bị hủy. ' +
              'Dữ liệu có thể đã được lưu — vui lòng tải lại trang để kiểm tra trước khi thử lại.'
       };
@@ -1980,6 +1989,58 @@ function handleSessionExpired() {
   stopIdleTimer();
   doLogout();
   toast('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại', 'error');
+}
+
+// =============================================
+// [MỚI - FIX MỤC 3] XÁC MINH TRẠNG THÁI LƯU SAU KHI TIMEOUT
+// Khi api() bị hủy do quá API_TIMEOUT_MS (30s), client và server "lạc nhau":
+// execution phía GAS KHÔNG bị hủy theo — nó vẫn tiếp tục chạy và thường vẫn
+// ghi xong xuống Sheet bình thường, chỉ là phản hồi không kịp quay về cho
+// client trước khi bị abort. Trước đây, trong tình huống này app chỉ báo 1
+// thông báo mập mờ ("dữ liệu có thể đã lưu, vui lòng tải lại trang để kiểm
+// tra") rồi để nguyên form/nút bấm, buộc người dùng tự đoán và tự đi kiểm
+// tra thủ công.
+//
+// Giờ, khi gặp đúng tình huống này, tự động gọi lại getHV()/getHVVP() để
+// XÁC MINH xem bản ghi đã thực sự xuất hiện trên server hay chưa — vì
+// server đã invalidateHVCache_()/invalidateHVVPCache_() NGAY sau khi ghi
+// xong (dù request gốc đã bị client bỏ cuộc), nên 1 lần đọc mới sau đó luôn
+// phản ánh đúng trạng thái mới nhất, không bị cache che khuất.
+//
+// Vì execution gốc có thể vẫn đang chạy dở trên server tại thời điểm vừa
+// abort (chưa chắc đã ghi xong ngay), hàm này THỬ LẠI vài lần cách nhau vài
+// giây thay vì chỉ kiểm tra 1 lần, để không kết luận "chưa lưu" quá sớm khi
+// server trên thực tế vẫn đang xử lý.
+//
+// kind: 'hv' | 'hvvp'
+// match: { id }  -> dùng khi SỬA (tìm đúng bản ghi theo id)
+//        { maHV } -> dùng khi THÊM MỚI (tìm theo mã HV vừa nhập, vì chưa có id)
+// Trả về { verified: true, record } nếu tìm thấy, { verified: false } nếu
+// sau tất cả các lần thử vẫn không thấy (nhiều khả năng THẬT SỰ chưa lưu được).
+// =============================================
+async function verifySavedAfterTimeout_(kind, match) {
+  const action = kind === 'hv' ? 'getHV' : 'getHVVP';
+  const delaysMs = [3000, 5000, 8000]; // tổng chờ thêm tối đa ~16s sau lần abort đầu
+  for (let i = 0; i < delaysMs.length; i++) {
+    await new Promise(r => setTimeout(r, delaysMs[i]));
+    let res;
+    try {
+      res = await api(action);
+    } catch (e) {
+      continue; // lỗi mạng khi đang xác minh -> thử lại ở vòng lặp kế tiếp
+    }
+    if (res && res.ok && Array.isArray(res.data)) {
+      let found = null;
+      if (match.id) {
+        found = res.data.find(h => String(h.id) === String(match.id));
+      } else if (match.maHV) {
+        const ma = String(match.maHV).trim().toLowerCase();
+        if (ma) found = res.data.find(h => String(h.maHV || '').trim().toLowerCase() === ma);
+      }
+      if (found) return { verified: true, record: found };
+    }
+  }
+  return { verified: false };
 }
 
 // =============================================
@@ -3630,7 +3691,46 @@ async function saveHV() {
   try {
     const action = editingHVId ? 'updateHV' : 'addHV';
     const res = await api(action, data);
-    if (!res.ok) { toast(res.msg, 'error'); return; }
+
+    if (!res.ok) {
+      // [FIX MỤC 3] Hết thời gian chờ (30s) KHÔNG đồng nghĩa với thất bại —
+      // execution phía server không bị hủy theo và thường vẫn ghi xong bình
+      // thường, chỉ là phản hồi không kịp quay về trước khi client bỏ cuộc.
+      // Trước đây app chỉ báo 1 thông báo mập mờ rồi để người dùng tự đoán.
+      // Giờ chủ động gọi lại verifySavedAfterTimeout_() để XÁC MINH với
+      // server trước khi kết luận, thay vì để "treo, không rõ đã lưu hay chưa".
+      if (res.timedOut) {
+        toast('Yêu cầu mất nhiều thời gian hơn bình thường, đang kiểm tra xem đã lưu chưa...', 'warning');
+        const verify = await verifySavedAfterTimeout_('hv', editingHVId ? { id: editingHVId } : { maHV });
+        if (verify.verified) {
+          // Tìm thấy bản ghi trên server -> XÁC NHẬN đã lưu thành công, dùng
+          // đúng dữ liệu server trả về (đã format chuẩn) thay vì dữ liệu form.
+          if (editingHVId) {
+            const idx = hvData.findIndex(h => h.id == editingHVId);
+            if (idx !== -1) hvData[idx] = verify.record; else hvData.push(verify.record);
+            if (oldHv) {
+              const changes = buildChanges(oldHv, verify.record);
+              if (changes.length) auditLog('edit', verify.record, changes);
+            }
+          } else {
+            hvData.push(verify.record);
+            auditLog('add', verify.record);
+          }
+          toast(
+            (editingHVId ? 'Đã cập nhật' : 'Đã thêm') + ' học viên (mất nhiều thời gian hơn bình thường, nhưng đã lưu thành công)',
+            'success'
+          );
+          closeModal('modalHV');
+          renderTable();
+          updateDashboard();
+        } else {
+          toast('Không thể xác nhận việc lưu sau nhiều lần kiểm tra — vui lòng bấm "Làm mới" trong danh sách để kiểm tra lại, hoặc thử lưu lại.', 'error');
+        }
+        return;
+      }
+      toast(res.msg, 'error');
+      return;
+    }
 
     // Cập nhật hvData cục bộ thay vì tải lại toàn bộ danh sách
     if (editingHVId) {
@@ -4654,7 +4754,33 @@ async function saveHVVP() {
       ? await api('updateHVVP', { id: editingHVVPId, ...payload })
       : await api('addHVVP', payload);
 
-    if (!res.ok) { toast(res.msg, 'error'); return; }
+    if (!res.ok) {
+      // [FIX MỤC 3] Xem giải thích chi tiết ở saveHV() — timeout không đồng
+      // nghĩa thất bại, chủ động xác minh lại với server trước khi kết luận.
+      if (res.timedOut) {
+        toast('Yêu cầu mất nhiều thời gian hơn bình thường, đang kiểm tra xem đã lưu chưa...', 'warning');
+        const verify = await verifySavedAfterTimeout_('hvvp', editingHVVPId ? { id: editingHVVPId } : { maHV });
+        if (verify.verified) {
+          if (editingHVVPId && oldHv) {
+            const changes = buildChangesVP(oldHv, verify.record);
+            if (changes.length) auditLogVP('vp_edit', verify.record, changes);
+          } else {
+            auditLogVP('vp_add', verify.record);
+          }
+          toast(
+            (editingHVVPId ? 'Đã cập nhật' : 'Đã thêm') + ' học viên (mất nhiều thời gian hơn bình thường, nhưng đã lưu thành công)',
+            'success'
+          );
+          closeModal('modalHVVP');
+          loadHVVP(true); // lấy đúng hạn/trạng thái đã tính lại từ server
+        } else {
+          toast('Không thể xác nhận việc lưu sau nhiều lần kiểm tra — vui lòng bấm "Làm mới" trong danh sách để kiểm tra lại, hoặc thử lưu lại.', 'error');
+        }
+        return;
+      }
+      toast(res.msg, 'error');
+      return;
+    }
 
     // Ghi audit log (fire-and-forget, không block UI)
     if (editingHVVPId && oldHv) {
