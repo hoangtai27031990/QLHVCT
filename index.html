@@ -885,29 +885,6 @@ tbody tr:hover td{background:var(--gray-50)}
           <div id="trendMonthlyWrap"><svg class="trend-svg" id="trendMonthlySvg" viewBox="0 0 900 220"></svg></div>
         </div>
 
-        <div class="trend-grid">
-          <div class="panel" style="margin-top:0">
-            <div class="panel-header">
-              <span class="panel-title">Tỷ lệ hoàn thành theo quý (8 quý gần nhất)</span>
-            </div>
-            <div class="trend-legend">
-              <span class="trend-legend-item"><span class="trend-legend-line" style="background:var(--blue)"></span>HV Quản lý cấp trung</span>
-              <span class="trend-legend-item"><span class="trend-legend-line" style="background:var(--purple)"></span>HV Văn phòng</span>
-            </div>
-            <div id="trendQuarterlyWrap"><svg class="trend-svg" id="trendQuarterlySvg" viewBox="0 0 420 220"></svg></div>
-          </div>
-
-          <div class="panel" style="margin-top:0">
-            <div class="panel-header">
-              <span class="panel-title">Điểm trung bình</span>
-            </div>
-            <div class="trend-tabs">
-              <button type="button" class="trend-tab-btn active" id="trendAvgTabVP" onclick="switchTrendAvgTab('vp')">Theo chức danh (HV Văn phòng)</button>
-              <button type="button" class="trend-tab-btn" id="trendAvgTabHV" onclick="switchTrendAvgTab('hv')">Theo đơn vị (HV cấp trung)</button>
-            </div>
-            <div class="cd-bars" id="trendAvgScoreBars"></div>
-          </div>
-        </div>
         </div>
         <!-- /dashBlockTrends -->
       </div>
@@ -3916,8 +3893,6 @@ function renderTrendAvgScoreBars() {
 // đúng khi nguồn còn lại tải xong và gọi lại).
 function renderTrendsSection() {
   renderTrendMonthlyChart();
-  renderTrendQuarterlyChart();
-  renderTrendAvgScoreBars();
 }
 
 // =============================================
