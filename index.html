@@ -1473,17 +1473,27 @@ tbody tr:hover td{background:var(--gray-50)}
 
 <!-- MODAL: PREVIEW IMPORT EXCEL HV VP -->
 <div class="overlay" id="modalImportVPPreview">
-  <div class="modal" style="max-width:900px">
+  <div class="modal" style="width:1180px;max-width:96vw">
     <div class="modal-header">
       <h3>Xem Trước Dữ Liệu Import</h3>
       <button class="modal-close" onclick="closeModal('modalImportVPPreview')">×</button>
     </div>
-    <div class="modal-body" style="max-height:500px;overflow-y:auto">
+    <div class="modal-body" style="max-height:min(75vh,650px);overflow-y:auto">
       <div style="margin-bottom:12px;font-size:13px;color:var(--text-muted)">
         <span id="importVPStats"></span>
       </div>
       <div class="tbl-wrap" style="margin-bottom:12px">
-        <table id="importVPPreviewTable">
+        <table id="importVPPreviewTable" style="table-layout:fixed;width:100%">
+          <colgroup>
+            <col style="width:56px">
+            <col style="width:100px">
+            <col style="width:140px">
+            <col style="width:130px">
+            <col style="width:150px">
+            <col style="width:110px">
+            <col style="width:130px">
+            <col style="width:340px">
+          </colgroup>
           <thead>
             <tr>
               <th>STT</th>
@@ -1500,9 +1510,9 @@ tbody tr:hover td{background:var(--gray-50)}
           </tbody>
         </table>
       </div>
-      <div id="importVPErrors" style="display:none;background:var(--red-light);border:1px solid var(--red);border-radius:var(--radius);padding:12px;margin-bottom:12px;color:var(--red);font-size:12px">
-        <div style="font-weight:600;margin-bottom:8px">⚠️ Lỗi phát hiện:</div>
-        <div id="importVPErrorsList"></div>
+      <div id="importVPErrors" style="display:none;background:var(--red-light);border:1px solid var(--red);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;color:var(--red);font-size:13.5px;max-height:220px;overflow-y:auto">
+        <div style="font-weight:700;margin-bottom:8px">⚠️ Lỗi phát hiện:</div>
+        <div id="importVPErrorsList" style="line-height:1.7"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -5170,7 +5180,7 @@ function renderImportVPPreviewTable_() {
           <td>${escapeHTML(item.chucDanh || '–')}</td>
           <td>${item.ngayNhanViec || '–'}</td>
           <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(item.duAn || '')}">${escapeHTML(item.duAn) || '–'}</td>
-          <td>${statusHtml}</td>
+          <td style="white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.5">${statusHtml}</td>
         </tr>`;
   }).join('');
 
