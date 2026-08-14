@@ -5296,21 +5296,20 @@ async function confirmImportVP() {
 
 function formatExcelDate(excelDate) {
   if (!excelDate) return '';
-  
+
   if (typeof excelDate === 'number') {
     // Excel serial number
     const date = new Date((excelDate - 25569) * 86400 * 1000);
     return date.toISOString().split('T')[0];
   } else if (typeof excelDate === 'string') {
-    // Chuỗi ngày
+    // [FIX] Ưu tiên hiểu chuỗi theo định dạng Việt Nam dd/mm/yyyy trước —
+    // tránh bug new Date("05/08/2024") bị JS hiểu nhầm thành mm/dd/yyyy (Mỹ),
+    // dẫn tới lệch ngày/tháng khi cả hai đều <= 12.
+    const vn = parseVNDateStr_(excelDate);
+    if (vn) return vn;
     const parsed = new Date(excelDate);
     if (!isNaN(parsed)) {
       return parsed.toISOString().split('T')[0];
-    }
-    // Thử format dd/mm/yyyy
-    const parts = excelDate.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
     }
   }
   return '';
@@ -5706,6 +5705,30 @@ function downloadTemplate() {
 const IMPORT_FIELDS = ['maHV','ho','ten','chucDanh','donVi','nguoiHD','ngayBatDau','ngayGiaHan','lyDoGiaHan','tenDeTai',
   'diemGD1','gk1','gk2','gk3','diemQuyTrinh','trangThai','ghiChu','email','sdt'];
 
+// [MỚI] Phân tích chuỗi ngày dạng văn bản (không phải kiểu Date thật của Excel)
+// theo định dạng Việt Nam: dd/mm/yyyy, dd/mm/yy, dd-mm-yyyy, dd.mm.yyyy
+// (ngày đứng trước, tháng đứng sau) — trả về 'yyyy-mm-dd' hoặc '' nếu không khớp.
+// Dùng chung cho cả import HV và import HVVP để tránh lệch ngày/tháng do
+// JS Date() tự đoán nhầm sang định dạng Mỹ (mm/dd/yyyy).
+function parseVNDateStr_(v) {
+  const s = String(v).trim();
+  if (!s) return '';
+  // Đã ở dạng ISO yyyy-mm-dd (hoặc yyyy/mm/dd) — giữ nguyên, không cần đoán
+  let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // Định dạng Việt Nam: dd/mm/yyyy hoặc dd/mm/yy
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) {
+    const dd = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+    let yyyy = parseInt(m[3], 10);
+    if (yyyy < 100) yyyy += (yyyy < 50 ? 2000 : 1900); // năm 2 chữ số -> 20xx (hoặc 19xx nếu >=50)
+    if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+      return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    }
+  }
+  return '';
+}
+
 function excelDateToStr(v) {
   if (v === null || v === undefined || v === '') return '';
   if (v instanceof Date) {
@@ -5716,7 +5739,9 @@ function excelDateToStr(v) {
     const d = new Date(Math.round((v - 25569) * 86400 * 1000));
     return Utilities_formatDate(d);
   }
-  return String(v).trim();
+  // Ô ngày dạng văn bản — ưu tiên hiểu theo định dạng Việt Nam dd/mm/yyyy
+  const parsed = parseVNDateStr_(v);
+  return parsed || String(v).trim();
 }
 function Utilities_formatDate(d) {
   const yyyy = d.getFullYear();
