@@ -5953,9 +5953,11 @@ function baoCaoStatsHV_(rows) {
   const quaHan = rows.filter(isOverdue).length;
   const chuaHoanThanh = tong - hoanThanh;
   const tyLe = tong ? Math.round(hoanThanh / tong * 1000) / 10 : 0;
+  // [MỚI] Số HV đã xin gia hạn nộp bài — trước đây bị bỏ sót trong báo cáo tổng hợp
+  const daGiaHan = rows.filter(h => h.ngayGiaHan && h.ngayGiaHan.trim()).length;
   const bqVals = rows.map(h => computeScores(h).bq).filter(v => v !== null && v !== undefined && !isNaN(v));
   const diemBQ = bqVals.length ? bqVals.reduce((a, b) => a + b, 0) / bqVals.length : null;
-  return { tong, hoanThanh, chuaHoanThanh, quaHan, tyLe, diemBQ };
+  return { tong, hoanThanh, chuaHoanThanh, quaHan, daGiaHan, tyLe, diemBQ };
 }
 
 function baoCaoStatsVP_(rows) {
@@ -6082,6 +6084,7 @@ function baoCaoCols_(section) {
       { header: 'Đã hoàn thành', key: 'hoanThanh' },
       { header: 'Chưa hoàn thành', key: 'chuaHoanThanh' },
       { header: 'Quá hạn', key: 'quaHan' },
+      { header: 'Đã gia hạn', key: 'daGiaHan' },
       { header: 'Tỷ lệ hoàn thành', key: 'tyLe', isPct: true },
       { header: 'Điểm BQ chung', key: 'diemBQ', isScore: true },
     ];
@@ -6105,6 +6108,7 @@ function baoCaoCols_(section) {
         { header: 'Đã hoàn thành', key: 'hoanThanh' },
         { header: 'Chưa hoàn thành', key: 'chuaHoanThanh' },
         { header: 'Quá hạn', key: 'quaHan' },
+        { header: 'Đã gia hạn', key: 'daGiaHan' },
         { header: 'Tỷ lệ hoàn thành', key: 'tyLe', isPct: true },
         { header: 'Điểm BQ chung', key: 'diemBQ', isScore: true },
       ]
