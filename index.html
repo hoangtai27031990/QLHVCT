@@ -1963,10 +1963,14 @@ async function sha256(str) {
 // độ trễ mạng), nhưng vẫn đảm bảo KHÔNG treo vô hạn thực sự.
 const API_TIMEOUT_MS = 30000;
 
-async function api(action, data = {}, _retried = false) {
+async function api(action, data = {}, _retried = false, timeoutMsOverride) {
   const payload = JSON.stringify({ action, token, ...data });
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  // [MỚI] Cho phép override thời gian chờ cho từng action riêng — dùng cho
+  // 'login', vốn dễ gặp cold start Spreadsheet chậm hơn các action khác vì
+  // không có gì "làm nóng" trước đó (xem LOGIN_API_TIMEOUT_MS ở doLogin()).
+  const timeoutMs = timeoutMsOverride || API_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -2019,7 +2023,7 @@ async function api(action, data = {}, _retried = false) {
       return {
         ok: false,
         timedOut: true,
-        msg: 'Yêu cầu mất quá nhiều thời gian (quá ' + Math.round(API_TIMEOUT_MS / 1000) + 's) và đã bị hủy. ' +
+        msg: 'Yêu cầu mất quá nhiều thời gian (quá ' + Math.round(timeoutMs / 1000) + 's) và đã bị hủy. ' +
              'Dữ liệu có thể đã được lưu — vui lòng tải lại trang để kiểm tra trước khi thử lại.'
       };
     }
@@ -2236,7 +2240,24 @@ async function doLogin() {
   // phải JSON (cold start, quota tức thời...) là báo lỗi ngay cho người
   // dùng, trong khi mọi action khác đều được api() tự thử lại 1 lần trước
   // khi báo lỗi. Giờ dùng chung api() để login cũng được bảo vệ như vậy.
-  const res = await api('login', { username, password: passwordHash });
+  //
+  // [MỚI] login KHÔNG ghi dữ liệu (không như addHV/updateHV...), nên tự
+  // động thử lại khi bị timeout là AN TOÀN — không có rủi ro tạo dòng dữ
+  // liệu trùng như các thao tác ghi. Đây chính là nguyên nhân gây màn hình
+  // "Yêu cầu mất quá nhiều thời gian (quá 30s)" thỉnh thoảng xuất hiện lúc
+  // đăng nhập: cache tài khoản (phía server) hết hạn đúng lúc đó khiến GAS
+  // phải mở lại Spreadsheet từ đầu, thỉnh thoảng bị cold start chậm bất
+  // thường. Dùng timeout riêng dài hơn (45s thay vì 30s mặc định) cho lần
+  // đầu, và nếu vẫn bị timeout thì tự thử lại thêm 1 lần trước khi báo lỗi
+  // hẳn cho người dùng.
+  const LOGIN_API_TIMEOUT_MS = 45000;
+  let res = await api('login', { username, password: passwordHash }, false, LOGIN_API_TIMEOUT_MS);
+
+  if (!res.ok && res.timedOut) {
+    errText.textContent = 'Kết nối chậm, đang tự động thử lại...';
+    errIcon.style.display = '';
+    res = await api('login', { username, password: passwordHash }, false, LOGIN_API_TIMEOUT_MS);
+  }
 
   btn.classList.remove('loading');
   btn.disabled = false;
@@ -2246,6 +2267,8 @@ async function doLogin() {
     errIcon.style.display = '';
     return;
   }
+  errText.textContent = '';
+  errIcon.style.display = 'none';
   token = res.token;
   currentUser = res.user;
   sessionExpiredHandled = false;
