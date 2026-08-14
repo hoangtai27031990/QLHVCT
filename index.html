@@ -1875,6 +1875,10 @@ tbody tr:hover td{background:var(--gray-50)}
             <input type="radio" name="baocaoNhom" value="chucdanh" style="width:15px;height:15px;accent-color:var(--blue)">
             Chức danh
           </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoNhom" value="duan" style="width:15px;height:15px;accent-color:var(--purple)">
+            Dự án <span style="color:var(--text-faint);font-size:12px">(chỉ áp dụng cho HV Văn phòng)</span>
+          </label>
         </div>
       </div>
 
@@ -5882,7 +5886,7 @@ const BAOCAO_MAU = {
   blue:   { rgb: 'FF2563EB', light: 'FFEFF6FF', hex: '#2563EB', hexLight: '#EFF6FF' },
   purple: { rgb: 'FF7C3AED', light: 'FFF5F3FF', hex: '#7C3AED', hexLight: '#F5F3FF' },
 };
-const BAOCAO_GROUPBY_LABEL = { donvi: 'Theo đơn vị', dot: 'Theo đợt', chucdanh: 'Theo chức danh' };
+const BAOCAO_GROUPBY_LABEL = { donvi: 'Theo đơn vị', dot: 'Theo đợt', chucdanh: 'Theo chức danh', duan: 'Theo dự án' };
 
 function openBaoCaoModal() {
   document.getElementById('modalBaoCao').classList.add('open');
@@ -5967,11 +5971,16 @@ function buildBaoCaoDataset(groupBy, sources) {
     sections.push({ nguon: 'Học viên Quản lý cấp trung', tenNhom, mau: BAOCAO_MAU.blue, loai: 'hv', rows, tong: baoCaoStatsHV_(hvData) });
   }
 
-  if (sources.vp && (groupBy === 'dot' || groupBy === 'chucdanh')) {
+  if (sources.vp && (groupBy === 'dot' || groupBy === 'chucdanh' || groupBy === 'duan')) {
     let rows, tenNhom;
     if (groupBy === 'chucdanh') {
       const groups = baoCaoGroupBy_(hvvpData, h => h.chucDanh);
       tenNhom = 'Chức danh';
+      rows = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length)
+        .map(k => ({ ten: k, ...baoCaoStatsVP_(groups[k]) }));
+    } else if (groupBy === 'duan') {
+      const groups = baoCaoGroupBy_(hvvpData, h => h.duAn);
+      tenNhom = 'Dự án';
       rows = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length)
         .map(k => ({ ten: k, ...baoCaoStatsVP_(groups[k]) }));
     } else {
@@ -5999,6 +6008,7 @@ function generateBaoCao() {
   };
   if (!sources.hv && !sources.vp) { toast('Vui lòng chọn ít nhất 1 nguồn dữ liệu', 'error'); return; }
   if (groupBy === 'donvi' && !sources.hv) { toast('Nhóm "Theo đơn vị" chỉ áp dụng cho HV Quản lý cấp trung — vui lòng chọn nguồn này', 'error'); return; }
+  if (groupBy === 'duan' && !sources.vp) { toast('Nhóm "Theo dự án" chỉ áp dụng cho HV Văn phòng — vui lòng chọn nguồn này', 'error'); return; }
 
   const sections = buildBaoCaoDataset(groupBy, sources);
   if (!sections.length || sections.every(s => s.rows.length === 0 || s.tong.tong === 0)) {
