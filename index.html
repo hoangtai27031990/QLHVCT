@@ -565,6 +565,9 @@ tbody tr:hover td{background:var(--gray-50)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<!-- [MỚI] Dùng để xuất báo cáo PDF trình bày đẹp (khối "Xuất báo cáo" ở Dashboard) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -700,7 +703,11 @@ tbody tr:hover td{background:var(--gray-50)}
       <div class="page active" id="page-dashboard">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
           <div id="dashUpdatedAt" style="font-size:12px;color:var(--text-faint);display:flex;align-items:center;gap:6px"></div>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="openBaoCaoModal()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Xuất báo cáo
+            </button>
             <a href="#dash-section-captrung" id="dashAnchorCapTrung" style="font-size:12px;font-weight:600;color:var(--text);text-decoration:none;padding:6px 12px;border:1px solid var(--border-md);border-radius:var(--radius);display:flex;align-items:center;gap:5px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Quản lý cấp trung
@@ -1818,6 +1825,75 @@ tbody tr:hover td{background:var(--gray-50)}
       <button class="btn btn-primary" id="btnConfirmImport" onclick="confirmImportExcel()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Xác nhận nhập
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: XUẤT BÁO CÁO (theo đơn vị / đợt / chức danh) -->
+<div class="overlay" id="modalBaoCao">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Xuất báo cáo
+      </h3>
+      <button class="modal-close" onclick="closeModal('modalBaoCao')">×</button>
+    </div>
+    <div class="modal-body" style="padding:22px 20px">
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">Tổng hợp số liệu theo nhóm (không phải danh sách thô từng học viên) — dùng để trình bày, nộp báo cáo lên quản lý cấp trên.</p>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">Nguồn dữ liệu</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="baocaoNguonHV" checked style="width:15px;height:15px;accent-color:var(--blue)">
+            Học viên Quản lý cấp trung
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="baocaoNguonVP" checked style="width:15px;height:15px;accent-color:var(--purple)">
+            Học viên Văn phòng
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">Nhóm theo</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoNhom" value="donvi" checked style="width:15px;height:15px;accent-color:var(--blue)">
+            Đơn vị công tác <span style="color:var(--text-faint);font-size:12px">(chỉ áp dụng cho HV Quản lý cấp trung)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoNhom" value="dot" style="width:15px;height:15px;accent-color:var(--blue)">
+            Đợt <span style="color:var(--text-faint);font-size:12px">(theo quý bắt đầu/nhận việc, 8 quý gần nhất)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoNhom" value="chucdanh" style="width:15px;height:15px;accent-color:var(--blue)">
+            Chức danh
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">Định dạng xuất</div>
+        <div style="display:flex;gap:16px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoDinhDang" value="excel" checked style="width:15px;height:15px;accent-color:var(--green)">
+            Excel (.xlsx)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer">
+            <input type="radio" name="baocaoDinhDang" value="pdf" style="width:15px;height:15px;accent-color:var(--red)">
+            PDF
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalBaoCao')">Hủy</button>
+      <button class="btn btn-primary" onclick="generateBaoCao()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Tạo báo cáo
       </button>
     </div>
   </div>
@@ -5789,6 +5865,347 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = 'hoc_vien_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
+}
+
+// =============================================
+// [MỚI] XUẤT BÁO CÁO (theo đơn vị / đợt / chức danh)
+// Khác với "Xuất CSV" (danh sách thô từng học viên), khối này tổng hợp số
+// liệu theo nhóm — có tỷ lệ hoàn thành và điểm bình quân — trình bày như 1
+// văn bản báo cáo (Excel có màu/tiêu đề, hoặc PDF) để nộp lên quản lý cấp
+// trên. Tính trực tiếp trên hvData/hvvpData đã tải sẵn, không gọi thêm
+// request nào tới server.
+// =============================================
+const BAOCAO_MAU = {
+  blue:   { rgb: 'FF2563EB', light: 'FFEFF6FF', hex: '#2563EB', hexLight: '#EFF6FF' },
+  purple: { rgb: 'FF7C3AED', light: 'FFF5F3FF', hex: '#7C3AED', hexLight: '#F5F3FF' },
+};
+const BAOCAO_GROUPBY_LABEL = { donvi: 'Theo đơn vị', dot: 'Theo đợt', chucdanh: 'Theo chức danh' };
+
+function openBaoCaoModal() {
+  document.getElementById('modalBaoCao').classList.add('open');
+}
+
+// Gom mảng theo khóa (dùng chung cho cả 3 tiêu chí nhóm)
+function baoCaoGroupBy_(arr, keyFn) {
+  const map = {};
+  arr.forEach(item => {
+    const k = (keyFn(item) || '').toString().trim() || '(Chưa xác định)';
+    (map[k] = map[k] || []).push(item);
+  });
+  return map;
+}
+
+// 8 quý gần nhất — dùng cho báo cáo "Theo đợt" (cùng logic cohort với khối
+// "Xu hướng theo thời gian" trước đây trên Dashboard, để số liệu nhất quán)
+function baoCaoDotBuckets_(n) {
+  n = n || 8;
+  const now = new Date();
+  let y = now.getFullYear(), q = Math.ceil((now.getMonth() + 1) / 3);
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    list.unshift({ key: `${y}-Q${q}`, label: `Quý ${q}/${y}` });
+    q--; if (q < 1) { q = 4; y--; }
+  }
+  return list;
+}
+
+function baoCaoStatsHV_(rows) {
+  const tong = rows.length;
+  const hoanThanh = rows.filter(isDone).length;
+  const quaHan = rows.filter(isOverdue).length;
+  const chuaHoanThanh = tong - hoanThanh;
+  const tyLe = tong ? Math.round(hoanThanh / tong * 1000) / 10 : 0;
+  const bqVals = rows.map(h => computeScores(h).bq).filter(v => v !== null && v !== undefined && !isNaN(v));
+  const diemBQ = bqVals.length ? bqVals.reduce((a, b) => a + b, 0) / bqVals.length : null;
+  return { tong, hoanThanh, chuaHoanThanh, quaHan, tyLe, diemBQ };
+}
+
+function baoCaoStatsVP_(rows) {
+  const tong = rows.length;
+  const hoanTat = rows.filter(h => h.trangThai === HVVP_TT_HOAN_TAT).length;
+  const ngung = rows.filter(h => h.trangThai === HVVP_TT_NGUNG).length;
+  const dangTheoDoi = tong - hoanTat - ngung;
+  const tyLe = tong ? Math.round(hoanTat / tong * 1000) / 10 : 0;
+  const scoreVals = rows.map(h => {
+    const s = [parseFloat(h.diemGD1), parseFloat(h.diemGD2)].filter(v => !isNaN(v));
+    return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null;
+  }).filter(v => v !== null);
+  const diemBQ = scoreVals.length ? scoreVals.reduce((a, b) => a + b, 0) / scoreVals.length : null;
+  return { tong, hoanTat, dangTheoDoi, ngung, tyLe, diemBQ };
+}
+
+// Xây dữ liệu báo cáo — trả về danh sách "khối" (1 khối = 1 nguồn dữ liệu),
+// mỗi khối có nhãn/cột riêng phù hợp thuật ngữ của nguồn đó.
+function buildBaoCaoDataset(groupBy, sources) {
+  const sections = [];
+
+  if (sources.hv && (groupBy === 'donvi' || groupBy === 'dot' || groupBy === 'chucdanh')) {
+    let rows, tenNhom;
+    if (groupBy === 'donvi') {
+      const groups = baoCaoGroupBy_(hvData, h => h.donVi);
+      tenNhom = 'Đơn vị TT';
+      rows = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length)
+        .map(k => ({ ten: k, ...baoCaoStatsHV_(groups[k]) }));
+    } else if (groupBy === 'chucdanh') {
+      const groups = baoCaoGroupBy_(hvData, h => h.chucDanh);
+      tenNhom = 'Chức danh';
+      rows = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length)
+        .map(k => ({ ten: k, ...baoCaoStatsHV_(groups[k]) }));
+    } else {
+      const buckets = baoCaoDotBuckets_(8).map(b => ({ ...b, items: [] }));
+      const idx = {}; buckets.forEach((b, i) => idx[b.key] = i);
+      hvData.forEach(h => {
+        const qi = trendQuarterInfo_(h.ngayBatDau);
+        if (qi && idx[qi.key] !== undefined) buckets[idx[qi.key]].items.push(h);
+      });
+      tenNhom = 'Đợt (quý bắt đầu)';
+      rows = buckets.map(b => ({ ten: b.label, ...baoCaoStatsHV_(b.items) }));
+    }
+    sections.push({ nguon: 'Học viên Quản lý cấp trung', tenNhom, mau: BAOCAO_MAU.blue, loai: 'hv', rows, tong: baoCaoStatsHV_(hvData) });
+  }
+
+  if (sources.vp && (groupBy === 'dot' || groupBy === 'chucdanh')) {
+    let rows, tenNhom;
+    if (groupBy === 'chucdanh') {
+      const groups = baoCaoGroupBy_(hvvpData, h => h.chucDanh);
+      tenNhom = 'Chức danh';
+      rows = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length)
+        .map(k => ({ ten: k, ...baoCaoStatsVP_(groups[k]) }));
+    } else {
+      const buckets = baoCaoDotBuckets_(8).map(b => ({ ...b, items: [] }));
+      const idx = {}; buckets.forEach((b, i) => idx[b.key] = i);
+      hvvpData.forEach(h => {
+        const qi = trendQuarterInfo_(h.ngayNhanViec);
+        if (qi && idx[qi.key] !== undefined) buckets[idx[qi.key]].items.push(h);
+      });
+      tenNhom = 'Đợt (quý nhận việc)';
+      rows = buckets.map(b => ({ ten: b.label, ...baoCaoStatsVP_(b.items) }));
+    }
+    sections.push({ nguon: 'Học viên Văn phòng', tenNhom, mau: BAOCAO_MAU.purple, loai: 'vp', rows, tong: baoCaoStatsVP_(hvvpData) });
+  }
+
+  return sections;
+}
+
+function generateBaoCao() {
+  const groupBy = document.querySelector('input[name="baocaoNhom"]:checked').value;
+  const dinhDang = document.querySelector('input[name="baocaoDinhDang"]:checked').value;
+  const sources = {
+    hv: document.getElementById('baocaoNguonHV').checked,
+    vp: document.getElementById('baocaoNguonVP').checked
+  };
+  if (!sources.hv && !sources.vp) { toast('Vui lòng chọn ít nhất 1 nguồn dữ liệu', 'error'); return; }
+  if (groupBy === 'donvi' && !sources.hv) { toast('Nhóm "Theo đơn vị" chỉ áp dụng cho HV Quản lý cấp trung — vui lòng chọn nguồn này', 'error'); return; }
+
+  const sections = buildBaoCaoDataset(groupBy, sources);
+  if (!sections.length || sections.every(s => s.rows.length === 0 || s.tong.tong === 0)) {
+    toast('Không có dữ liệu để xuất báo cáo', 'error'); return;
+  }
+
+  if (dinhDang === 'excel') exportBaoCaoExcel(groupBy, sections);
+  else exportBaoCaoPDF(groupBy, sections);
+
+  closeModal('modalBaoCao');
+}
+
+function baoCaoCols_(section) {
+  return section.loai === 'hv'
+    ? [
+        { header: section.tenNhom, key: 'ten', align: 'left' },
+        { header: 'Tổng HV', key: 'tong' },
+        { header: 'Đã hoàn thành', key: 'hoanThanh' },
+        { header: 'Chưa hoàn thành', key: 'chuaHoanThanh' },
+        { header: 'Quá hạn', key: 'quaHan' },
+        { header: 'Tỷ lệ hoàn thành', key: 'tyLe', isPct: true },
+        { header: 'Điểm BQ chung', key: 'diemBQ', isScore: true },
+      ]
+    : [
+        { header: section.tenNhom, key: 'ten', align: 'left' },
+        { header: 'Tổng HV', key: 'tong' },
+        { header: 'Hoàn tất', key: 'hoanTat' },
+        { header: 'Đang theo dõi', key: 'dangTheoDoi' },
+        { header: 'Ngưng theo dõi', key: 'ngung' },
+        { header: 'Tỷ lệ hoàn tất', key: 'tyLe', isPct: true },
+        { header: 'Điểm BQ', key: 'diemBQ', isScore: true },
+      ];
+}
+
+// ── XUẤT EXCEL (.xlsx) — dùng ExcelJS để tô màu/định dạng như 1 văn bản báo cáo ──
+async function exportBaoCaoExcel(groupBy, sections) {
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = (currentUser && (currentUser.hoTen || currentUser.username)) || 'Hệ thống quản lý học viên';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('Báo cáo', { pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+    const nCols = 7;
+
+    ws.mergeCells(1, 1, 1, nCols);
+    const titleCell = ws.getCell(1, 1);
+    titleCell.value = `BÁO CÁO ĐÀO TẠO — ${BAOCAO_GROUPBY_LABEL[groupBy].toUpperCase()}`;
+    titleCell.font = { bold: true, size: 16, color: { argb: 'FF0F172A' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 28;
+
+    ws.mergeCells(2, 1, 2, nCols);
+    const now = new Date();
+    const nguoiLap = currentUser ? (currentUser.hoTen || currentUser.username || '') : '';
+    const subCell = ws.getCell(2, 1);
+    subCell.value = `Ngày xuất báo cáo: ${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` + (nguoiLap ? ` — Người lập: ${nguoiLap}` : '');
+    subCell.font = { italic: true, size: 10.5, color: { argb: 'FF64748B' } };
+    subCell.alignment = { horizontal: 'center' };
+
+    let r = 4;
+    sections.forEach(section => {
+      const cols = baoCaoCols_(section);
+
+      ws.mergeCells(r, 1, r, nCols);
+      const bandCell = ws.getCell(r, 1);
+      const totalCount = section.rows.reduce((a, x) => a + x.tong, 0);
+      bandCell.value = `${section.nguon}  (${totalCount} học viên)`;
+      bandCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+      bandCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: section.mau.rgb } };
+      bandCell.alignment = { vertical: 'middle', indent: 1 };
+      ws.getRow(r).height = 22;
+      r++;
+
+      cols.forEach((c, i) => {
+        const cell = ws.getCell(r, i + 1);
+        cell.value = c.header;
+        cell.font = { bold: true, size: 10.5, color: { argb: 'FF0F172A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: section.mau.light } };
+        cell.border = { bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } } };
+        cell.alignment = { horizontal: i === 0 ? 'left' : 'center', vertical: 'middle' };
+        const w = i === 0 ? 30 : 14;
+        if (!ws.getColumn(i + 1).width || ws.getColumn(i + 1).width < w) ws.getColumn(i + 1).width = w;
+      });
+      r++;
+
+      section.rows.forEach(row => {
+        cols.forEach((c, i) => {
+          const cell = ws.getCell(r, i + 1);
+          let v = row[c.key];
+          if (c.isPct) v = (v || 0) / 100;
+          if (c.isScore) v = (v === null || v === undefined) ? null : Math.round(v * 100) / 100;
+          cell.value = (v === null || v === undefined) ? '' : v;
+          if (c.isPct) cell.numFmt = '0.0%';
+          if (c.isScore) cell.numFmt = '0.00';
+          cell.alignment = { horizontal: i === 0 ? 'left' : 'center' };
+          cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+        });
+        r++;
+      });
+
+      const t = section.tong;
+      const totalsRow = section.loai === 'hv'
+        ? ['TỔNG CỘNG', t.tong, t.hoanThanh, t.chuaHoanThanh, t.quaHan, (t.tyLe || 0) / 100, t.diemBQ === null ? '' : Math.round(t.diemBQ * 100) / 100]
+        : ['TỔNG CỘNG', t.tong, t.hoanTat, t.dangTheoDoi, t.ngung, (t.tyLe || 0) / 100, t.diemBQ === null ? '' : Math.round(t.diemBQ * 100) / 100];
+      totalsRow.forEach((v, i) => {
+        const cell = ws.getCell(r, i + 1);
+        cell.value = v;
+        cell.font = { bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        cell.border = { top: { style: 'thin', color: { argb: 'FF94A3B8' } } };
+        if (i === 5) cell.numFmt = '0.0%';
+        if (i === 6) cell.numFmt = '0.00';
+        cell.alignment = { horizontal: i === 0 ? 'left' : 'center' };
+      });
+      r += 2;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bao_cao_${groupBy}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Đã xuất báo cáo Excel');
+  } catch (err) {
+    toast(`Lỗi xuất báo cáo: ${err.message}`, 'error');
+  }
+}
+
+// ── XUẤT PDF — dựng khối HTML trình bày như báo cáo, chụp bằng html2canvas
+// rồi cắt trang bằng jsPDF (giữ nguyên dấu tiếng Việt vì được chụp thành ảnh) ──
+function baoCaoPdfSectionHTML_(section) {
+  const cols = baoCaoCols_(section);
+  const totalCount = section.rows.reduce((a, x) => a + x.tong, 0);
+  const fmtCell = (row, c) => {
+    const v = row[c.key];
+    if (c.isPct) return (v || 0).toFixed(1) + '%';
+    if (c.isScore) return (v === null || v === undefined) ? '–' : v.toFixed(2);
+    return (v === null || v === undefined) ? '–' : v;
+  };
+  const headerHtml = cols.map(c => `<th style="padding:9px 12px;text-align:${c.align || 'center'};font-size:12px;color:#0F172A;background:${section.mau.hexLight};border-bottom:1px solid #CBD5E1;white-space:nowrap">${escapeHTML(c.header)}</th>`).join('');
+  const rowsHtml = section.rows.map((row, ri) => `
+    <tr style="background:${ri % 2 ? '#FFFFFF' : '#F8FAFC'}">
+      ${cols.map(c => `<td style="padding:8px 12px;text-align:${c.align || 'center'};font-size:12px;color:#0F172A;border-bottom:1px solid #EEF2F7">${escapeHTML(String(fmtCell(row, c)))}</td>`).join('')}
+    </tr>`).join('');
+  const t = section.tong;
+  const totalVals = section.loai === 'hv'
+    ? ['TỔNG CỘNG', t.tong, t.hoanThanh, t.chuaHoanThanh, t.quaHan, (t.tyLe || 0).toFixed(1) + '%', t.diemBQ === null ? '–' : t.diemBQ.toFixed(2)]
+    : ['TỔNG CỘNG', t.tong, t.hoanTat, t.dangTheoDoi, t.ngung, (t.tyLe || 0).toFixed(1) + '%', t.diemBQ === null ? '–' : t.diemBQ.toFixed(2)];
+  const totalHtml = `<tr style="background:#F1F5F9;font-weight:700">
+    ${totalVals.map((v, i) => `<td style="padding:9px 12px;text-align:${i === 0 ? 'left' : 'center'};font-size:12px;color:#0F172A;border-top:1.5px solid #94A3B8">${escapeHTML(String(v))}</td>`).join('')}
+  </tr>`;
+
+  return `
+    <div style="margin-bottom:22px">
+      <div style="background:${section.mau.hex};color:#fff;font-weight:700;font-size:13.5px;padding:9px 14px;border-radius:6px 6px 0 0">${escapeHTML(section.nguon)} <span style="font-weight:500;opacity:.85">(${totalCount} học viên)</span></div>
+      <table style="width:100%;border-collapse:collapse;font-family:'Segoe UI',Arial,sans-serif">
+        <thead><tr>${headerHtml}</tr></thead>
+        <tbody>${rowsHtml}${totalHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+function buildBaoCaoPdfHTML_(groupBy, sections) {
+  const now = new Date();
+  const nguoiLap = currentUser ? (currentUser.hoTen || currentUser.username || '') : '';
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-99999px;top:0;width:1050px;background:#fff;padding:32px 36px;box-sizing:border-box;font-family:"Segoe UI",Arial,sans-serif';
+  container.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:20px;font-weight:800;color:#0F172A;letter-spacing:.3px">BÁO CÁO ĐÀO TẠO — ${escapeHTML(BAOCAO_GROUPBY_LABEL[groupBy].toUpperCase())}</div>
+      <div style="font-size:12px;color:#64748B;margin-top:6px">Ngày xuất: ${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${nguoiLap ? ' — Người lập: ' + escapeHTML(nguoiLap) : ''}</div>
+    </div>
+    ${sections.map(s => baoCaoPdfSectionHTML_(s)).join('')}
+  `;
+  return container;
+}
+
+async function exportBaoCaoPDF(groupBy, sections) {
+  const container = buildBaoCaoPdfHTML_(groupBy, sections);
+  document.body.appendChild(container);
+  try {
+    toast('Đang tạo báo cáo PDF...');
+    const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = canvas.height * imgW / canvas.width;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    let heightLeft = imgH;
+    let position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+    heightLeft -= pageH;
+    while (heightLeft > 0) {
+      position = heightLeft - imgH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+      heightLeft -= pageH;
+    }
+    pdf.save(`bao_cao_${groupBy}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast('Đã xuất báo cáo PDF');
+  } catch (err) {
+    toast(`Lỗi xuất báo cáo PDF: ${err.message}`, 'error');
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 // =============================================
