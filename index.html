@@ -425,9 +425,13 @@ tbody tr:hover td{background:var(--gray-50)}
 .form-field input,.form-field select,.form-field textarea{padding:9px 12px;border:1px solid var(--border-md);border-radius:var(--radius);font-size:16px;outline:none;font-family:inherit;background:#fff;color:var(--text);transition:border .12s,box-shadow .12s}
 .form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(5,150,105,.10)}
 .form-field input[readonly]{background:var(--gray-50);color:var(--text-muted)}
-.score-input-teacher input{background:var(--amber-light)!important;border-color:rgba(180,83,9,.35)!important}
-.score-input-teacher input:focus{border-color:var(--amber)!important;box-shadow:0 0 0 3px rgba(180,83,9,.12)!important}
+.score-input-teacher input,.score-input-teacher select{background:var(--amber-light)!important;border-color:rgba(180,83,9,.35)!important}
+.score-input-teacher input:focus,.score-input-teacher select:focus{border-color:var(--amber)!important;box-shadow:0 0 0 3px rgba(180,83,9,.12)!important}
 .score-input-teacher label{color:var(--amber)!important}
+/* [MỚI] Khi ô bị khóa (disabled) — vd "Kết quả đánh giá GĐ1" với HV chỉ có 1
+   giai đoạn — không tô vàng nữa, vì đây không phải ô cần GV chú ý điền, mà là
+   ô không áp dụng. Tô vàng lúc này sẽ gây hiểu lầm ngược lại. */
+.score-input-teacher input:disabled{background:var(--gray-50)!important;border-color:var(--border)!important;color:var(--text-faint)!important}
 .form-field textarea{resize:vertical;min-height:60px}
 .form-divider{grid-column:1/-1;border:none;border-top:1px solid var(--border);margin:4px 0}
 .form-section-title{grid-column:1/-1;font-size:14px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:4px}
@@ -1392,7 +1396,7 @@ tbody tr:hover td{background:var(--gray-50)}
         </div>
         <div class="form-field">
           <label>Chức danh *</label>
-          <select id="fvp-chucDanh" onchange="calcVPDates();validateField('fvp-chucDanh')">
+          <select id="fvp-chucDanh" onchange="calcVPDates(true);validateField('fvp-chucDanh')">
             <option value="">-- Chọn chức danh --</option>
           </select>
           <span class="field-err-msg" id="fvp-chucDanh-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn chức danh</span></span>
@@ -1430,9 +1434,10 @@ tbody tr:hover td{background:var(--gray-50)}
           <input type="text" id="fvp-ngayDGGD1" readonly placeholder="Tự tính">
           <span class="calc-note">Hạn GĐ1 − 3 ngày</span>
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>Kết quả đánh giá GĐ1</label>
           <input type="number" id="fvp-diemGD1" step="0.1" min="0" max="10" placeholder="0 – 10" oninput="checkVPAutoHoanTat()">
+          <span class="calc-note" id="fvp-diemGD1-lock-note" style="display:none;color:var(--text-faint)">Chức danh này chỉ có 1 giai đoạn đào tạo (38 ngày) — không có đánh giá GĐ1, chỉ cần nhập điểm GĐ2/Cuối.</span>
         </div>
 
         <div class="form-section-title">Giai đoạn 2 / Cuối</div>
@@ -1446,13 +1451,13 @@ tbody tr:hover td{background:var(--gray-50)}
           <input type="text" id="fvp-ngayDGGD2" readonly placeholder="Tự tính">
           <span class="calc-note">Hạn GĐ2/Cuối − 10 ngày</span>
         </div>
-        <div class="form-field">
+        <div class="form-field score-input-teacher">
           <label>Kết quả đánh giá GĐ2/Cuối</label>
           <input type="number" id="fvp-diemGD2" step="0.1" min="0" max="10" placeholder="0 – 10" oninput="checkVPAutoHoanTat()">
         </div>
 
         <div class="form-section-title">Theo dõi</div>
-        <div class="form-field form-full">
+        <div class="form-field form-full score-input-teacher">
           <label>Trạng thái theo dõi</label>
           <select id="fvp-trangThai" onchange="onVpTrangThaiManualChange()">
             <option value="Đang theo dõi">Đang theo dõi</option>
@@ -4179,7 +4184,14 @@ let hvvpData = [];
 // liệu đã tải trong 30s gần nhất, chuyển tab chỉ render lại từ hvvpData đang
 // có sẵn, không gọi server.
 let hvvpDataLoadedAt = 0;
-const HVVP_CLIENT_CACHE_TTL_MS = 30000;
+// [TINH CHỈNH] Tăng từ 30s lên 3 phút — 30s quá ngắn so với thời gian thực tế
+// người dùng thao tác giữa các tab, khiến hầu như LẦN NÀO chuyển qua tab "HV
+// Văn phòng" cũng bị coi là "hết hạn" và kích hoạt tải lại (xóa bảng + hiện
+// "Đang tải..."), tạo cảm giác app "reload" mỗi lần chuyển tab dù dữ liệu vốn
+// không đổi. Kết hợp với cơ chế stale-while-revalidate mới trong loadHVVP()
+// bên dưới (hiện ngay dữ liệu cũ, âm thầm làm mới ở nền), người dùng sẽ không
+// còn thấy màn hình trống/spinner khi quay lại tab này nữa.
+const HVVP_CLIENT_CACHE_TTL_MS = 3 * 60 * 1000;
 let selectedHVVP = new Set();
 let editingHVVPId = null;
 let pendingDeleteHVVPId = null;
@@ -4343,16 +4355,36 @@ async function loadHVVP(forceRefresh = false) {
     renderVPTable();
     return;
   }
-  document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  // [MỚI - STALE-WHILE-REVALIDATE] Trước đây hễ TTL hết hạn (kể cả chỉ mới
+  // hết hạn 1 giây) là XÓA TRẮNG bảng và hiện "Đang tải..." trước khi gọi
+  // server — với TTL ngắn, gần như MỖI LẦN chuyển qua tab này đều bị coi là
+  // "reload" dù dữ liệu thực tế chưa chắc đã đổi, gây cảm giác app chậm/giật.
+  // Giờ nếu ĐÃ CÓ dữ liệu cũ trong bộ nhớ (kể cả hết hạn), hiển thị NGAY dữ
+  // liệu đó trước (không xóa bảng, không spinner) — người dùng thấy bảng có
+  // ngay lập tức khi chuyển tab — rồi mới âm thầm gọi server ở nền để lấy bản
+  // mới nhất, chỉ cập nhật lại bảng khi có dữ liệu mới. Chỉ hiện spinner khi
+  // THỰC SỰ chưa có gì trong bộ nhớ để hiển thị (lần đầu vào tab).
+  const hasCachedData = Array.isArray(hvvpData) && hvvpData.length > 0;
+  if (hasCachedData) {
+    renderVPTable();
+  } else {
+    document.getElementById('hvvpBody').innerHTML = '<tr><td colspan="13" class="loading"><span class="spinner"></span>Đang tải...</td></tr>';
+  }
   populateVPChucDanhSelect();
   const res = await api('getHVVP');
   if (!res.ok) {
-    toast(res.msg, 'error');
-    // [FIX ỔN ĐỊNH] Trước đây bảng bị kẹt mãi ở "Đang tải..." nếu request
-    // thất bại (kể cả sau khi api() đã tự retry ngầm 1 lần) — người dùng
-    // không biết phải làm gì ngoài F5 lại trang. Giờ hiện nút "Thử lại".
-    const tbody = document.getElementById('hvvpBody');
-    if (tbody) tbody.innerHTML = tableErrorRowHtml(13, res.msg, 'loadHVVP');
+    // Nếu đã có dữ liệu cũ đang hiển thị rồi thì không cần làm phiền người
+    // dùng bằng toast lỗi mỗi khi lần làm mới ở NỀN thất bại — họ vẫn đang
+    // xem dữ liệu hợp lệ (chỉ hơi cũ), cứ để lần poll/chuyển tab kế tiếp tự
+    // thử lại. Chỉ báo lỗi rõ ràng khi KHÔNG có gì để hiển thị thay thế.
+    if (!hasCachedData) {
+      toast(res.msg, 'error');
+      // [FIX ỔN ĐỊNH] Trước đây bảng bị kẹt mãi ở "Đang tải..." nếu request
+      // thất bại (kể cả sau khi api() đã tự retry ngầm 1 lần) — người dùng
+      // không biết phải làm gì ngoài F5 lại trang. Giờ hiện nút "Thử lại".
+      const tbody = document.getElementById('hvvpBody');
+      if (tbody) tbody.innerHTML = tableErrorRowHtml(13, res.msg, 'loadHVVP');
+    }
     return;
   }
   hvvpData = res.data;
@@ -4686,7 +4718,7 @@ async function quickSetHVVPTrangThai(id, trangThai) {
 }
 
 // Đổ dữ liệu tự tính vào form (gọi khi chọn chức danh / nhập ngày nhận việc)
-function calcVPDates() {
+function calcVPDates(isUserChange) {
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
   const trangThai = document.getElementById('fvp-trangThai') ? document.getElementById('fvp-trangThai').value : '';
@@ -4698,7 +4730,35 @@ function calcVPDates() {
   document.getElementById('fvp-ngayDGGD1').value    = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
   document.getElementById('fvp-hanGD2').value       = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
   document.getElementById('fvp-ngayDGGD2').value    = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
+  // [MỚI] Khóa ô "Kết quả đánh giá GĐ1" khi chức danh chỉ có 1 giai đoạn (tổng
+  // 38 ngày ĐT) — chức danh này KHÔNG có mốc đánh giá GĐ1 (xem quy tắc tính
+  // hanGD1/ngayDGGD1 ở computeVPStatus(): chỉ tính khi cd.soNgay !== 38), nên
+  // để GV tự do gõ điểm vào đây rất dễ nhập nhầm (điểm đó sẽ không có ý nghĩa
+  // gì, dễ gây hiểu lầm là HV đã qua "Giai đoạn 1" trong khi thực ra chỉ có 1
+  // giai đoạn đánh giá duy nhất). isUserChange=true (người dùng vừa tự đổi
+  // chức danh trên form) thì xóa luôn giá trị đang gõ dở nếu bị khóa; còn khi
+  // gọi từ openEditHVVP() (isUserChange=false/undefined, đang tải dữ liệu có
+  // sẵn để sửa) thì GIỮ NGUYÊN giá trị cũ (nếu có) để không âm thầm xóa mất
+  // dữ liệu lịch sử — chỉ khóa không cho sửa thêm, người quản trị vẫn thấy và
+  // có thể tự xóa tay nếu xác định đó là dữ liệu nhập nhầm trước đây.
+  updateVPGD1Lock(calc.soGiaiDoan, !!isUserChange);
   checkVPAutoHoanTat(); // [MỚI] chức danh đổi -> số giai đoạn có thể đổi theo -> kiểm tra lại điều kiện gợi ý Hoàn tất
+}
+
+// [MỚI] Khóa/mở khóa ô "Kết quả đánh giá GĐ1" tùy theo số giai đoạn của chức
+// danh đang chọn. soGiaiDoan === 1 (tổng ngày ĐT = 38) -> khóa (disabled),
+// vì chức danh này chỉ có 1 mốc đánh giá duy nhất (GĐ2/Cuối), không có GĐ1.
+function updateVPGD1Lock(soGiaiDoan, clearIfLocked) {
+  const inp = document.getElementById('fvp-diemGD1');
+  const noteEl = document.getElementById('fvp-diemGD1-lock-note');
+  if (!inp) return;
+  const chiMotGiaiDoan = soGiaiDoan === 1;
+  inp.disabled = chiMotGiaiDoan;
+  inp.placeholder = chiMotGiaiDoan ? 'Không áp dụng' : '0 – 10';
+  if (noteEl) noteEl.style.display = chiMotGiaiDoan ? '' : 'none';
+  if (chiMotGiaiDoan && clearIfLocked && inp.value !== '') {
+    inp.value = '';
+  }
 }
 
 // [MỚI] Điểm đánh giá đạt yêu cầu để được gợi ý tự động chuyển "Hoàn tất".
@@ -5227,7 +5287,13 @@ async function saveHVVP() {
   const duAn = document.getElementById('fvp-duAn').value.trim();
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
-  const diemGD1 = document.getElementById('fvp-diemGD1').value.trim();
+  // [MỚI - AN TOÀN] Dù ô "fvp-diemGD1" đã bị khóa (disabled) trên giao diện
+  // khi chức danh chỉ có 1 giai đoạn, vẫn kiểm tra lại 1 lần nữa ở đây trước
+  // khi gửi lên server — phòng trường hợp giá trị cũ còn sót lại trong DOM
+  // (vd đang sửa 1 HV có sẵn điểm GĐ1 nhập nhầm từ trước, rồi đổi sang chức
+  // danh 1 giai đoạn) mà chưa qua đúng luồng calcVPDates(true) để tự xóa.
+  const soGiaiDoanHienTai = computeVPStatus({ chucDanh, ngayNhanViec, trangThai: document.getElementById('fvp-trangThai').value }).soGiaiDoan;
+  const diemGD1 = soGiaiDoanHienTai === 1 ? '' : document.getElementById('fvp-diemGD1').value.trim();
   const diemGD2 = document.getElementById('fvp-diemGD2').value.trim();
   const trangThai = document.getElementById('fvp-trangThai').value || HVVP_TT_DANG_THEO_DOI;
   const ghiChu = document.getElementById('fvp-ghiChu').value.trim();
