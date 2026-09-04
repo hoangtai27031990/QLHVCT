@@ -4360,11 +4360,11 @@ function computeVPStatus(hv) {
 
   if (cd.soNgay !== 38) {
     out.hanGD1 = addDays(hv.ngayNhanViec, 29);
-    out.ngayDGGD1 = addDays(out.hanGD1, -3);
+    out.ngayDGGD1 = addDays(out.hanGD1, -5);
     out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1, hv.diemGD1);
   }
   out.hanGD2 = addDays(hv.ngayNhanViec, cd.soNgay - 1);
-  out.ngayDGGD2 = addDays(out.hanGD2, -10);
+  out.ngayDGGD2 = addDays(out.hanGD2, -7);
   out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2, hv.diemGD2);
 
   return out;
