@@ -1401,6 +1401,15 @@ tbody tr:hover td{background:var(--gray-50)}
           <input type="text" id="fvp-tongSoNgayDT" readonly placeholder="Tự tính">
         </div>
         <div class="form-field">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="fvp-soNgayDC-enable" onchange="toggleSoNgayDCEnable()" style="width:auto;margin:0">
+            Tổng số ngày ĐT (điều chỉnh)
+          </label>
+          <input type="number" id="fvp-soNgayDC" min="1" step="1" disabled placeholder="Tích chọn ở trên để điều chỉnh" oninput="calcVPDates();clearFieldError('fvp-soNgayDC')">
+          <span class="field-err-msg" id="fvp-soNgayDC-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Số ngày điều chỉnh không hợp lệ</span></span>
+          <span class="calc-note" id="fvp-soNgayDC-note">Áp dụng cho học viên nội bộ, tích chọn để điều chỉnh thời gian đào tạo.</span>
+        </div>
+        <div class="form-field">
           <label>Ngày nhận việc *</label>
           <input type="date" id="fvp-ngayNhanViec" oninput="calcVPDates();validateField('fvp-ngayNhanViec')">
           <span class="field-err-msg" id="fvp-ngayNhanViec-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Vui lòng chọn ngày nhận việc</span></span>
@@ -4324,18 +4333,24 @@ const HVVP_TT_HOAN_TAT      = 'Hoàn tất';
 const HVVP_TT_NGUNG         = 'Ngưng theo dõi';
 const HVVP_TT_KET_THUC = [HVVP_TT_HOAN_TAT, HVVP_TT_NGUNG];
 
-// Tính các mốc ngày + trạng thái cho 1 HV VP — công thức y hệt file Excel:
-//  Số giai đoạn   = (tổng ngày == 38) ? 1 : 2
+// Tính các mốc ngày + trạng thái cho 1 HV VP — công thức y hệt backend Code.gs:
+//  Số giai đoạn   = (tổng ngày ĐT ÁP DỤNG == 38) ? 1 : 2
 //  Hạn GĐ1        = ngày nhận việc + 30 - 1        (chỉ khi có 2 giai đoạn)
-//  Ngày ĐG GĐ1    = Hạn GĐ1 - 3
-//  Hạn GĐ2/Cuối   = ngày nhận việc + tổng ngày - 1
-//  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 10
+//  Ngày ĐG GĐ1    = Hạn GĐ1 - 5
+//  Hạn GĐ2/Cuối   = ngày nhận việc + tổng ngày ĐT áp dụng - 1
+//  Ngày ĐG GĐ2/Cuối = Hạn GĐ2/Cuối - 7
 //  Trạng thái     = so hôm nay với Ngày ĐG: qua hạn / còn ≤3 ngày = sắp đến hạn / còn lại chưa tới hạn
 //  Nếu hv.trangThai là "Hoàn tất"/"Ngưng theo dõi" -> không tính trạng thái GĐ1/GĐ2 nữa.
+// [MỚI] hv.soNgayDTDieuChinh (số nguyên dương, ≤ mặc định của chức danh) sẽ
+// THAY THẾ HOÀN TOÀN số ngày mặc định để tính lại Số giai đoạn + Hạn GĐ2/Cuối
+// — dùng cho nhân sự nội bộ được rút ngắn thời gian đào tạo.
 function computeVPStatus(hv) {
   const cd = timChucDanhVP(hv.chucDanh);
+  const dc = parseInt(hv.soNgayDTDieuChinh, 10);
+  const coDieuChinh = !!cd && !isNaN(dc) && dc > 0 && dc <= cd.soNgay;
+  const tongSoNgayDT = coDieuChinh ? dc : (cd ? cd.soNgay : '');
   const out = {
-    maChucDanh: cd ? cd.ma : '', tongSoNgayDT: cd ? cd.soNgay : '', soGiaiDoan: cd ? (cd.soNgay === 38 ? 1 : 2) : '',
+    maChucDanh: cd ? cd.ma : '', tongSoNgayDT, soGiaiDoan: cd ? (tongSoNgayDT === 38 ? 1 : 2) : '',
     hanGD1: '', ngayDGGD1: '', trangThaiGD1: '',
     hanGD2: '', ngayDGGD2: '', trangThaiGD2: ''
   };
@@ -4358,12 +4373,12 @@ function computeVPStatus(hv) {
     return 'Chưa tới hạn';
   };
 
-  if (cd.soNgay !== 38) {
+  if (tongSoNgayDT !== 38) {
     out.hanGD1 = addDays(hv.ngayNhanViec, 29);
     out.ngayDGGD1 = addDays(out.hanGD1, -5);
     out.trangThaiGD1 = trangThaiTu(out.ngayDGGD1, hv.diemGD1);
   }
-  out.hanGD2 = addDays(hv.ngayNhanViec, cd.soNgay - 1);
+  out.hanGD2 = addDays(hv.ngayNhanViec, tongSoNgayDT - 1);
   out.ngayDGGD2 = addDays(out.hanGD2, -7);
   out.trangThaiGD2 = trangThaiTu(out.ngayDGGD2, hv.diemGD2);
 
@@ -4573,7 +4588,7 @@ function renderVPTable() {
       <td style="cursor:pointer;font-weight:500" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.hoTen)}</td>
       <td style="cursor:pointer" onclick="openDetailVP('${hv.id}')" title="Xem chi tiết học viên">${escapeHTML(hv.chucDanh)}</td>
       <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(hv.duAn || '')}">${hv.duAn ? escapeHTML(hv.duAn) : '<span style="color:var(--text-faint)">–</span>'}</td>
-      <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}</td>
+      <td>${escapeHTML(String(hv.tongSoNgayDT ?? ''))}${hv.soNgayDTDieuChinh ? ' <span title="Đã điều chỉnh so với mặc định theo chức danh" style="color:var(--orange-dark,#b45309);font-weight:600">*</span>' : ''}</td>
       <td>${fmtDate(hv.ngayNhanViec)}</td>
       <td>${hv.ngayDGGD1 ? vpHanCellHtml(hv.ngayDGGD1, hv.trangThaiGD1) : '<span style="color:var(--text-faint)">–</span>'}</td>
       <td>${vpDiemCellHtml(hv.diemGD1)}</td>
@@ -4794,7 +4809,13 @@ function calcVPDates(isUserChange) {
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
   const trangThai = document.getElementById('fvp-trangThai') ? document.getElementById('fvp-trangThai').value : '';
-  const calc = computeVPStatus({ chucDanh, ngayNhanViec, trangThai });
+  const soNgayDCEl = document.getElementById('fvp-soNgayDC');
+  const soNgayDCEnableEl = document.getElementById('fvp-soNgayDC-enable');
+  // [MỚI] Chỉ áp dụng giá trị điều chỉnh khi ô tích chọn đang được bật — hạn
+  // chế nhập nhầm/gõ nhầm số vào ô mà quên tích chọn (hoặc ngược lại, còn sót
+  // giá trị cũ trong ô dù đã bỏ tích).
+  const soNgayDTDieuChinh = (soNgayDCEl && soNgayDCEnableEl && soNgayDCEnableEl.checked) ? soNgayDCEl.value.trim() : '';
+  const calc = computeVPStatus({ chucDanh, ngayNhanViec, trangThai, soNgayDTDieuChinh });
   document.getElementById('fvp-maChucDanh').value   = calc.maChucDanh || '';
   document.getElementById('fvp-tongSoNgayDT').value = calc.tongSoNgayDT || '';
   document.getElementById('fvp-soGiaiDoan').value   = calc.soGiaiDoan || '';
@@ -4802,6 +4823,15 @@ function calcVPDates(isUserChange) {
   document.getElementById('fvp-ngayDGGD1').value    = calc.ngayDGGD1 ? fmtDate(calc.ngayDGGD1) : '';
   document.getElementById('fvp-hanGD2').value       = calc.hanGD2 ? fmtDate(calc.hanGD2) : '';
   document.getElementById('fvp-ngayDGGD2').value    = calc.ngayDGGD2 ? fmtDate(calc.ngayDGGD2) : '';
+  // [MỚI] Cập nhật placeholder/giới hạn trên ô điều chỉnh theo chức danh đang
+  // chọn — chỉ cho rút ngắn, không cho nhập lớn hơn mặc định của chức danh.
+  if (soNgayDCEl) {
+    const cdHienTai = timChucDanhVP(chucDanh);
+    soNgayDCEl.max = cdHienTai ? cdHienTai.soNgay : '';
+    soNgayDCEl.placeholder = cdHienTai
+      ? `Để trống = dùng mặc định (${cdHienTai.soNgay} ngày)`
+      : 'Để trống = dùng mặc định theo chức danh';
+  }
   // [MỚI] Khóa ô "Kết quả đánh giá GĐ1" khi chức danh chỉ có 1 giai đoạn (tổng
   // 38 ngày ĐT) — chức danh này KHÔNG có mốc đánh giá GĐ1 (xem quy tắc tính
   // hanGD1/ngayDGGD1 ở computeVPStatus(): chỉ tính khi cd.soNgay !== 38), nên
@@ -4815,6 +4845,34 @@ function calcVPDates(isUserChange) {
   // có thể tự xóa tay nếu xác định đó là dữ liệu nhập nhầm trước đây.
   updateVPGD1Lock(calc.soGiaiDoan, !!isUserChange);
   checkVPAutoHoanTat(); // [MỚI] chức danh đổi -> số giai đoạn có thể đổi theo -> kiểm tra lại điều kiện gợi ý Hoàn tất
+}
+
+// [MỚI] Bật/tắt ô "Tổng số ngày ĐT (điều chỉnh)" theo checkbox đi kèm — mặc
+// định luôn KHÓA để hạn chế nhập nhầm; chỉ khi người dùng chủ động tích chọn
+// mới cho phép gõ số ngày điều chỉnh. Bỏ tích thì xóa luôn giá trị đang gõ dở
+// (không âm thầm giữ lại một giá trị mà form không còn cho sửa/thấy rõ).
+// Khi đã tích chọn: ẩn ghi chú giải thích (không cần thiết nữa) và tô viền/nền
+// đỏ cho ô để nhấn mạnh đây là 1 điều chỉnh khác thường so với mặc định.
+function toggleSoNgayDCEnable() {
+  const chk = document.getElementById('fvp-soNgayDC-enable');
+  const inp = document.getElementById('fvp-soNgayDC');
+  const noteEl = document.getElementById('fvp-soNgayDC-note');
+  if (!chk || !inp) return;
+  inp.disabled = !chk.checked;
+  if (noteEl) noteEl.style.display = chk.checked ? 'none' : '';
+  if (chk.checked) {
+    inp.style.borderColor = '#dc2626';
+    inp.style.color = '#dc2626';
+    inp.style.fontWeight = '600';
+  } else {
+    inp.style.borderColor = '';
+    inp.style.color = '';
+    inp.style.fontWeight = '';
+    inp.value = '';
+    clearFieldError('fvp-soNgayDC');
+  }
+  if (chk.checked) inp.focus();
+  calcVPDates(true);
 }
 
 // [MỚI] Khóa/mở khóa ô "Kết quả đánh giá GĐ1" tùy theo số giai đoạn của chức
@@ -4851,7 +4909,10 @@ function checkVPAutoHoanTat() {
 
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
-  const calc = computeVPStatus({ chucDanh, ngayNhanViec, trangThai: trangThaiEl.value });
+  const soNgayDCEl = document.getElementById('fvp-soNgayDC');
+  const soNgayDCEnableEl = document.getElementById('fvp-soNgayDC-enable');
+  const soNgayDTDieuChinh = (soNgayDCEl && soNgayDCEnableEl && soNgayDCEnableEl.checked) ? soNgayDCEl.value.trim() : '';
+  const calc = computeVPStatus({ chucDanh, ngayNhanViec, soNgayDTDieuChinh, trangThai: trangThaiEl.value });
   const soGiaiDoan = calc.soGiaiDoan;
   if (!soGiaiDoan) { if (noteEl) noteEl.style.display = 'none'; return; } // chưa chọn chức danh -> chưa biết cần mấy giai đoạn
 
@@ -4896,10 +4957,23 @@ function onVpTrangThaiManualChange() {
 }
 
 function clearHVVPForm() {
-  ['fvp-maHV','fvp-hoTen','fvp-duAn','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soGiaiDoan',
+  ['fvp-maHV','fvp-hoTen','fvp-duAn','fvp-ngayNhanViec','fvp-maChucDanh','fvp-tongSoNgayDT','fvp-soNgayDC','fvp-soGiaiDoan',
    'fvp-hanGD1','fvp-ngayDGGD1','fvp-hanGD2','fvp-ngayDGGD2','fvp-diemGD1','fvp-diemGD2','fvp-ghiChu'
   ].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fvp-chucDanh').value = '';
+  // [MỚI] Bỏ tích + khóa lại ô "Tổng số ngày ĐT (điều chỉnh)" mỗi khi mở form
+  // thêm mới / sửa HV khác, tránh trường hợp checkbox còn đang tích từ lần
+  // sửa trước bị áp nhầm sang HV đang mở. Đồng bộ luôn ghi chú + màu đỏ về
+  // trạng thái mặc định (giống hệt toggleSoNgayDCEnable() khi bỏ tích).
+  const dcChk = document.getElementById('fvp-soNgayDC-enable');
+  if (dcChk) dcChk.checked = false;
+  const dcInp = document.getElementById('fvp-soNgayDC');
+  dcInp.disabled = true;
+  dcInp.style.borderColor = '';
+  dcInp.style.color = '';
+  dcInp.style.fontWeight = '';
+  const dcNoteEl = document.getElementById('fvp-soNgayDC-note');
+  if (dcNoteEl) dcNoteEl.style.display = '';
   document.getElementById('fvp-trangThai').dataset.autoSet = '';
   const autoNoteEl = document.getElementById('fvp-autoHoanTat-note');
   if (autoNoteEl) autoNoteEl.style.display = 'none';
@@ -5335,6 +5409,21 @@ function openEditHVVP(id) {
   document.getElementById('fvp-duAn').value = hv.duAn || '';
   document.getElementById('fvp-chucDanh').value = hv.chucDanh || '';
   document.getElementById('fvp-ngayNhanViec').value = hv.ngayNhanViec || '';
+  // [MỚI] Nếu HV đang có sẵn số ngày điều chỉnh -> tự tích chọn + mở khóa ô
+  // để hiển thị đúng giá trị đã lưu (đồng bộ luôn ẩn ghi chú + tô đỏ giống
+  // toggleSoNgayDCEnable()); nếu không có -> giữ bỏ tích + khóa (mặc định an
+  // toàn) như clearHVVPForm() đã thiết lập.
+  const coDCSan = !!hv.soNgayDTDieuChinh;
+  const dcChk = document.getElementById('fvp-soNgayDC-enable');
+  if (dcChk) dcChk.checked = coDCSan;
+  const dcInp = document.getElementById('fvp-soNgayDC');
+  dcInp.disabled = !coDCSan;
+  dcInp.value = hv.soNgayDTDieuChinh || '';
+  dcInp.style.borderColor = coDCSan ? '#dc2626' : '';
+  dcInp.style.color = coDCSan ? '#dc2626' : '';
+  dcInp.style.fontWeight = coDCSan ? '600' : '';
+  const dcNoteEl = document.getElementById('fvp-soNgayDC-note');
+  if (dcNoteEl) dcNoteEl.style.display = coDCSan ? 'none' : '';
   document.getElementById('fvp-diemGD1').value = hv.diemGD1 || '';
   document.getElementById('fvp-diemGD2').value = hv.diemGD2 || '';
   document.getElementById('fvp-trangThai').value = hv.trangThai || HVVP_TT_DANG_THEO_DOI;
@@ -5358,12 +5447,18 @@ async function saveHVVP() {
   const duAn = document.getElementById('fvp-duAn').value.trim();
   const chucDanh = document.getElementById('fvp-chucDanh').value;
   const ngayNhanViec = document.getElementById('fvp-ngayNhanViec').value;
+  // [MỚI - AN TOÀN] Chỉ lấy giá trị điều chỉnh khi checkbox "fvp-soNgayDC-enable"
+  // đang tích — nếu bỏ tích thì bỏ qua hoàn toàn giá trị còn sót trong ô
+  // (input đã disabled trên giao diện nhưng vẫn đọc phòng hờ DOM còn sót).
+  const soNgayDCChecked = !!document.getElementById('fvp-soNgayDC-enable')?.checked;
+  const soNgayDTDieuChinh = soNgayDCChecked ? document.getElementById('fvp-soNgayDC').value.trim() : '';
   // [MỚI - AN TOÀN] Dù ô "fvp-diemGD1" đã bị khóa (disabled) trên giao diện
   // khi chức danh chỉ có 1 giai đoạn, vẫn kiểm tra lại 1 lần nữa ở đây trước
   // khi gửi lên server — phòng trường hợp giá trị cũ còn sót lại trong DOM
   // (vd đang sửa 1 HV có sẵn điểm GĐ1 nhập nhầm từ trước, rồi đổi sang chức
-  // danh 1 giai đoạn) mà chưa qua đúng luồng calcVPDates(true) để tự xóa.
-  const soGiaiDoanHienTai = computeVPStatus({ chucDanh, ngayNhanViec, trangThai: document.getElementById('fvp-trangThai').value }).soGiaiDoan;
+  // danh 1 giai đoạn, hoặc điều chỉnh số ngày ĐT khiến gộp về 1 giai đoạn) mà
+  // chưa qua đúng luồng calcVPDates(true) để tự xóa.
+  const soGiaiDoanHienTai = computeVPStatus({ chucDanh, ngayNhanViec, soNgayDTDieuChinh, trangThai: document.getElementById('fvp-trangThai').value }).soGiaiDoan;
   const diemGD1 = soGiaiDoanHienTai === 1 ? '' : document.getElementById('fvp-diemGD1').value.trim();
   const diemGD2 = document.getElementById('fvp-diemGD2').value.trim();
   const trangThai = document.getElementById('fvp-trangThai').value || HVVP_TT_DANG_THEO_DOI;
@@ -5374,6 +5469,35 @@ async function saveHVVP() {
   if (!hoTen) { validateField('fvp-hoTen'); hasErr = true; }
   if (!chucDanh) { validateField('fvp-chucDanh'); hasErr = true; }
   if (!ngayNhanViec) { validateField('fvp-ngayNhanViec'); hasErr = true; }
+  // [MỚI] Số ngày ĐT điều chỉnh: không bắt buộc (checkbox không tích), nhưng
+  // nếu đã tích chọn thì bắt buộc phải nhập, và phải là số nguyên dương không
+  // lớn hơn mặc định của chức danh đang chọn.
+  if (soNgayDCChecked && !soNgayDTDieuChinh) {
+    const wrap = document.getElementById('fvp-soNgayDC').closest('.form-field');
+    const errSpan = document.getElementById('fvp-soNgayDC-err');
+    if (wrap) { wrap.classList.remove('field-ok'); wrap.classList.add('field-error'); }
+    if (errSpan) {
+      errSpan.querySelector('span').textContent = 'Đã tích điều chỉnh thì phải nhập số ngày';
+      errSpan.classList.add('show');
+    }
+    hasErr = true;
+  } else if (soNgayDTDieuChinh) {
+    const cdDangChon = timChucDanhVP(chucDanh);
+    const dcN = parseInt(soNgayDTDieuChinh, 10);
+    const hopLe = !isNaN(dcN) && dcN > 0 && String(dcN) === soNgayDTDieuChinh && (!cdDangChon || dcN <= cdDangChon.soNgay);
+    if (!hopLe) {
+      const wrap = document.getElementById('fvp-soNgayDC').closest('.form-field');
+      const errSpan = document.getElementById('fvp-soNgayDC-err');
+      if (wrap) { wrap.classList.remove('field-ok'); wrap.classList.add('field-error'); }
+      if (errSpan) {
+        errSpan.querySelector('span').textContent = cdDangChon
+          ? `Phải là số nguyên dương, không lớn hơn ${cdDangChon.soNgay} ngày (mặc định chức danh)`
+          : 'Số ngày điều chỉnh không hợp lệ';
+        errSpan.classList.add('show');
+      }
+      hasErr = true;
+    }
+  }
   if (hasErr) return;
 
   const oldHv = editingHVVPId ? hvvpData.find(h => h.id == editingHVVPId) : null;
@@ -5390,7 +5514,7 @@ async function saveHVVP() {
   }, 4000);
 
   try {
-    const payload = { maHV, hoTen, duAn, chucDanh, ngayNhanViec, diemGD1, diemGD2, trangThai, ghiChu };
+    const payload = { maHV, hoTen, duAn, chucDanh, ngayNhanViec, soNgayDTDieuChinh, diemGD1, diemGD2, trangThai, ghiChu };
     const res = editingHVVPId
       ? await api('updateHVVP', { id: editingHVVPId, ...payload })
       : await api('addHVVP', payload);
@@ -6465,6 +6589,7 @@ function buildChanges(oldHv, newData) {
 // =============================================
 const FIELD_LABELS_VP = {
   maHV: 'Mã HV', hoTen: 'Họ tên', duAn: 'Dự án', chucDanh: 'Chức danh', ngayNhanViec: 'Ngày nhận việc',
+  soNgayDTDieuChinh: 'Tổng số ngày ĐT (điều chỉnh)',
   diemGD1: 'Điểm GĐ1', diemGD2: 'Điểm GĐ2', trangThai: 'Trạng thái theo dõi', ghiChu: 'Ghi chú'
 };
 
@@ -6894,7 +7019,7 @@ function openDetailVP(id) {
         <div class="detail-card-title">Thông tin chức danh</div>
         ${infoRow('Dự án', hv.duAn)}
         ${infoRow('Mã chức danh', hv.maChucDanh)}
-        ${infoRow('Tổng số ngày ĐT', hv.tongSoNgayDT !== '' && hv.tongSoNgayDT != null ? String(hv.tongSoNgayDT) : '')}
+        ${infoRow('Tổng số ngày ĐT', (hv.tongSoNgayDT !== '' && hv.tongSoNgayDT != null ? String(hv.tongSoNgayDT) : '') + (hv.soNgayDTDieuChinh ? ' (đã điều chỉnh, mặc định theo chức danh)' : ''))}
         ${infoRow('Số giai đoạn', hv.soGiaiDoan !== '' && hv.soGiaiDoan != null ? String(hv.soGiaiDoan) : '')}
         ${infoRow('Ngày nhận việc', hv.ngayNhanViec ? fmtDate(hv.ngayNhanViec) : '')}
       </div>
